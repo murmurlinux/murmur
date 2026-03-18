@@ -1,0 +1,68 @@
+{
+  "name": "Gemini V1",
+  "version": "1.0.0",
+  "source": { "width": 1380, "height": 752 },
+  "layers": {
+    "body": "body.png"
+  },
+  "accentColor": { "default": "#00d4ff", "method": "hue-rotate" },
+  "zones": {
+    "micButton": {
+      "type": "button",
+      "shape": "circle",
+      "cx": 696,
+      "cy": 462,
+      "radius": 92,
+      "action": "toggle_recording",
+      "ledRadius": 99,
+      "taperRadius": 113
+    },
+    "gearButton": {
+      "type": "button",
+      "shape": "circle",
+      "cx": 210,
+      "cy": 574,
+      "radius": 18,
+      "action": "open_settings",
+      "proximityRadius": 363
+    },
+    "waveform": {
+      "type": "display",
+      "x": 488,
+      "y": 159,
+      "width": 415,
+      "height": 144
+    },
+    "statusLed": {
+      "type": "indicator",
+      "shape": "circle",
+      "cx": 696,
+      "cy": 624,
+      "radius": 11
+    },
+    "led1": {
+      "type": "indicator",
+      "x": 144,
+      "y": 458,
+      "width": 18,
+      "height": 20,
+      "rotation": -27
+    },
+    "led2": {
+      "type": "indicator",
+      "x": 160,
+      "y": 486,
+      "width": 18,
+      "height": 22,
+      "rotation": -28
+    },
+    "led3": {
+      "type": "indicator",
+      "x": 178,
+      "y": 516,
+      "width": 16,
+      "height": 22,
+      "rotation": -31
+    }
+  }
+}
