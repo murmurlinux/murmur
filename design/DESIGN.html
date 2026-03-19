@@ -2061,222 +2061,102 @@
   </div>
 </section>
 
-<!-- ===== UI CONCEPTS ===== -->
+<!-- ===== SKIN DESIGNS ===== -->
 <section>
   <div class="section-label">Interface</div>
-  <h2>UI Concepts</h2>
+  <h2>Skin Designs</h2>
   <p class="subtitle">
-    Six different takes on the gadget. No window borders. Custom shapes. Each one is a standalone
-    floating panel you can drag around your desktop. All borderless, all skeuomorphic.
+    Five AI-generated skins for the gadget. No window borders. Custom shapes. Each one is a standalone
+    floating panel you can drag around your desktop. All borderless, all skeuomorphic — inspired by
+    classic Winamp and Windows Media Player skins, modernised with contemporary materials and lighting.
   </p>
 
   <div class="concepts-grid">
 
-    <!-- Concept 1: The Deck -->
+    <!-- Skin 1: The Reactor -->
     <div class="concept-card">
-      <div class="concept-preview" style="background: linear-gradient(135deg, #0d0d18, #151528);">
-        <div class="deck-widget">
-          <div class="deck-top">
-            <div class="deck-title">Murmur</div>
-            <div class="deck-status">
-              <div class="deck-status-dot"></div>
-              READY
-            </div>
-          </div>
-          <div class="deck-middle">
-            <div class="deck-rec-btn">
-              <div class="deck-rec-icon"></div>
-            </div>
-            <div class="deck-waveform" id="deckWaveform"></div>
-          </div>
-          <div class="deck-bottom">
-            <div class="deck-ctrl" title="Pin on top">📌</div>
-            <div class="deck-model-select">
-              <div class="deck-model-dot"></div>
-              whisper-small · local
-            </div>
-            <div class="deck-ctrl" title="Settings">⚙</div>
-            <div class="deck-ctrl" title="History">📋</div>
-          </div>
-        </div>
+      <div class="concept-preview" style="background: #000; display: flex; align-items: center; justify-content: center;">
+        <img src="skins/reactor.jpg" alt="The Reactor" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;">
       </div>
       <div class="concept-info">
-        <div class="concept-style">Mixing Console Aesthetic</div>
-        <h3>The Deck</h3>
+        <div class="concept-style">Arc Reactor / Power Core</div>
+        <h3>The Reactor</h3>
         <p>
-          Compact control panel inspired by audio mixing consoles. Brushed-metal feel with a giant
-          red record button, real-time waveform display, model selector, and quick-access controls.
-          Horizontal layout maximizes screen real estate.
+          Circular design resembling a miniature arc reactor. Dark gunmetal and matte black housing
+          with machined aluminium bevels. Central glowing ring with electric neon blue light emission.
+          Waveform display behind tinted glass. Skeletal wing on one side doubles as a drag handle.
+          Status LEDs embedded in the bezel.
         </p>
       </div>
     </div>
 
-    <!-- Concept 2: The Orb -->
-    <div class="concept-card">
-      <div class="concept-preview" style="background: radial-gradient(circle at 50% 50%, #12122a, #08080f);">
-        <div class="orb-widget">
-          <div class="orb-ring"></div>
-          <div class="orb-ring"></div>
-          <div class="orb-ring"></div>
-          <div class="orb-indicators">
-            <div class="orb-dot"></div>
-            <div class="orb-dot"></div>
-            <div class="orb-dot"></div>
-            <div class="orb-dot"></div>
-          </div>
-          <div class="orb-center">
-            <div class="orb-mic">🎙</div>
-          </div>
-          <div class="orb-label">Listening...</div>
-        </div>
+    <!-- Skin 2: The Comm Badge (Active Skin) -->
+    <div class="concept-card" style="border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow);">
+      <div class="concept-preview" style="background: #000; display: flex; align-items: center; justify-content: center; position: relative;">
+        <img src="skins/comm-badge.jpg" alt="The Comm Badge" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;">
+        <div style="position: absolute; top: 12px; right: 12px; background: var(--accent2); color: #0a0a0f; padding: 3px 10px; border-radius: 100px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Active</div>
       </div>
       <div class="concept-info">
-        <div class="concept-style">Sonar / Radar Display</div>
-        <h3>The Orb</h3>
+        <div class="concept-style">Tactical Communicator</div>
+        <h3>The Comm Badge</h3>
         <p>
-          Circular, radar-inspired design with pulsing concentric rings. Tap the center orb to
-          record. Ripple animations emanate outward during speech. Collapses to a tiny circle
-          when idle. Sci-fi meets meditation app.
+          Dog-tag shaped tactical communicator with brushed dark titanium frame and carbon fiber inlay panels.
+          Horizontal waveform display in a rounded OLED-style panel. Large central mic button with cyan glow ring.
+          Neon accent strip along the right edge. Three proximity-activated LED indicators near the settings
+          gear that light up as your mouse approaches. Press-and-hold to record.
         </p>
       </div>
     </div>
 
-    <!-- Concept 3: The Blade -->
+    <!-- Skin 3: The Turbine -->
     <div class="concept-card">
-      <div class="concept-preview" style="background: linear-gradient(135deg, #0a0a15, #101020);">
-        <div class="blade-widget">
-          <div class="blade-rec">
-            <div class="blade-rec-dot"></div>
-          </div>
-          <div class="blade-wave-container" id="bladeWaveform"></div>
-          <div class="blade-timer">0:03</div>
-          <div class="blade-controls">
-            <div class="blade-btn" title="Pin">📌</div>
-            <div class="blade-btn" title="Settings">⚙</div>
-          </div>
-        </div>
+      <div class="concept-preview" style="background: #000; display: flex; align-items: center; justify-content: center;">
+        <img src="skins/turbine.jpg" alt="The Turbine" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;">
       </div>
       <div class="concept-info">
-        <div class="concept-style">Ultra-Minimal Dock Bar</div>
-        <h3>The Blade</h3>
+        <div class="concept-style">Jet Engine Intake</div>
+        <h3>The Turbine</h3>
         <p>
-          Pill-shaped horizontal bar with glassmorphism. Sits at the edge of your screen like a
-          miniature dock. Record button, live waveform, timer, and two controls — nothing else.
-          Maximum function, minimum footprint. Barely there until you need it.
+          Circular design inspired by a jet engine intake viewed from the front. Concentric rings of
+          dark brushed metal with deep channels. Circular waveform display in the centre with radial
+          frequency bars. Neon blue light bleeding from between the ring segments. Mic button on the
+          left wing, settings gear and status LEDs on the right. Feels like it was pulled from a
+          spacecraft dashboard.
         </p>
       </div>
     </div>
 
-    <!-- Concept 4: The Nexus -->
+    <!-- Skin 4: The Slate -->
     <div class="concept-card">
-      <div class="concept-preview" style="background: linear-gradient(135deg, #08081a, #0f0f24);">
-        <div class="nexus-widget">
-          <div class="nexus-header">
-            <div class="nexus-logo">MURMUR</div>
-            <div class="nexus-pin">📌</div>
-          </div>
-          <div class="nexus-center">
-            <div class="nexus-wave-ring"></div>
-            <div class="nexus-wave-ring"></div>
-            <div class="nexus-wave-ring"></div>
-            <div class="nexus-rec-outer">
-              <div class="nexus-rec-inner">
-                <div class="nexus-mic-icon">🎤</div>
-              </div>
-            </div>
-          </div>
-          <div class="nexus-bottom">
-            <div class="nexus-model">
-              <div class="nexus-model-indicator"></div>
-              whisper-sm
-            </div>
-            <div class="nexus-action-btn">📋</div>
-            <div class="nexus-action-btn">⚙</div>
-          </div>
-        </div>
+      <div class="concept-preview" style="background: #000; display: flex; align-items: center; justify-content: center;">
+        <img src="skins/slate.jpg" alt="The Slate" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;">
       </div>
       <div class="concept-info">
-        <div class="concept-style">Floating Command Hub</div>
-        <h3>The Nexus</h3>
+        <div class="concept-style">Premium Pebble Remote</div>
+        <h3>The Slate</h3>
         <p>
-          Square-ish floating panel with a massive central record button surrounded by wave
-          rings that pulse when recording. Rotating conic gradient in the background adds
-          depth. Model selector and controls at the bottom. Feels like a spaceship control.
+          Organic pebble shape — like a river stone crossed with a premium remote control. Matte black
+          soft-touch surface with one brushed aluminium accent edge. Concave central display zone for
+          waveforms. Single large capacitive mic button with neon blue ring glow. Tiny status LEDs
+          recessed into the top edge. Minimal, premium, tactile. No right angles anywhere.
         </p>
       </div>
     </div>
 
-    <!-- Concept 5: The Flux -->
+    <!-- Skin 5: The Oculus -->
     <div class="concept-card">
-      <div class="concept-preview" style="background: linear-gradient(135deg, #0c0c1a, #14142a);">
-        <div class="flux-widget">
-          <div class="flux-top">
-            <div class="flux-brand">
-              <div class="flux-logo-mark">M</div>
-              <div class="flux-logo-text">Murmur</div>
-            </div>
-            <div class="flux-mode">
-              <div class="flux-mode-dot"></div>
-              LOCAL
-            </div>
-          </div>
-          <div class="flux-middle">
-            <div class="flux-rec">
-              <div class="flux-rec-dot"></div>
-            </div>
-            <div class="flux-wave-area">
-              <div class="flux-wave-row" id="fluxWaveTop"></div>
-              <div class="flux-transcript">
-                <span class="highlight-text">The quick brown fox</span> jumps over...
-              </div>
-            </div>
-            <div class="flux-time">0:03</div>
-          </div>
-        </div>
+      <div class="concept-preview" style="background: #000; display: flex; align-items: center; justify-content: center;">
+        <img src="skins/oculus.jpg" alt="The Oculus" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;">
       </div>
       <div class="concept-info">
-        <div class="concept-style">Live Transcript Panel</div>
-        <h3>The Flux</h3>
+        <div class="concept-style">Cyberpunk Monocle</div>
+        <h3>The Oculus</h3>
         <p>
-          Landscape widget with a rounded-square record button, dual waveform display, and a
-          live transcript preview that scrolls as you speak. Shows the model status (local/cloud)
-          and elapsed time. The most information-dense design — for power users who want to see
-          everything.
-        </p>
-      </div>
-    </div>
-
-    <!-- Concept 6: The Prism -->
-    <div class="concept-card">
-      <div class="concept-preview" style="background: linear-gradient(180deg, #0c0c1a, #101024);">
-        <div class="prism-widget">
-          <div class="prism-status">
-            <div class="prism-status-dot"></div>
-            READY
-          </div>
-          <div class="prism-visual">
-            <div class="prism-circle-track">
-              <div class="prism-progress"></div>
-              <div class="prism-rec-btn">
-                <div class="prism-rec-icon"></div>
-              </div>
-            </div>
-          </div>
-          <div class="prism-time">0:00</div>
-          <div class="prism-controls">
-            <div class="prism-ctrl">📌</div>
-            <div class="prism-ctrl">⚙</div>
-            <div class="prism-ctrl">📋</div>
-          </div>
-        </div>
-      </div>
-      <div class="concept-info">
-        <div class="concept-style">Vertical Remote Control</div>
-        <h3>The Prism</h3>
-        <p>
-          Tall, narrow remote-control shape. Gradient accent bar at the top, circular progress
-          ring around the record button that fills as you speak, timer, and three control buttons.
-          Fits perfectly alongside a vertical taskbar. Feels like holding a physical clicker.
+          Monocle shape with an angular control wing extension. Large circular main display behind
+          curved glass showing audio waveform visualisation. Outer ring has segment markings like a
+          watch bezel with neon blue illumination in the grooves. Mic button on the wing section with
+          a pulsing LED. Dark chrome and matte black materials. The most detailed and characterful
+          skin — strong WMP nostalgia modernised with contemporary materials.
         </p>
       </div>
     </div>
@@ -2290,6 +2170,7 @@
   <h2>Feature Roadmap</h2>
   <p class="subtitle">
     Phased delivery. MVP ships fast with core dictation. V2 adds intelligence. V3 goes commercial.
+    Skin system supports multiple switchable skins with dynamic accent recolouring.
   </p>
 
   <div class="feature-grid">
