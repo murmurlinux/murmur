@@ -3,7 +3,7 @@ import { SkinRenderer } from "./SkinRenderer";
 import { MicButton } from "./MicButton";
 import { GearButton } from "./GearButton";
 import { LedIndicators } from "./LedIndicators";
-import { WaveformPlaceholder } from "./WaveformPlaceholder";
+import { Waveform } from "./Waveform";
 import skinConfig from "../assets/skins/gemini-v1/skin.json";
 
 // Scale the skin down inside the window — leaves transparent padding around edges
@@ -49,7 +49,7 @@ export function GadgetWindow() {
         }}
       >
         <SkinRenderer />
-        <WaveformPlaceholder
+        <Waveform
           zone={skinConfig.zones.waveform as any}
           sourceWidth={sw}
           sourceHeight={sh}

@@ -1,3 +1,7 @@
+mod audio;
+mod commands;
+mod state;
+
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -7,6 +11,11 @@ use tauri::{
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(state::AppState::default())
+        .invoke_handler(tauri::generate_handler![
+            commands::audio::start_recording,
+            commands::audio::stop_recording,
+        ])
         .setup(|app| {
             // --- System Tray ---
             let show_item =
