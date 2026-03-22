@@ -1,10 +1,23 @@
 use arboard::Clipboard;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 /// Stores the last known non-Murmur window ID.
 /// Updated by a background polling thread.
 static LAST_EXTERNAL_WINDOW: Mutex<Option<String>> = Mutex::new(None);
+
+/// Stop flag for the window tracker thread.
+static TRACKER_STOP: AtomicBool = AtomicBool::new(false);
+
+/// Check if xdotool is available on the system.
+pub fn is_xdotool_available() -> bool {
+    Command::new("xdotool")
+        .arg("version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
 
 /// Get the currently focused window ID via xdotool.
 pub fn get_active_window() -> Option<String> {
@@ -22,14 +35,20 @@ pub fn get_active_window() -> Option<String> {
 }
 
 /// Start a background thread that tracks the last non-Murmur focused window.
-/// Takes Murmur's own X11 window ID to exclude from tracking.
+/// Checks for xdotool availability before starting.
 pub fn start_window_tracker() {
+    if !is_xdotool_available() {
+        eprintln!("Warning: xdotool not found. Text injection will use clipboard only.");
+        return;
+    }
+
+    TRACKER_STOP.store(false, Ordering::Relaxed);
+
     std::thread::spawn(|| {
-        // Wait for Murmur's window to be created, then find its X11 ID
-        // by looking for windows with the exact class "murmur" (Tauri sets this from the app name)
+        // Wait for Murmur's window to be created
         std::thread::sleep(std::time::Duration::from_secs(2));
 
-        // Get Murmur's window ID using WM_CLASS which is unique to our app
+        // Get Murmur's window IDs using WM_CLASS
         let murmur_ids: Vec<String> = Command::new("xdotool")
             .args(["search", "--class", "murmur"])
             .output()
@@ -45,11 +64,10 @@ pub fn start_window_tracker() {
 
         println!("Murmur window IDs (by class): {:?}", murmur_ids);
 
-        loop {
+        while !TRACKER_STOP.load(Ordering::Relaxed) {
             std::thread::sleep(std::time::Duration::from_millis(200));
 
             if let Some(active) = get_active_window() {
-                // Only store if it's NOT one of Murmur's windows
                 if !murmur_ids.contains(&active) {
                     if let Ok(mut last) = LAST_EXTERNAL_WINDOW.lock() {
                         *last = Some(active);
@@ -57,13 +75,32 @@ pub fn start_window_tracker() {
                 }
             }
         }
+
+        println!("Window tracker thread stopped");
     });
+}
+
+/// Stop the window tracker thread.
+pub fn stop_window_tracker() {
+    TRACKER_STOP.store(true, Ordering::Relaxed);
 }
 
 /// Get the last known non-Murmur window ID.
 /// This is the window we should paste into.
 pub fn get_last_external_window() -> Option<String> {
     LAST_EXTERNAL_WINDOW.lock().ok().and_then(|w| w.clone())
+}
+
+/// Sanitise transcribed text for safe xdotool injection.
+/// Strips control characters that could produce unintended keystrokes
+/// (escape sequences, carriage returns, etc.) in the target application.
+fn sanitise_for_xdotool(text: &str) -> String {
+    text.chars()
+        .filter(|c| {
+            // Allow printable ASCII, newline, tab, and all Unicode above ASCII
+            matches!(*c, '\n' | '\t' | ' '..='~') || (*c as u32 > 127 && !c.is_control())
+        })
+        .collect()
 }
 
 /// Inject transcribed text into the last external window.
@@ -82,6 +119,13 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
     if text.is_empty() {
         return Ok(());
     }
+
+    // Sanitise: strip control characters that could cause unintended keystrokes
+    let text = sanitise_for_xdotool(text);
+    if text.is_empty() {
+        return Ok(());
+    }
+    let text = text.as_str();
 
     // Always put text on clipboard as fallback for manual paste
     if let Ok(mut clipboard) = Clipboard::new() {

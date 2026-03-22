@@ -5,6 +5,21 @@ use crate::state::{AppState, RecordingState};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
 use tauri::{Emitter, Manager};
+use tauri_plugin_store::StoreExt;
+
+const DEFAULT_MODEL: &str = "ggml-tiny.en.bin";
+
+/// Read the active model filename from the settings store
+fn get_active_model(app: &tauri::AppHandle) -> String {
+    match app.store("settings.json") {
+        Ok(store) => {
+            let val: Option<serde_json::Value> = store.get("model");
+            val.and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| DEFAULT_MODEL.to_string())
+        }
+        Err(_) => DEFAULT_MODEL.to_string(),
+    }
+}
 
 #[derive(Clone, Serialize)]
 struct RecordingStatePayload {
@@ -36,15 +51,16 @@ pub fn start_recording(
     inner.recording_state = RecordingState::Recording;
     inner.stop_flag.store(false, Ordering::Relaxed);
 
-    // Clear the audio buffer
-    if let Ok(mut buf) = inner.audio_buffer.lock() {
-        buf.clear();
-    }
-
     let stop_flag = inner.stop_flag.clone();
     let audio_buffer = inner.audio_buffer.clone();
 
+    // Drop the outer lock BEFORE locking audio buffer (avoids nested lock)
     drop(inner);
+
+    // Clear the audio buffer
+    if let Ok(mut buf) = audio_buffer.lock() {
+        buf.clear();
+    }
 
     let _ = app.emit(
         "recording-state",
@@ -53,10 +69,15 @@ pub fn start_recording(
         },
     );
 
-    capture::start_capture(app.clone(), audio_buffer, stop_flag)
+    let actual_rate = capture::start_capture(app.clone(), audio_buffer, stop_flag)
         .map_err(|e| format!("Failed to start audio capture: {}", e))?;
 
-    println!("Recording started");
+    // Update sample rate from actual device config
+    if let Ok(mut inner) = state.lock() {
+        inner.sample_rate = actual_rate;
+    }
+
+    println!("Recording started ({}Hz)", actual_rate);
     Ok(())
 }
 
@@ -75,15 +96,18 @@ pub fn stop_recording(
     inner.stop_flag.store(true, Ordering::Relaxed);
     inner.recording_state = RecordingState::Processing;
 
-    // Grab the audio buffer and sample rate
-    let audio_data: Vec<f32> = match inner.audio_buffer.lock() {
-        Ok(buf) => buf.clone(),
-        Err(_) => Vec::new(),
-    };
+    let audio_buffer = inner.audio_buffer.clone();
     let sample_rate = inner.sample_rate;
     let previous_window = inner.previous_window_id.clone();
 
+    // Drop outer lock BEFORE locking audio buffer (avoids nested lock)
     drop(inner);
+
+    // Clone audio data from the buffer
+    let audio_data: Vec<f32> = match audio_buffer.lock() {
+        Ok(buf) => buf.clone(),
+        Err(_) => Vec::new(),
+    };
 
     let _ = app.emit(
         "recording-state",
@@ -110,19 +134,19 @@ pub fn stop_recording(
     }
 
     // Spawn transcription on a background thread (whisper is blocking + heavy)
+    let active_model = get_active_model(&app);
     let app_handle = app.clone();
     let app_for_state = app.clone();
     std::thread::spawn(move || {
         let start = std::time::Instant::now();
 
         // Check/download model
-        let model_path = match model_manager::get_default_model_path() {
+        let model_path = match model_manager::get_model_path(&active_model) {
             Some(p) => p,
             None => {
-                println!("Model not found, downloading...");
+                println!("Model '{}' not found, downloading...", active_model);
                 // Create a tokio runtime for the async download
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                match rt.block_on(model_manager::download_default_model(app_handle.clone())) {
+                match tauri::async_runtime::block_on(model_manager::download_model_by_name(app_handle.clone(), &active_model)) {
                     Ok(p) => p,
                     Err(e) => {
                         eprintln!("Model download failed: {}", e);
@@ -197,18 +221,24 @@ pub fn start_recording_internal(app: tauri::AppHandle) -> Result<(), String> {
     inner.recording_state = RecordingState::Recording;
     inner.stop_flag.store(false, Ordering::Relaxed);
 
-    if let Ok(mut buf) = inner.audio_buffer.lock() {
-        buf.clear();
-    }
-
     let stop_flag = inner.stop_flag.clone();
     let audio_buffer = inner.audio_buffer.clone();
     drop(inner);
 
+    // Clear buffer after dropping outer lock
+    if let Ok(mut buf) = audio_buffer.lock() {
+        buf.clear();
+    }
+
     let _ = app.emit("recording-state", RecordingStatePayload { state: "recording".to_string() });
 
-    capture::start_capture(app.clone(), audio_buffer, stop_flag)
+    let actual_rate = capture::start_capture(app.clone(), audio_buffer, stop_flag)
         .map_err(|e| format!("Failed to start audio capture: {}", e))?;
+
+    // Update sample rate from actual device config
+    if let Ok(mut inner) = app.state::<AppState>().lock() {
+        inner.sample_rate = actual_rate;
+    }
 
     Ok(())
 }
@@ -225,13 +255,17 @@ pub fn stop_recording_internal(app: tauri::AppHandle) -> Result<(), String> {
     inner.stop_flag.store(true, Ordering::Relaxed);
     inner.recording_state = RecordingState::Processing;
 
-    let audio_data: Vec<f32> = match inner.audio_buffer.lock() {
+    let audio_buffer = inner.audio_buffer.clone();
+    let sample_rate = inner.sample_rate;
+    let previous_window = inner.previous_window_id.clone();
+
+    // Drop outer lock before locking audio buffer
+    drop(inner);
+
+    let audio_data: Vec<f32> = match audio_buffer.lock() {
         Ok(buf) => buf.clone(),
         Err(_) => Vec::new(),
     };
-    let sample_rate = inner.sample_rate;
-    let previous_window = inner.previous_window_id.clone();
-    drop(inner);
 
     let _ = app.emit("recording-state", RecordingStatePayload { state: "processing".to_string() });
 
@@ -243,6 +277,7 @@ pub fn stop_recording_internal(app: tauri::AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
+    let active_model = get_active_model(&app);
     let app_handle = app.clone();
     let app_for_state2 = app.clone();
     std::thread::spawn(move || {
@@ -256,11 +291,10 @@ pub fn stop_recording_internal(app: tauri::AppHandle) -> Result<(), String> {
 
         let start = std::time::Instant::now();
 
-        let model_path = match model_manager::get_default_model_path() {
+        let model_path = match model_manager::get_model_path(&active_model) {
             Some(p) => p,
             None => {
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                match rt.block_on(model_manager::download_default_model(app_handle.clone())) {
+                match tauri::async_runtime::block_on(model_manager::download_model_by_name(app_handle.clone(), &active_model)) {
                     Ok(p) => p,
                     Err(e) => {
                         eprintln!("Model download failed: {}", e);

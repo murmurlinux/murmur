@@ -32,12 +32,18 @@
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
+      "icons/256x256.png",
+      "icons/512x512.png",
       "icons/icon.png"
     ],
     "targets": ["deb", "appimage"],
+    "shortDescription": "AI voice-to-text gadget for Linux",
+    "longDescription": "Murmur is a Linux-native voice-to-text desktop gadget. Hold a button or hotkey, speak, and text appears at your cursor in any application. Powered by whisper.cpp for fast local transcription.",
+    "homepage": "https://github.com/SyncroTrade/murmur",
+    "category": "Utility",
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1"]
+        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "xdotool"]
       }
     }
   }

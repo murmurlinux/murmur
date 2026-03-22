@@ -1,7 +1,9 @@
 import { createSignal } from "solid-js";
+import { invoke } from "@tauri-apps/api/core";
+import type { CircleZone } from "../lib/skin-loader";
 
 interface GearButtonProps {
-  zone: { cx: number; cy: number; radius: number };
+  zone: CircleZone;
   sourceWidth: number;
   sourceHeight: number;
 }
@@ -16,7 +18,7 @@ export function GearButton(props: GearButtonProps) {
   const heightPct = () => ((props.zone.radius * 2) / props.sourceHeight) * 100;
 
   const handleClick = () => {
-    console.log("Settings clicked — settings panel coming in Slice 4");
+    invoke("open_settings").catch((e) => console.error("Failed to open settings:", e));
   };
 
   return (

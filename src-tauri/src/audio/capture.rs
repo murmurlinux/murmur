@@ -13,16 +13,21 @@ pub struct AudioLevel {
 
 /// Starts audio capture on a background thread.
 /// The cpal stream is created INSIDE the thread (Stream is !Send).
+/// Returns the actual device sample rate.
 pub fn start_capture(
     app: tauri::AppHandle,
     audio_buffer: Arc<Mutex<Vec<f32>>>,
     stop_flag: Arc<AtomicBool>,
-) -> Result<(), anyhow::Error> {
-    // Verify we can access an input device before spawning the thread
+) -> Result<u32, anyhow::Error> {
+    // Verify we can access an input device and get actual sample rate
     let host = cpal::default_host();
-    let _device = host
+    let device = host
         .default_input_device()
         .ok_or_else(|| anyhow::anyhow!("No input audio device available"))?;
+    let actual_sample_rate = device
+        .default_input_config()
+        .map(|c| c.sample_rate().0)
+        .unwrap_or(44100);
 
     let stop = Arc::clone(&stop_flag);
     let app_handle = app.clone();
@@ -170,9 +175,18 @@ pub fn start_capture(
                 },
             );
 
-            // Accumulate for STT (Slice 3)
+            // Accumulate for STT — cap at 60 seconds (~2.6M samples at 44.1kHz)
+            const MAX_SAMPLES: usize = 44100 * 60;
             if let Ok(mut buf) = audio_buffer.lock() {
-                buf.extend_from_slice(&samples);
+                if buf.len() < MAX_SAMPLES {
+                    let remaining = MAX_SAMPLES - buf.len();
+                    let to_add = samples.len().min(remaining);
+                    buf.extend_from_slice(&samples[..to_add]);
+                    if buf.len() >= MAX_SAMPLES {
+                        println!("Max recording duration (60s) reached — auto-stopping");
+                        stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
+                    }
+                }
             }
         }
 
@@ -181,5 +195,5 @@ pub fn start_capture(
         println!("Audio capture thread stopped");
     });
 
-    Ok(())
+    Ok(actual_sample_rate)
 }
