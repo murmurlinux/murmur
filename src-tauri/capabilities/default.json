@@ -11,6 +11,9 @@
     "core:window:allow-close",
     "core:window:allow-set-focus",
     "core:window:allow-minimize",
-    "core:window:allow-unminimize"
+    "core:window:allow-unminimize",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-is-registered"
   ]
 }

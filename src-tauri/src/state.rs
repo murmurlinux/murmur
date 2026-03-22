@@ -12,16 +12,20 @@ pub enum RecordingState {
 
 pub struct InnerState {
     pub recording_state: RecordingState,
-    pub audio_buffer: Vec<f32>,
+    pub audio_buffer: Arc<Mutex<Vec<f32>>>,
     pub stop_flag: Arc<AtomicBool>,
+    pub sample_rate: u32,
+    pub previous_window_id: Option<String>,
 }
 
 impl Default for InnerState {
     fn default() -> Self {
         Self {
             recording_state: RecordingState::Idle,
-            audio_buffer: Vec::new(),
+            audio_buffer: Arc::new(Mutex::new(Vec::new())),
             stop_flag: Arc::new(AtomicBool::new(false)),
+            sample_rate: 44100,
+            previous_window_id: None,
         }
     }
 }
