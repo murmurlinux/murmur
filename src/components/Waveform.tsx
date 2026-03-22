@@ -1,10 +1,13 @@
 import { onMount, onCleanup, createSignal } from "solid-js";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { hexToRgb } from "../lib/color";
+import type { RectZone } from "../lib/skin-loader";
 
 interface WaveformProps {
-  zone: { x: number; y: number; width: number; height: number };
+  zone: RectZone;
   sourceWidth: number;
   sourceHeight: number;
+  accentColor: string;
 }
 
 interface AudioLevel {
@@ -60,6 +63,12 @@ export function Waveform(props: WaveformProps) {
     const gap = (w / barCount) * 0.3;
     const centerY = h / 2;
 
+    // Derive accent RGB for bar colours (lightened version of accent)
+    const [ar, ag, ab] = hexToRgb(props.accentColor);
+    const lr = Math.round(ar + (255 - ar) * 0.4);
+    const lg = Math.round(ag + (255 - ag) * 0.4);
+    const lb = Math.round(ab + (255 - ab) * 0.4);
+
     for (let i = 0; i < barCount; i++) {
       const amplitude = Math.min(currentBars[i], 1); // Already normalised 0-1 from Rust
       const barHeight = Math.max(1, amplitude * (h * 0.8));
@@ -67,14 +76,14 @@ export function Waveform(props: WaveformProps) {
       const x = i * (barWidth + gap) + gap / 2;
       const y = centerY - barHeight / 2;
 
-      // Gradient based on amplitude: dim cyan → bright cyan
+      // Gradient based on amplitude: dim → bright accent
       const alpha = 0.15 + amplitude * 0.75;
-      ctx.fillStyle = `rgba(140, 235, 250, ${alpha})`;
+      ctx.fillStyle = `rgba(${lr}, ${lg}, ${lb}, ${alpha})`;
       ctx.fillRect(x, y, barWidth, barHeight);
 
       // Glow effect for louder bars
       if (amplitude > 0.3) {
-        ctx.shadowColor = "rgba(140, 235, 250, 0.4)";
+        ctx.shadowColor = `rgba(${lr}, ${lg}, ${lb}, 0.4)`;
         ctx.shadowBlur = 4;
         ctx.fillRect(x, y, barWidth, barHeight);
         ctx.shadowBlur = 0;
@@ -85,7 +94,7 @@ export function Waveform(props: WaveformProps) {
     if (!isActive()) {
       const maxBar = Math.max(...currentBars);
       if (maxBar < 0.01) {
-        ctx.strokeStyle = "rgba(140, 235, 250, 0.15)";
+        ctx.strokeStyle = `rgba(${lr}, ${lg}, ${lb}, 0.15)`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(w * 0.1, centerY);
@@ -94,7 +103,20 @@ export function Waveform(props: WaveformProps) {
       }
     }
 
+    // Stop the loop once fully decayed to idle
+    const maxBar = Math.max(...currentBars);
+    if (!isActive() && maxBar < 0.005) {
+      animFrameId = undefined; // Stop looping — will restart on next audio event
+      return;
+    }
+
     animFrameId = requestAnimationFrame(draw);
+  };
+
+  const ensureDrawing = () => {
+    if (animFrameId === undefined) {
+      animFrameId = requestAnimationFrame(draw);
+    }
   };
 
   onMount(async () => {
@@ -109,6 +131,7 @@ export function Waveform(props: WaveformProps) {
     unlisten = await listen<AudioLevel>("audio-level", (event) => {
       targetBars = event.payload.samples;
       setIsActive(true);
+      ensureDrawing();
     });
 
     // Listen for recording state to know when we're idle
@@ -116,12 +139,14 @@ export function Waveform(props: WaveformProps) {
       if (event.payload.state === "idle") {
         setIsActive(false);
         targetBars = new Array(48).fill(0);
+        ensureDrawing(); // Run decay animation, then auto-stop
       } else if (event.payload.state === "recording") {
         setIsActive(true);
+        ensureDrawing();
       }
     });
 
-    // Start render loop
+    // Draw initial idle frame, then stop
     animFrameId = requestAnimationFrame(draw);
 
     onCleanup(() => {

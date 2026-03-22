@@ -1,14 +1,13 @@
 import { createSignal, onMount, onCleanup } from "solid-js";
-
-interface Led {
-  x: number; y: number; width: number; height: number; rotation?: number;
-}
+import { hexToRgba, lighten } from "../lib/color";
+import type { RectZone, CircleZone } from "../lib/skin-loader";
 
 interface LedIndicatorsProps {
-  leds: Led[];
-  gearZone: { cx: number; cy: number; proximityRadius?: number };
+  leds: RectZone[];
+  gearZone: CircleZone;
   sourceWidth: number;
   sourceHeight: number;
+  accentColor: string;
 }
 
 export function LedIndicators(props: LedIndicatorsProps) {
@@ -58,6 +57,7 @@ export function LedIndicators(props: LedIndicatorsProps) {
   });
 
   const lightOrder = [3, 2, 1];
+  const litColor = () => lighten(props.accentColor, 0.4);
 
   return (
     <>
@@ -81,10 +81,10 @@ export function LedIndicators(props: LedIndicatorsProps) {
               "border-radius": "3px",
               transform: led.rotation ? `rotate(${led.rotation}deg)` : "none",
               background: isLit()
-                ? "rgba(140, 235, 250, 0.75)"
+                ? hexToRgba(litColor(), 0.75)
                 : "transparent",
               "box-shadow": isLit()
-                ? "0 0 6px 2px rgba(140, 235, 250, 0.5)"
+                ? `0 0 6px 2px ${hexToRgba(litColor(), 0.5)}`
                 : "none",
               transition: "all 0.3s ease",
               "pointer-events": "none",
