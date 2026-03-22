@@ -2196,13 +2196,13 @@
     </div>
     <div class="feature-card">
       <div class="phase mvp">MVP</div>
-      <h4>Voice Activity Detection</h4>
-      <p>Silero VAD auto-detects speech end. No manual stop needed. Configurable silence threshold.</p>
-    </div>
-    <div class="feature-card">
-      <div class="phase mvp">MVP</div>
       <h4>Real-time Waveform</h4>
       <p>Live audio visualization while recording. Visual confirmation that the mic is picking up your voice.</p>
+    </div>
+    <div class="feature-card">
+      <div class="phase v2">V2</div>
+      <h4>Voice Activity Detection (VAD)</h4>
+      <p>Silero VAD auto-detects speech end for tap-to-record mode. No manual stop needed. Configurable silence threshold. Not needed for hold-to-record (MVP default).</p>
     </div>
     <div class="feature-card">
       <div class="phase v2">V2</div>
@@ -2284,8 +2284,7 @@
         <li>Borderless gadget window with drag + always-on-top</li>
         <li>Audio capture via cpal (PipeWire/PulseAudio)</li>
         <li>whisper.cpp integration via whisper-rs</li>
-        <li>Silero VAD for speech detection</li>
-        <li>Clipboard-based text injection (X11 + Wayland)</li>
+        <li>Universal text injection via xdotool XTEST (windowactivate --sync to refocus, then type without --window for universal compatibility across terminals, editors, browsers; clipboard fallback)</li>
         <li>Global hotkey for push-to-talk</li>
         <li>Real-time waveform visualization</li>
         <li>System tray with basic controls</li>
@@ -2297,6 +2296,8 @@
       <h4>Phase 2 — Intelligence</h4>
       <div class="phase-label">Cloud Engines &amp; AI Processing</div>
       <ul>
+        <li>Silero VAD for tap-to-record auto-stop (speech end detection)</li>
+        <li>Tap-to-record mode toggle (alternative to hold-to-record)</li>
         <li>Pluggable STT engine architecture</li>
         <li>Deepgram Nova-3 streaming integration</li>
         <li>Groq Whisper API integration</li>

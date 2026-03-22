@@ -1,6 +1,8 @@
 mod audio;
 mod commands;
+mod inject;
 mod state;
+mod stt;
 
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -16,7 +18,27 @@ pub fn run() {
             commands::audio::start_recording,
             commands::audio::stop_recording,
         ])
+        .plugin({
+            use tauri_plugin_global_shortcut::{Builder, ShortcutState};
+
+            Builder::new()
+                .with_shortcut("Ctrl+Shift+Space")
+                .expect("Failed to parse shortcut")
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        println!("Hotkey pressed — starting recording");
+                        let _ = commands::audio::start_recording_internal(app.clone());
+                    } else if event.state == ShortcutState::Released {
+                        println!("Hotkey released — stopping recording");
+                        let _ = commands::audio::stop_recording_internal(app.clone());
+                    }
+                })
+                .build()
+        })
         .setup(|app| {
+            // --- Window Tracker (tracks last non-Murmur focused window for text injection) ---
+            inject::paste::start_window_tracker();
+
             // --- System Tray ---
             let show_item =
                 MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
