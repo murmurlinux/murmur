@@ -38,7 +38,7 @@ pub fn start_capture(
         let device = match host.default_input_device() {
             Some(d) => d,
             None => {
-                eprintln!("No input device available");
+                log::error!("No input device available");
                 return;
             }
         };
@@ -46,13 +46,13 @@ pub fn start_capture(
         let default_config = match device.default_input_config() {
             Ok(c) => c,
             Err(e) => {
-                eprintln!("Failed to get input config: {}", e);
+                log::error!("Failed to get input config: {}", e);
                 return;
             }
         };
 
         let channels = default_config.channels() as usize;
-        println!(
+        log::info!(
             "Audio: {} ({}Hz, {}ch)",
             device.name().unwrap_or_default(),
             default_config.sample_rate().0,
@@ -78,18 +78,18 @@ pub fn start_capture(
                     buf.extend_from_slice(&mono);
                 }
             },
-            |err| eprintln!("Audio stream error: {}", err),
+            |err| log::error!("Audio stream error: {}", err),
             None,
         ) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("Failed to build input stream: {}", e);
+                log::error!("Failed to build input stream: {}", e);
                 return;
             }
         };
 
         if let Err(e) = stream.play() {
-            eprintln!("Failed to play stream: {}", e);
+            log::error!("Failed to play stream: {}", e);
             return;
         }
 
@@ -183,7 +183,7 @@ pub fn start_capture(
                     let to_add = samples.len().min(remaining);
                     buf.extend_from_slice(&samples[..to_add]);
                     if buf.len() >= MAX_SAMPLES {
-                        println!("Max recording duration (60s) reached — auto-stopping");
+                        log::info!("Max recording duration (60s) reached — auto-stopping");
                         stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
                     }
                 }
@@ -192,7 +192,7 @@ pub fn start_capture(
 
         // Stream drops here, stopping audio capture
         drop(stream);
-        println!("Audio capture thread stopped");
+        log::debug!("Audio capture thread stopped");
     });
 
     Ok(actual_sample_rate)

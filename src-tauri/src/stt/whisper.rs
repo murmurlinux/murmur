@@ -87,7 +87,7 @@ pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Err
     }
 
     let duration = start.elapsed();
-    println!(
+    log::debug!(
         "Transcription: {:?} ({} samples, {:.1}s audio -> {:.1}s processing)",
         text.trim(),
         audio.len(),

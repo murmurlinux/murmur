@@ -13,16 +13,16 @@ pub fn register_hotkey(app: &AppHandle, shortcut: &str) -> Result<(), String> {
 
     gs.on_shortcut(shortcut, move |app, _shortcut, event| {
         if event.state == ShortcutState::Pressed {
-            println!("Hotkey pressed — starting recording");
+            log::debug!("Hotkey pressed — starting recording");
             let _ = audio::start_recording_internal(app.clone());
         } else if event.state == ShortcutState::Released {
-            println!("Hotkey released — stopping recording");
+            log::debug!("Hotkey released — stopping recording");
             let _ = audio::stop_recording_internal(app.clone());
         }
     })
     .map_err(|e| format!("Failed to register hotkey '{}': {}", shortcut, e))?;
 
-    println!("Hotkey registered: {}", shortcut);
+    log::info!("Hotkey registered: {}", shortcut);
     Ok(())
 }
 

@@ -16,6 +16,7 @@ pub struct InnerState {
     pub stop_flag: Arc<AtomicBool>,
     pub sample_rate: u32,
     pub previous_window_id: Option<String>,
+    pub active_model: String,
 }
 
 impl Default for InnerState {
@@ -26,6 +27,7 @@ impl Default for InnerState {
             stop_flag: Arc::new(AtomicBool::new(false)),
             sample_rate: 44100,
             previous_window_id: None,
+            active_model: "ggml-tiny.en.bin".to_string(),
         }
     }
 }
