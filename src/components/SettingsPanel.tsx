@@ -45,6 +45,12 @@ export function SettingsPanel() {
   const [capturingHotkey, setCapturingHotkey] = createSignal(false);
   const [models, setModels] = createSignal<any[]>([]);
   const [downloadingModel, setDownloadingModel] = createSignal<string | null>(null);
+  const [error, setError] = createSignal<string | null>(null);
+
+  const showError = (msg: string) => {
+    setError(msg);
+    setTimeout(() => setError(null), 5000);
+  };
 
   onMount(async () => {
     const s = await loadSettings();
@@ -102,7 +108,7 @@ export function SettingsPanel() {
 
     // Try to change hotkey on the backend
     invoke("change_hotkey", { newHotkey: combo }).catch((err) =>
-      console.error("Failed to change hotkey:", err),
+      showError(`Failed to set hotkey "${combo}": ${err}`),
     );
   }
 
@@ -116,7 +122,7 @@ export function SettingsPanel() {
       const list = await invoke<any[]>("list_models");
       setModels(list);
     } catch (e) {
-      console.error("Download failed:", e);
+      showError(`Download failed: ${e}`);
     } finally {
       setDownloadingModel(null);
     }
@@ -159,6 +165,24 @@ export function SettingsPanel() {
       >
         Settings
       </h1>
+
+      {error() && (
+        <div
+          style={{
+            padding: "10px 14px",
+            background: "rgba(220, 50, 50, 0.15)",
+            border: "1px solid rgba(220, 50, 50, 0.3)",
+            "border-radius": "8px",
+            color: "#ff8888",
+            "font-size": "13px",
+            "margin-bottom": "16px",
+            cursor: "pointer",
+          }}
+          onClick={() => setError(null)}
+        >
+          {error()}
+        </div>
+      )}
 
       {settings() && (
         <>

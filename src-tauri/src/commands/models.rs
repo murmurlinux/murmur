@@ -1,5 +1,6 @@
-use crate::stt::model_manager;
-use tauri::AppHandle;
+use crate::state::AppState;
+use crate::stt::{model_manager, whisper};
+use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 pub fn list_models() -> Vec<model_manager::ModelInfo> {
@@ -23,12 +24,19 @@ pub fn set_active_model(app: AppHandle, model_filename: String) -> Result<(), St
         return Err(format!("Model '{}' is not downloaded", model_filename));
     }
 
-    // Save to store
+    // Update cached model in AppState
+    if let Ok(mut inner) = app.state::<AppState>().lock() {
+        inner.active_model = model_filename.clone();
+    }
+
+    // Clear cached whisper context so the new model is loaded on next transcription
+    whisper::clear_cache();
+
+    // Save to store for persistence across restarts
     let store = app.store("settings.json").map_err(|e| e.to_string())?;
-    store
-        .set("model", serde_json::json!(model_filename));
+    store.set("model", serde_json::json!(model_filename));
     store.save().map_err(|e| e.to_string())?;
 
-    println!("Active model set to: {}", model_filename);
+    log::info!("Active model set to: {}", model_filename);
     Ok(())
 }

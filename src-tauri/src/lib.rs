@@ -7,7 +7,7 @@ mod stt;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Emitter, Manager,
 };
 use tauri_plugin_store::StoreExt;
 
@@ -29,24 +29,38 @@ pub fn run() {
             commands::models::set_active_model,
         ])
         .setup(|app| {
-            // --- Window Tracker (tracks last non-Murmur focused window for text injection) ---
+            // --- Check xdotool availability and start window tracker ---
+            if !inject::paste::is_xdotool_available() {
+                let _ = app.handle().emit("system-warning", serde_json::json!({
+                    "message": "xdotool not found. Text will be copied to clipboard only — install xdotool for direct typing."
+                }));
+            }
             inject::paste::start_window_tracker();
 
-            // --- Register global hotkey (read from store or use default) ---
-            let hotkey = {
+            // --- Load settings from store into AppState ---
+            let (hotkey, active_model) = {
                 let handle = app.handle().clone();
                 match handle.store("settings.json") {
                     Ok(store) => {
-                        let val: Option<serde_json::Value> = store.get("hotkey");
-                        val.and_then(|v| v.as_str().map(String::from))
-                            .unwrap_or_else(|| DEFAULT_HOTKEY.to_string())
+                        let hk: Option<serde_json::Value> = store.get("hotkey");
+                        let hotkey = hk.and_then(|v| v.as_str().map(String::from))
+                            .unwrap_or_else(|| DEFAULT_HOTKEY.to_string());
+                        let model: Option<serde_json::Value> = store.get("model");
+                        let active_model = model.and_then(|v| v.as_str().map(String::from))
+                            .unwrap_or_else(|| "ggml-tiny.en.bin".to_string());
+                        (hotkey, active_model)
                     }
-                    Err(_) => DEFAULT_HOTKEY.to_string(),
+                    Err(_) => (DEFAULT_HOTKEY.to_string(), "ggml-tiny.en.bin".to_string()),
                 }
             };
 
+            // Cache active model in AppState
+            if let Ok(mut inner) = app.state::<state::AppState>().lock() {
+                inner.active_model = active_model;
+            }
+
             if let Err(e) = commands::hotkey::register_hotkey(app.handle(), &hotkey) {
-                eprintln!("Failed to register hotkey '{}': {}", hotkey, e);
+                log::error!("Failed to register hotkey '{}': {}", hotkey, e);
                 // Fallback to default if custom hotkey fails
                 if hotkey != DEFAULT_HOTKEY {
                     let _ = commands::hotkey::register_hotkey(app.handle(), DEFAULT_HOTKEY);
