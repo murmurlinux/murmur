@@ -9,35 +9,49 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager,
 };
+use tauri_plugin_store::StoreExt;
+
+const DEFAULT_HOTKEY: &str = "Ctrl+Shift+Space";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(state::AppState::default())
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             commands::audio::start_recording,
             commands::audio::stop_recording,
+            commands::settings::open_settings,
+            commands::hotkey::change_hotkey,
+            commands::models::list_models,
+            commands::models::download_model,
+            commands::models::set_active_model,
         ])
-        .plugin({
-            use tauri_plugin_global_shortcut::{Builder, ShortcutState};
-
-            Builder::new()
-                .with_shortcut("Ctrl+Shift+Space")
-                .expect("Failed to parse shortcut")
-                .with_handler(|app, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        println!("Hotkey pressed — starting recording");
-                        let _ = commands::audio::start_recording_internal(app.clone());
-                    } else if event.state == ShortcutState::Released {
-                        println!("Hotkey released — stopping recording");
-                        let _ = commands::audio::stop_recording_internal(app.clone());
-                    }
-                })
-                .build()
-        })
         .setup(|app| {
             // --- Window Tracker (tracks last non-Murmur focused window for text injection) ---
             inject::paste::start_window_tracker();
+
+            // --- Register global hotkey (read from store or use default) ---
+            let hotkey = {
+                let handle = app.handle().clone();
+                match handle.store("settings.json") {
+                    Ok(store) => {
+                        let val: Option<serde_json::Value> = store.get("hotkey");
+                        val.and_then(|v| v.as_str().map(String::from))
+                            .unwrap_or_else(|| DEFAULT_HOTKEY.to_string())
+                    }
+                    Err(_) => DEFAULT_HOTKEY.to_string(),
+                }
+            };
+
+            if let Err(e) = commands::hotkey::register_hotkey(app.handle(), &hotkey) {
+                eprintln!("Failed to register hotkey '{}': {}", hotkey, e);
+                // Fallback to default if custom hotkey fails
+                if hotkey != DEFAULT_HOTKEY {
+                    let _ = commands::hotkey::register_hotkey(app.handle(), DEFAULT_HOTKEY);
+                }
+            }
 
             // --- System Tray ---
             let show_item =
@@ -45,7 +59,7 @@ pub fn run() {
             let aot_item = MenuItem::with_id(
                 app,
                 "always_on_top",
-                "Always on Top  [ON]",
+                "Always on Top",
                 true,
                 None::<&str>,
             )?;
@@ -62,7 +76,7 @@ pub fn run() {
             )?;
 
             let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(app.default_window_icon().expect("No default window icon configured in tauri.conf.json").clone())
                 .tooltip("Murmur — Voice to Text")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
@@ -84,7 +98,7 @@ pub fn run() {
                         }
                     }
                     "settings" => {
-                        println!("Settings clicked — coming in Slice 4");
+                        commands::settings::open_settings_internal(app);
                     }
                     "quit" => {
                         app.exit(0);

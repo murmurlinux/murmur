@@ -1,35 +1,41 @@
 import { createSignal } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
+import { hexToRgba } from "../lib/color";
+import type { CircleZone } from "../lib/skin-loader";
 
 interface MicButtonProps {
-  zone: { cx: number; cy: number; radius: number; ledRadius: number; taperRadius: number };
+  zone: CircleZone;
   sourceWidth: number;
   sourceHeight: number;
+  accentColor: string;
 }
 
 export function MicButton(props: MicButtonProps) {
   const [isHeld, setIsHeld] = createSignal(false);
 
-  const leftPct = () => ((props.zone.cx - props.zone.ledRadius) / props.sourceWidth) * 100;
-  const topPct = () => ((props.zone.cy - props.zone.ledRadius) / props.sourceHeight) * 100;
-  const widthPct = () => ((props.zone.ledRadius * 2) / props.sourceWidth) * 100;
-  const heightPct = () => ((props.zone.ledRadius * 2) / props.sourceHeight) * 100;
+  const effectiveLedR = () => props.zone.ledRadius ?? props.zone.radius * 1.08;
+  const effectiveTaperR = () => props.zone.taperRadius ?? props.zone.radius * 1.23;
 
-  const taperLeftPct = () => ((props.zone.cx - props.zone.taperRadius) / props.sourceWidth) * 100;
-  const taperTopPct = () => ((props.zone.cy - props.zone.taperRadius) / props.sourceHeight) * 100;
-  const taperWidthPct = () => ((props.zone.taperRadius * 2) / props.sourceWidth) * 100;
-  const taperHeightPct = () => ((props.zone.taperRadius * 2) / props.sourceHeight) * 100;
+  const leftPct = () => ((props.zone.cx - effectiveLedR()) / props.sourceWidth) * 100;
+  const topPct = () => ((props.zone.cy - effectiveLedR()) / props.sourceHeight) * 100;
+  const widthPct = () => ((effectiveLedR() * 2) / props.sourceWidth) * 100;
+  const heightPct = () => ((effectiveLedR() * 2) / props.sourceHeight) * 100;
+
+  const taperLeftPct = () => ((props.zone.cx - effectiveTaperR()) / props.sourceWidth) * 100;
+  const taperTopPct = () => ((props.zone.cy - effectiveTaperR()) / props.sourceHeight) * 100;
+  const taperWidthPct = () => ((effectiveTaperR() * 2) / props.sourceWidth) * 100;
+  const taperHeightPct = () => ((effectiveTaperR() * 2) / props.sourceHeight) * 100;
 
   const ledRingPx = () => {
-    const ledR = (props.zone.ledRadius / props.sourceWidth) * 690;
+    const lr = (effectiveLedR() / props.sourceWidth) * 690;
     const btnR = (props.zone.radius / props.sourceWidth) * 690;
-    return Math.max(1, Math.round(ledR - btnR));
+    return Math.max(1, Math.round(lr - btnR));
   };
 
   const taperSpreadPx = () => {
-    const taperR = (props.zone.taperRadius / props.sourceWidth) * 690;
-    const ledR = (props.zone.ledRadius / props.sourceWidth) * 690;
-    return Math.max(1, Math.round(taperR - ledR));
+    const tr = (effectiveTaperR() / props.sourceWidth) * 690;
+    const lr = (effectiveLedR() / props.sourceWidth) * 690;
+    return Math.max(1, Math.round(tr - lr));
   };
 
   const handleDown = async () => {
@@ -52,6 +58,8 @@ export function MicButton(props: MicButtonProps) {
     }
   };
 
+  const c = () => props.accentColor;
+
   return (
     <>
       <div
@@ -65,8 +73,8 @@ export function MicButton(props: MicButtonProps) {
           "pointer-events": "none",
           "z-index": 5,
           "box-shadow": isHeld()
-            ? "inset 0 0 12px 6px rgba(0, 212, 255, 0.2)"
-            : "inset 0 0 5px 2px rgba(0, 212, 255, 0.04)",
+            ? `inset 0 0 12px 6px ${hexToRgba(c(), 0.2)}`
+            : `inset 0 0 5px 2px ${hexToRgba(c(), 0.04)}`,
           transition: "box-shadow 0.15s ease",
         }}
       />
@@ -89,11 +97,11 @@ export function MicButton(props: MicButtonProps) {
           "z-index": 10,
           transition: "all 0.15s ease",
           outline: isHeld()
-            ? `${ledRingPx()}px solid rgba(0, 212, 255, 0.5)`
-            : `${ledRingPx()}px solid rgba(0, 212, 255, 0.1)`,
+            ? `${ledRingPx()}px solid ${hexToRgba(c(), 0.5)}`
+            : `${ledRingPx()}px solid ${hexToRgba(c(), 0.1)}`,
           "outline-offset": "0px",
           "box-shadow": isHeld()
-            ? `0 0 ${taperSpreadPx()}px ${Math.round(taperSpreadPx() / 2)}px rgba(0, 212, 255, 0.15)`
+            ? `0 0 ${taperSpreadPx()}px ${Math.round(taperSpreadPx() / 2)}px ${hexToRgba(c(), 0.15)}`
             : "none",
           transform: isHeld() ? "scale(0.98)" : "scale(1)",
           padding: 0,

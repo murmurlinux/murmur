@@ -1,6 +1,9 @@
-import bodyImage from "../assets/skins/gemini-v1/body.png";
+interface SkinRendererProps {
+  imageSrc: string;
+  hueRotation: number;
+}
 
-export function SkinRenderer() {
+export function SkinRenderer(props: SkinRendererProps) {
   return (
     <div
       style={{
@@ -14,7 +17,7 @@ export function SkinRenderer() {
     >
       {/* Body layer — the main device image */}
       <img
-        src={bodyImage}
+        src={props.imageSrc}
         alt=""
         draggable={false}
         style={{
@@ -25,6 +28,8 @@ export function SkinRenderer() {
           height: "100%",
           "object-fit": "contain",
           "pointer-events": "none",
+          filter: props.hueRotation !== 0 ? `hue-rotate(${props.hueRotation}deg)` : "none",
+          transition: "filter 0.3s ease",
         }}
       />
     </div>
