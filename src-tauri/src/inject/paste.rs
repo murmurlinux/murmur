@@ -38,7 +38,7 @@ pub fn get_active_window() -> Option<String> {
 /// Checks for xdotool availability before starting.
 pub fn start_window_tracker() {
     if !is_xdotool_available() {
-        eprintln!("Warning: xdotool not found. Text injection will use clipboard only.");
+        log::warn!("xdotool not found. Text injection will use clipboard only.");
         return;
     }
 
@@ -62,7 +62,7 @@ pub fn start_window_tracker() {
             })
             .unwrap_or_default();
 
-        println!("Murmur window IDs (by class): {:?}", murmur_ids);
+        log::debug!("Murmur window IDs (by class): {:?}", murmur_ids);
 
         while !TRACKER_STOP.load(Ordering::Relaxed) {
             std::thread::sleep(std::time::Duration::from_millis(200));
@@ -76,11 +76,12 @@ pub fn start_window_tracker() {
             }
         }
 
-        println!("Window tracker thread stopped");
+        log::debug!("Window tracker thread stopped");
     });
 }
 
-/// Stop the window tracker thread.
+/// Stop the window tracker thread (called on app shutdown).
+#[allow(dead_code)]
 pub fn stop_window_tracker() {
     TRACKER_STOP.store(true, Ordering::Relaxed);
 }
@@ -145,10 +146,10 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 
         match activate_status {
             Ok(s) if s.success() => {
-                println!("Refocused window: {}", wid);
+                log::debug!("Refocused window: {}", wid);
             }
             _ => {
-                eprintln!("Failed to refocus window {}. Text is on clipboard.", wid);
+                log::warn!("Failed to refocus window {}. Text is on clipboard.", wid);
                 return Ok(());
             }
         }
@@ -156,7 +157,7 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
         // Small delay for window manager to fully settle
         std::thread::sleep(std::time::Duration::from_millis(50));
     } else {
-        eprintln!("No target window found. Text is on clipboard.");
+        log::warn!("No target window found. Text is on clipboard.");
         return Ok(());
     }
 
@@ -167,15 +168,15 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 
     match status {
         Ok(s) if s.success() => {
-            println!("Typed text: {:?}", &text[..text.len().min(50)]);
+            log::debug!("Typed text: {:?}", &text[..text.len().min(50)]);
             Ok(())
         }
         Ok(s) => {
-            eprintln!("xdotool type exited with: {}. Text is on clipboard.", s);
+            log::warn!("xdotool type exited with: {}. Text is on clipboard.", s);
             Ok(())
         }
         Err(e) => {
-            eprintln!("xdotool not found: {}. Text is on clipboard — paste manually.", e);
+            log::error!("xdotool not found: {}. Text is on clipboard — paste manually.", e);
             Err(anyhow::anyhow!(
                 "xdotool not installed. Text copied to clipboard — paste manually."
             ))

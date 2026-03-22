@@ -173,14 +173,14 @@ pub async fn download_model_by_name(
     let dest = models_dir().join(filename);
 
     if dest.exists() {
-        println!("Model already downloaded: {}", dest.display());
+        log::info!("Model already downloaded: {}", dest.display());
         return Ok(dest);
     }
 
     let (url, expected_sha) = get_model_meta(filename)
         .ok_or_else(|| anyhow::anyhow!("Unknown model: {}", filename))?;
 
-    println!("Downloading whisper model to: {}", dest.display());
+    log::info!("Downloading whisper model to: {}", dest.display());
 
     // Download to a temporary file first (atomic write pattern)
     let tmp_dest = models_dir().join(format!("{}.tmp", filename));
@@ -237,7 +237,7 @@ pub async fn download_model_by_name(
         Ok(true) => {
             // Checksum matches — atomically rename to final destination
             std::fs::rename(&tmp_dest, &dest)?;
-            println!("Model download complete and verified: {} bytes", downloaded);
+            log::info!("Model download complete and verified: {} bytes", downloaded);
             Ok(dest)
         }
         Ok(false) => {
