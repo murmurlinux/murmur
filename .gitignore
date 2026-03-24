@@ -4,3 +4,20 @@ src-tauri/target/
 src-tauri/gen/
 *.tsbuildinfo
 .vite/
+
+# Secrets & credentials
+.env*
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+.secrets*
+
+# Research & design (not part of the app)
+.firecrawl/
+.claude/
+design/COMPETITOR-RESEARCH.*
+design/DESIGN.html
+design/skin-test.html
+design/website-*.html

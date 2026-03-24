@@ -2,6 +2,10 @@
 name = "murmur"
 version = "0.1.0"
 edition = "2021"
+description = "AI voice-to-text gadget for Linux — speak anywhere, type everywhere"
+homepage = "https://murmurlinux.com"
+repository = "https://github.com/murmurlinux/murmur"
+license = "GPL-3.0"
 
 [lib]
 name = "murmur_lib"
