@@ -51,7 +51,7 @@ pub struct ModelDownloadProgress {
 
 /// Get the models directory (~/.local/share/murmur/models/)
 pub fn models_dir() -> PathBuf {
-    if let Some(dirs) = ProjectDirs::from("com", "syncrotrade", "murmur") {
+    if let Some(dirs) = ProjectDirs::from("com", "murmurlinux", "murmur") {
         let path = dirs.data_dir().join("models");
         std::fs::create_dir_all(&path).ok();
         path
