@@ -26,7 +26,7 @@ const defaultSkin: LoadedSkin = {
 export function GadgetWindow() {
   const appWindow = getCurrentWindow();
   const [skin, setSkin] = createSignal<LoadedSkin>(defaultSkin);
-  const [accentColor, setAccentColor] = createSignal("#00d4ff");
+  const [accentColor, setAccentColor] = createSignal("#10b981");
 
   // Load settings and skin on mount
   onMount(async () => {
@@ -105,7 +105,7 @@ export function GadgetWindow() {
   const sh = () => skin().config.source.height;
   const zones = () => skin().config.zones;
 
-  // Calculate hue rotation from default cyan (#00d4ff, hue ~191) to accent
+  // Calculate hue rotation from skin base cyan (#00d4ff, hue ~191) to accent
   const hueRotation = () => {
     const defaultHue = 191;
     return hexToHue(accentColor()) - defaultHue;
