@@ -10,7 +10,7 @@ export interface MurmurSettings {
 
 const DEFAULTS: MurmurSettings = {
   skin: "gemini-v1",
-  accentColor: "#00d4ff",
+  accentColor: "#10b981",
   hotkey: "Ctrl+Shift+Space",
   model: "ggml-tiny.en.bin",
   alwaysOnTop: true,
