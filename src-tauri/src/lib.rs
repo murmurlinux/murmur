@@ -83,10 +83,8 @@ pub fn run() {
                 }
             }
 
-            // --- Create popup window (hidden) ---
-            if let Err(e) = commands::popup::create_popup_window(app.handle()) {
-                log::error!("Failed to create popup window: {}", e);
-            }
+            // --- Position popup window (declared in tauri.conf.json, hidden) ---
+            commands::popup::setup_popup_position(app.handle());
 
             // --- System Tray ---
             let show_item =
