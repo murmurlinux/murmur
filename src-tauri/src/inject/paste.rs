@@ -3,12 +3,17 @@ use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
-/// Stores the last known non-Murmur window ID.
-/// Updated by a background polling thread.
+use super::display_server::{self, DisplayServer};
+
+/// Stores the last known non-Murmur window ID (X11 only).
 static LAST_EXTERNAL_WINDOW: Mutex<Option<String>> = Mutex::new(None);
 
 /// Stop flag for the window tracker thread.
 static TRACKER_STOP: AtomicBool = AtomicBool::new(false);
+
+// ---------------------------------------------------------------------------
+// Tool availability checks
+// ---------------------------------------------------------------------------
 
 /// Check if xdotool is available on the system.
 pub fn is_xdotool_available() -> bool {
@@ -18,6 +23,19 @@ pub fn is_xdotool_available() -> bool {
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
+
+/// Check if wtype is available on the system.
+fn is_wtype_available() -> bool {
+    Command::new("wtype")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+// ---------------------------------------------------------------------------
+// X11 window tracking (not available on Wayland)
+// ---------------------------------------------------------------------------
 
 /// Get the currently focused window ID via xdotool.
 pub fn get_active_window() -> Option<String> {
@@ -35,8 +53,15 @@ pub fn get_active_window() -> Option<String> {
 }
 
 /// Start a background thread that tracks the last non-Murmur focused window.
-/// Checks for xdotool availability before starting.
+/// Only runs on X11 — Wayland doesn't expose window IDs.
 pub fn start_window_tracker() {
+    let ds = display_server::detect();
+
+    if ds == DisplayServer::Wayland {
+        log::info!("Wayland detected — window tracking not available (by design).");
+        return;
+    }
+
     if !is_xdotool_available() {
         log::warn!("xdotool not found. Text injection will use clipboard only.");
         return;
@@ -86,16 +111,18 @@ pub fn stop_window_tracker() {
     TRACKER_STOP.store(true, Ordering::Relaxed);
 }
 
-/// Get the last known non-Murmur window ID.
-/// This is the window we should paste into.
+/// Get the last known non-Murmur window ID (X11 only).
 pub fn get_last_external_window() -> Option<String> {
     LAST_EXTERNAL_WINDOW.lock().ok().and_then(|w| w.clone())
 }
 
-/// Sanitise transcribed text for safe xdotool injection.
-/// Strips control characters that could produce unintended keystrokes
-/// (escape sequences, carriage returns, etc.) in the target application.
-fn sanitise_for_xdotool(text: &str) -> String {
+// ---------------------------------------------------------------------------
+// Text sanitisation
+// ---------------------------------------------------------------------------
+
+/// Sanitise transcribed text for safe injection.
+/// Strips control characters that could produce unintended keystrokes.
+fn sanitise_for_injection(text: &str) -> String {
     text.chars()
         .filter(|c| {
             // Allow printable ASCII, newline, tab, and all Unicode above ASCII
@@ -104,41 +131,17 @@ fn sanitise_for_xdotool(text: &str) -> String {
         .collect()
 }
 
-/// Inject transcribed text into the last external window.
-///
-/// Strategy (from xdotool documentation):
-///   1. Refocus the target window using `xdotool windowactivate --sync <id>`
-///      (--sync waits until the window is actually active before proceeding)
-///   2. Type text using `xdotool type` WITHOUT --window flag
-///      (without --window, xdotool uses XTEST which works in ALL apps;
-///       with --window it uses XSendEvent which many apps reject)
-///   3. Also copy text to clipboard as fallback for manual paste
-///
-/// This approach works universally: terminals, text editors, browsers,
-/// IDEs — any X11 application that accepts keyboard input.
-pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow::Error> {
-    if text.is_empty() {
-        return Ok(());
-    }
+// ---------------------------------------------------------------------------
+// X11 injection (xdotool — existing approach)
+// ---------------------------------------------------------------------------
 
-    // Sanitise: strip control characters that could cause unintended keystrokes
-    let text = sanitise_for_xdotool(text);
-    if text.is_empty() {
-        return Ok(());
-    }
-    let text = text.as_str();
-
-    // Always put text on clipboard as fallback for manual paste
-    if let Ok(mut clipboard) = Clipboard::new() {
-        let _ = clipboard.set_text(text);
-    }
-
-    // Determine which window to target
+/// Inject text on X11 via xdotool XTEST.
+fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow::Error> {
     let window_id = target_window
         .map(|s| s.to_string())
         .or_else(get_last_external_window);
 
-    // Step 1: Refocus the target window
+    // Refocus the target window
     if let Some(ref wid) = window_id {
         let activate_status = Command::new("xdotool")
             .args(["windowactivate", "--sync", wid])
@@ -154,21 +157,21 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
             }
         }
 
-        // Small delay for window manager to fully settle
+        // Small delay for window manager to settle
         std::thread::sleep(std::time::Duration::from_millis(50));
     } else {
         log::warn!("No target window found. Text is on clipboard.");
         return Ok(());
     }
 
-    // Step 2: Type text using XTEST (no --window flag = universal compatibility)
+    // Type text using XTEST (no --window flag = universal compatibility)
     let status = Command::new("xdotool")
         .args(["type", "--clearmodifiers", "--delay", "0", text])
         .status();
 
     match status {
         Ok(s) if s.success() => {
-            log::debug!("Typed text: {:?}", &text[..text.len().min(50)]);
+            log::debug!("xdotool typed: {:?}", &text[..text.len().min(50)]);
             Ok(())
         }
         Ok(s) => {
@@ -176,10 +179,101 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
             Ok(())
         }
         Err(e) => {
-            log::error!("xdotool not found: {}. Text is on clipboard — paste manually.", e);
-            Err(anyhow::anyhow!(
-                "xdotool not installed. Text copied to clipboard — paste manually."
-            ))
+            log::error!("xdotool failed: {}. Text is on clipboard.", e);
+            Ok(())
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Wayland injection (wtype + clipboard fallback)
+// ---------------------------------------------------------------------------
+
+/// Inject text on Wayland via wtype, falling back to clipboard + Ctrl+V.
+fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
+    // Try wtype first — Wayland-native, supports Unicode/CJK
+    if is_wtype_available() {
+        let status = Command::new("wtype")
+            .arg("--")
+            .arg(text)
+            .status();
+
+        match status {
+            Ok(s) if s.success() => {
+                log::debug!("wtype typed: {:?}", &text[..text.len().min(50)]);
+                return Ok(());
+            }
+            Ok(s) => {
+                log::warn!("wtype exited with: {}. Trying Ctrl+V fallback.", s);
+            }
+            Err(e) => {
+                log::warn!("wtype failed: {}. Trying Ctrl+V fallback.", e);
+            }
+        }
+    } else {
+        log::info!("wtype not found. Using clipboard + Ctrl+V fallback.");
+    }
+
+    // Fallback: clipboard is already set by caller, simulate Ctrl+V
+    paste_via_ctrl_v_wayland()
+}
+
+/// Simulate Ctrl+V on Wayland via wtype key simulation.
+fn paste_via_ctrl_v_wayland() -> Result<(), anyhow::Error> {
+    // wtype can simulate key combos: -M = modifier down, -m = modifier up, -P/-p = key
+    let status = Command::new("wtype")
+        .args(["-M", "ctrl", "-P", "v", "-p", "v", "-m", "ctrl"])
+        .status();
+
+    match status {
+        Ok(s) if s.success() => {
+            log::debug!("Ctrl+V simulated via wtype");
+            Ok(())
+        }
+        _ => {
+            log::warn!("Ctrl+V simulation failed. Text is on clipboard — paste manually.");
+            Ok(())
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Main entry point — dispatches based on display server
+// ---------------------------------------------------------------------------
+
+/// Inject transcribed text into the target application.
+///
+/// Strategy:
+///   - X11: refocus target window via xdotool, type via XTEST
+///   - Wayland: type via wtype (Unicode-safe), fallback to clipboard + Ctrl+V
+///   - Unknown: clipboard only
+///
+/// Text is always copied to clipboard as a universal fallback.
+pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow::Error> {
+    if text.is_empty() {
+        return Ok(());
+    }
+
+    let text = sanitise_for_injection(text);
+    if text.is_empty() {
+        return Ok(());
+    }
+    let text = text.as_str();
+
+    // Always copy to clipboard as universal fallback
+    if let Ok(mut clipboard) = Clipboard::new() {
+        let _ = clipboard.set_text(text);
+    }
+
+    let ds = display_server::detect();
+    log::debug!("Injecting text via {} display server", ds);
+
+    match ds {
+        DisplayServer::X11 => paste_text_x11(text, target_window),
+        DisplayServer::Wayland => paste_text_wayland(text),
+        DisplayServer::Unknown => {
+            log::warn!("Unknown display server. Text is on clipboard — paste manually.");
+            Ok(())
         }
     }
 }
