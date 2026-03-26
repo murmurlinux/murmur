@@ -1,8 +1,9 @@
 import { createSignal, onMount, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { loadSettings, saveSetting, type MurmurSettings } from "../lib/settings";
-import { hexToHue, hueToHex } from "../lib/color";
+import { hexToHue, hueToHex, hexToRgba } from "../lib/color";
 import { MurmurLogo } from "./MurmurLogo";
 
 // --- Ocean Terminal Theme ---
@@ -49,7 +50,7 @@ function Toggle(props: { value: boolean; onChange: () => void; accent: string })
         "border-radius": "11px",
         border: "none",
         cursor: "pointer",
-        background: props.value ? props.accent : "rgba(255, 255, 255, 0.08)",
+        background: props.value ? hexToRgba(props.accent, 0.55) : "rgba(255, 255, 255, 0.08)",
         position: "relative",
         transition: "background 0.2s ease",
         "flex-shrink": "0",
@@ -60,7 +61,7 @@ function Toggle(props: { value: boolean; onChange: () => void; accent: string })
           width: "16px",
           height: "16px",
           "border-radius": "50%",
-          background: "#fff",
+          background: "rgba(255, 255, 255, 0.9)",
           position: "absolute",
           top: "3px",
           left: props.value ? "21px" : "3px",
@@ -186,6 +187,8 @@ export function SettingsPanel() {
         "font-family": "-apple-system, system-ui, sans-serif",
         "overflow-y": "auto",
         position: "relative",
+        "border-radius": "12px",
+        border: "1px solid rgba(255, 255, 255, 0.06)",
       }}
     >
       {/* Subtle gradient overlay */}
@@ -203,13 +206,21 @@ export function SettingsPanel() {
       />
 
       <div style={{ position: "relative", "z-index": 1 }}>
-        {/* Header */}
+        {/* Draggable title bar */}
         <div
+          data-tauri-drag-region
           style={{
             display: "flex",
             "align-items": "center",
             gap: "10px",
             "margin-bottom": "20px",
+            cursor: "grab",
+            "user-select": "none",
+          }}
+          onMouseDown={(e) => {
+            if (!(e.target as HTMLElement).closest("button")) {
+              getCurrentWindow().startDragging();
+            }
           }}
         >
           <MurmurLogo size={28} color="#14b8a6" />
@@ -218,9 +229,37 @@ export function SettingsPanel() {
               Murmur
             </div>
           </div>
-          <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace" }}>
+          <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace", "margin-right": "8px" }}>
             v0.1.1
           </span>
+          <button
+            onClick={() => getCurrentWindow().close()}
+            style={{
+              width: "24px",
+              height: "24px",
+              "border-radius": "6px",
+              border: "none",
+              background: "rgba(255, 255, 255, 0.04)",
+              color: "rgba(255, 255, 255, 0.3)",
+              cursor: "pointer",
+              "font-size": "14px",
+              display: "flex",
+              "align-items": "center",
+              "justify-content": "center",
+              transition: "background 0.15s ease, color 0.15s ease",
+              padding: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(220, 50, 50, 0.3)";
+              e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
+              e.currentTarget.style.color = "rgba(255, 255, 255, 0.3)";
+            }}
+          >
+            ✕
+          </button>
         </div>
 
         {error() && (
@@ -291,10 +330,10 @@ export function SettingsPanel() {
                     width: "28px",
                     height: "28px",
                     "border-radius": "50%",
-                    background: accent(),
-                    border: "2px solid rgba(255, 255, 255, 0.1)",
+                    background: hexToRgba(accent(), 0.6),
+                    border: "2px solid rgba(255, 255, 255, 0.08)",
                     "flex-shrink": "0",
-                    "box-shadow": `0 0 12px ${accent()}33`,
+                    "box-shadow": `0 0 8px ${accent()}22`,
                   }}
                 />
               </div>
