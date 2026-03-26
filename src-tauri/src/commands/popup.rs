@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager, PhysicalPosition};
 
-const POPUP_WIDTH: u32 = 200;
-const POPUP_HEIGHT: u32 = 48;
+const POPUP_WIDTH: u32 = 180;
+const POPUP_HEIGHT: u32 = 44;
 const POPUP_MARGIN_BOTTOM: u32 = 40;
 
 /// Position the popup window at bottom-center of the primary monitor.
