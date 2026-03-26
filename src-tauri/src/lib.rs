@@ -83,6 +83,11 @@ pub fn run() {
                 }
             }
 
+            // --- Create popup window (hidden) ---
+            if let Err(e) = commands::popup::create_popup_window(app.handle()) {
+                log::error!("Failed to create popup window: {}", e);
+            }
+
             // --- System Tray ---
             let show_item =
                 MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
