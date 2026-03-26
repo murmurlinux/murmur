@@ -56,13 +56,13 @@ wget https://murmurlinux.com/latest.deb
 sudo dpkg -i latest.deb
 ```
 
-> Requires: Linux (Ubuntu 22.04+, Fedora 38+, Arch), xdotool, PipeWire or PulseAudio
+> Requires: Linux (Ubuntu 22.04+, Fedora 38+, Arch), PipeWire or PulseAudio, xdotool (X11) or wtype (Wayland)
 
 ## Build from Source
 
 ```bash
 # Prerequisites
-sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xdotool
+sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xdotool wtype
 
 # Clone and build
 git clone https://github.com/murmurlinux/murmur.git
