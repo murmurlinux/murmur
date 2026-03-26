@@ -1,5 +1,6 @@
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{AppHandle, Manager, WebviewUrl};
+use tauri_utils::config::Color;
 
 const POPUP_WIDTH: u32 = 280;
 const POPUP_HEIGHT: u32 = 48;
@@ -24,6 +25,7 @@ pub fn create_popup_window(app: &AppHandle) -> Result<(), String> {
     .resizable(false)
     .decorations(false)
     .transparent(true)
+    .background_color(Color(0, 0, 0, 0)) // Fully transparent WebView background
     .always_on_top(true)
     .skip_taskbar(true)
     .visible(false)
