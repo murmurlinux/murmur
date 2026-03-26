@@ -25,7 +25,7 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 | **Processing** | 100% local | 100% local | Cloud | 100% local |
 | **Engine** | whisper.cpp | whisper.cpp / VOSK | Proprietary | VOSK |
 | **GUI** | Floating widget | GTK tray | Tray icon | None (CLI) |
-| **Binary size** | ~3 MB | ~200 MB+ | ~50 MB | ~1 MB |
+| **Binary size** | ~5 MB | ~200 MB+ | ~50 MB | ~1 MB |
 | **Memory** | ~50 MB | ~300 MB | ~800 MB | ~200 MB |
 | **Stack** | Rust + Tauri | Python + GTK | Electron | Python |
 | **Cost** | Free | Free | $144/yr | Free |
@@ -37,7 +37,7 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 - **Universal Text Injection** — types into any app via XTEST. Terminals, IDEs, browsers, chat — if it has a cursor, Murmur types into it.
 - **Push-to-Talk** — configurable global hotkey. Hold to record, release to transcribe.
 - **Multiple Models** — Tiny (75 MB, ~3s), Base (142 MB, ~8s), Small (466 MB, best accuracy). Choose your tradeoff.
-- **Tiny Footprint** — ~3 MB binary, ~50 MB RAM. Built with Rust + Tauri 2. Starts in under a second.
+- **Tiny Footprint** — ~5 MB binary, ~50 MB RAM. Built with Rust + Tauri 2. Starts in under a second.
 
 ## Quick Install
 
