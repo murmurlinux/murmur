@@ -1,4 +1,4 @@
-import { onMount, onCleanup, createSignal, createEffect } from "solid-js";
+import { onMount, onCleanup, createSignal } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 import logoImg from "../assets/logo.png";
 
@@ -53,43 +53,53 @@ export function RecordingPopup() {
   });
 
   return (
+    // Transparent container fills the whole window — only the pill is visible
     <div
       style={{
-        display: "flex",
-        "align-items": "center",
-        gap: "12px",
         width: "100%",
         height: "100%",
-        padding: "0 16px",
-        background: "rgba(30, 30, 36, 0.92)",
-        "border-radius": "24px",
-        border: "1px solid rgba(20, 184, 166, 0.15)",
-        "box-shadow": "0 4px 20px rgba(0, 0, 0, 0.4)",
+        display: "flex",
+        "align-items": "flex-end",
+        "justify-content": "center",
+        padding: "0 0 8px 0",
       }}
     >
-      <img src={logoImg} alt="M" width={24} height={24} style={{ "border-radius": "4px" }} />
-
+      {/* The actual pill */}
       <div
         style={{
-          display: "flex",
+          display: "inline-flex",
           "align-items": "center",
-          gap: "2px",
-          flex: 1,
-          height: "28px",
+          gap: "10px",
+          padding: "8px 14px",
+          background: "rgba(30, 30, 36, 0.92)",
+          "border-radius": "24px",
+          border: "1px solid rgba(20, 184, 166, 0.15)",
+          "box-shadow": "0 4px 20px rgba(0, 0, 0, 0.4)",
         }}
       >
-        {bars().map((h) => (
-          <div
-            style={{
-              width: "3px",
-              height: `${Math.max(4, h * 24)}px`,
-              background: "#14b8a6",
-              "border-radius": "1.5px",
-              opacity: `${0.3 + h * 0.7}`,
-              transition: "height 0.05s ease, opacity 0.05s ease",
-            }}
-          />
-        ))}
+        <img src={logoImg} alt="M" width={24} height={24} style={{ "border-radius": "4px" }} />
+
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "2px",
+            height: "24px",
+          }}
+        >
+          {bars().map((h) => (
+            <div
+              style={{
+                width: "3px",
+                height: `${Math.max(4, h * 20)}px`,
+                background: "#14b8a6",
+                "border-radius": "1.5px",
+                opacity: `${0.3 + h * 0.7}`,
+                transition: "height 0.05s ease, opacity 0.05s ease",
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

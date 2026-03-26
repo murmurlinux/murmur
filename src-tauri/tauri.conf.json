@@ -26,15 +26,14 @@
         "label": "popup",
         "title": "Murmur Recording",
         "url": "popup.html",
-        "width": 180,
-        "height": 44,
+        "width": 300,
+        "height": 300,
         "resizable": false,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "visible": false,
-        "skipTaskbar": true,
-        "backgroundColor": [0, 0, 0, 0]
+        "skipTaskbar": true
       }
     ],
     "security": {
