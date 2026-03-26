@@ -1,51 +1,102 @@
-import { createSignal, onMount, For } from "solid-js";
+import { createSignal, onMount, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings } from "../lib/settings";
 import { hexToHue, hueToHex } from "../lib/color";
+import { MurmurLogo } from "./MurmurLogo";
 
-// --- Styles ---
+// --- Ocean Terminal Theme ---
 
-const sectionStyle = {
-  "margin-bottom": "20px",
-  padding: "16px",
-  background: "#1a1a2e",
-  "border-radius": "10px",
-  border: "1px solid #2a2a3e",
+const glass: JSX.CSSProperties = {
+  "margin-bottom": "16px",
+  padding: "18px",
+  background: "rgba(255, 255, 255, 0.025)",
+  "border-radius": "14px",
+  border: "1px solid rgba(255, 255, 255, 0.06)",
+  transition: "border-color 0.2s ease",
 };
 
-const labelStyle = {
+const label: JSX.CSSProperties = {
   display: "block",
-  "font-size": "11px",
+  "font-size": "10px",
   "font-weight": "600",
-  "text-transform": "uppercase" as const,
-  "letter-spacing": "0.05em",
-  color: "#888",
-  "margin-bottom": "8px",
+  "text-transform": "uppercase",
+  "letter-spacing": "0.08em",
+  color: "#14b8a6",
+  "margin-bottom": "10px",
 };
 
-const inputStyle = {
+const inputBase: JSX.CSSProperties = {
   width: "100%",
   padding: "8px 12px",
-  background: "#12121a",
-  border: "1px solid #2a2a3e",
-  "border-radius": "6px",
+  background: "rgba(0, 0, 0, 0.3)",
+  border: "1px solid rgba(255, 255, 255, 0.06)",
+  "border-radius": "8px",
   color: "#e0e0e0",
-  "font-size": "14px",
-  "font-family": "'Inter', -apple-system, BlinkMacSystemFont, monospace",
-  "box-sizing": "border-box" as const,
+  "font-size": "13px",
+  "font-family": "-apple-system, system-ui, sans-serif",
+  "box-sizing": "border-box",
   outline: "none",
 };
+
+function Toggle(props: { value: boolean; onChange: () => void; accent: string }) {
+  return (
+    <button
+      onClick={props.onChange}
+      style={{
+        width: "40px",
+        height: "22px",
+        "border-radius": "11px",
+        border: "none",
+        cursor: "pointer",
+        background: props.value ? props.accent : "rgba(255, 255, 255, 0.08)",
+        position: "relative",
+        transition: "background 0.2s ease",
+        "flex-shrink": "0",
+      }}
+    >
+      <div
+        style={{
+          width: "16px",
+          height: "16px",
+          "border-radius": "50%",
+          background: "#fff",
+          position: "absolute",
+          top: "3px",
+          left: props.value ? "21px" : "3px",
+          transition: "left 0.2s ease",
+        }}
+      />
+    </button>
+  );
+}
+
+function SettingRow(props: { label: string; children: JSX.Element }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        "align-items": "center",
+        "justify-content": "space-between",
+      }}
+    >
+      <span style={{ "font-size": "13px", color: "rgba(255, 255, 255, 0.7)" }}>{props.label}</span>
+      {props.children}
+    </div>
+  );
+}
 
 // --- Component ---
 
 export function SettingsPanel() {
   const [settings, setSettings] = createSignal<MurmurSettings | null>(null);
-  const [hue, setHue] = createSignal(191); // default cyan hue
+  const [hue, setHue] = createSignal(160);
   const [capturingHotkey, setCapturingHotkey] = createSignal(false);
   const [models, setModels] = createSignal<any[]>([]);
   const [downloadingModel, setDownloadingModel] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
+
+  const accent = () => hueToHex(hue());
 
   const showError = (msg: string) => {
     setError(msg);
@@ -57,7 +108,6 @@ export function SettingsPanel() {
     setSettings(s);
     setHue(hexToHue(s.accentColor));
 
-    // Load model list
     try {
       const list = await invoke<any[]>("list_models");
       setModels(list);
@@ -75,8 +125,6 @@ export function SettingsPanel() {
     await emit("settings-changed", { key, value });
   };
 
-  // --- Hotkey capture ---
-
   function handleHotkeyKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -86,7 +134,6 @@ export function SettingsPanel() {
       return;
     }
 
-    // Ignore standalone modifier presses
     if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return;
 
     const parts: string[] = [];
@@ -95,7 +142,6 @@ export function SettingsPanel() {
     if (e.shiftKey) parts.push("Shift");
     if (e.metaKey) parts.push("Super");
 
-    // Normalize key name
     let key = e.key;
     if (key === " ") key = "Space";
     else if (key.length === 1) key = key.toUpperCase();
@@ -105,20 +151,15 @@ export function SettingsPanel() {
 
     setCapturingHotkey(false);
     updateSetting("hotkey", combo);
-
-    // Try to change hotkey on the backend
     invoke("change_hotkey", { newHotkey: combo }).catch((err) =>
       showError(`Failed to set hotkey "${combo}": ${err}`),
     );
   }
 
-  // --- Model actions ---
-
   async function downloadModel(filename: string) {
     setDownloadingModel(filename);
     try {
       await invoke("download_model", { modelFilename: filename });
-      // Refresh model list
       const list = await invoke<any[]>("list_models");
       setModels(list);
     } catch (e) {
@@ -133,370 +174,320 @@ export function SettingsPanel() {
     updateSetting("model", filename);
   }
 
-  // --- Always on Top ---
-
-  async function toggleAlwaysOnTop() {
-    const s = settings();
-    if (!s) return;
-    const newVal = !s.alwaysOnTop;
-    updateSetting("alwaysOnTop", newVal);
-  }
-
   return (
     <div
       style={{
-        background: "#12121a",
-        color: "#e0e0e0",
+        background: "#060d18",
+        color: "rgba(255, 255, 255, 0.6)",
         width: "100%",
         height: "100vh",
-        padding: "24px",
+        padding: "20px",
         "box-sizing": "border-box",
-        "font-family": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        "font-family": "-apple-system, system-ui, sans-serif",
         "overflow-y": "auto",
+        position: "relative",
       }}
     >
-      <h1
+      {/* Subtle gradient overlay */}
+      <div
         style={{
-          "font-size": "20px",
-          "font-weight": 600,
-          margin: "0 0 20px 0",
-          color: "#fff",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "radial-gradient(ellipse at 50% 0%, rgba(20, 184, 166, 0.04) 0%, transparent 60%)",
+          "pointer-events": "none",
+          "z-index": 0,
         }}
-      >
-        Settings
-      </h1>
+      />
 
-      {error() && (
+      <div style={{ position: "relative", "z-index": 1 }}>
+        {/* Header */}
         <div
           style={{
-            padding: "10px 14px",
-            background: "rgba(220, 50, 50, 0.15)",
-            border: "1px solid rgba(220, 50, 50, 0.3)",
-            "border-radius": "8px",
-            color: "#ff8888",
-            "font-size": "13px",
-            "margin-bottom": "16px",
-            cursor: "pointer",
+            display: "flex",
+            "align-items": "center",
+            gap: "10px",
+            "margin-bottom": "20px",
           }}
-          onClick={() => setError(null)}
         >
-          {error()}
+          <MurmurLogo size={28} color="#14b8a6" />
+          <div style={{ flex: 1 }}>
+            <div style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.9)" }}>
+              Murmur
+            </div>
+          </div>
+          <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace" }}>
+            v0.1.1
+          </span>
         </div>
-      )}
 
-      {settings() && (
-        <>
-          {/* --- Skin Picker --- */}
-          <div style={sectionStyle}>
-            <label style={labelStyle}>Skin</label>
-            <div
-              style={{
-                padding: "10px 14px",
-                background: "#12121a",
-                "border-radius": "6px",
-                border: "1px solid #2a2a3e",
-                color: "#e0e0e0",
-                "font-size": "14px",
-              }}
-            >
-              Gemini V1
-              <span style={{ color: "#555", "margin-left": "8px", "font-size": "12px" }}>
-                (default)
-              </span>
-            </div>
-          </div>
-
-          {/* --- Accent Colour --- */}
-          <div style={sectionStyle}>
-            <label style={labelStyle}>Accent Colour</label>
-            <div style={{ display: "flex", "align-items": "center", gap: "14px" }}>
-              <input
-                type="range"
-                min="0"
-                max="360"
-                value={hue()}
-                onInput={(e) => {
-                  const h = parseInt(e.currentTarget.value);
-                  setHue(h);
-                  updateSetting("accentColor", hueToHex(h));
-                }}
-                style={{
-                  flex: 1,
-                  height: "6px",
-                  "border-radius": "3px",
-                  appearance: "auto",
-                  cursor: "pointer",
-                  background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
-                }}
-              />
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  "border-radius": "50%",
-                  background: hueToHex(hue()),
-                  border: "2px solid #2a2a3e",
-                  "flex-shrink": "0",
-                }}
-              />
-            </div>
-          </div>
-
-          {/* --- Hotkey --- */}
-          <div style={sectionStyle}>
-            <label style={labelStyle}>Global Hotkey</label>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <div
-                tabIndex={0}
-                onFocus={() => setCapturingHotkey(true)}
-                onBlur={() => setCapturingHotkey(false)}
-                onKeyDown={(e) => capturingHotkey() && handleHotkeyKeyDown(e)}
-                style={{
-                  ...inputStyle,
-                  flex: "1",
-                  cursor: "pointer",
-                  "border-color": capturingHotkey() ? hueToHex(hue()) : "#2a2a3e",
-                  "text-align": "center",
-                  "user-select": "none",
-                }}
-              >
-                {capturingHotkey() ? (
-                  <span style={{ color: "#888", "font-style": "italic" }}>
-                    Press a key combo...
-                  </span>
-                ) : (
-                  settings()!.hotkey
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  updateSetting("hotkey", "Ctrl+Shift+Space");
-                  invoke("change_hotkey", { newHotkey: "Ctrl+Shift+Space" }).catch(() => {});
-                }}
-                style={{
-                  padding: "8px 12px",
-                  background: "#2a2a3e",
-                  border: "1px solid #3a3a4e",
-                  "border-radius": "6px",
-                  color: "#888",
-                  cursor: "pointer",
-                  "font-size": "12px",
-                  "white-space": "nowrap",
-                }}
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-
-          {/* --- Model --- */}
-          <div style={sectionStyle}>
-            <label style={labelStyle}>Whisper Model</label>
-            <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
-              {models().length > 0 ? (
-                <For each={models()}>
-                  {(model) => (
-                    <div
-                      style={{
-                        display: "flex",
-                        "align-items": "center",
-                        gap: "10px",
-                        padding: "10px 12px",
-                        background:
-                          settings()!.model === model.filename ? "#1e1e38" : "#12121a",
-                        border:
-                          settings()!.model === model.filename
-                            ? `1px solid ${hueToHex(hue())}44`
-                            : "1px solid #2a2a3e",
-                        "border-radius": "6px",
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ "font-size": "14px", "font-weight": 500 }}>
-                          {model.name}
-                        </div>
-                        <div style={{ "font-size": "11px", color: "#666", "margin-top": "2px" }}>
-                          {model.description} — {model.size_mb}MB
-                        </div>
-                      </div>
-                      {model.downloaded ? (
-                        settings()!.model === model.filename ? (
-                          <span
-                            style={{
-                              "font-size": "11px",
-                              color: hueToHex(hue()),
-                              "font-weight": 600,
-                            }}
-                          >
-                            Active
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => selectModel(model.filename)}
-                            style={{
-                              padding: "4px 10px",
-                              background: "#2a2a3e",
-                              border: "1px solid #3a3a4e",
-                              "border-radius": "4px",
-                              color: "#ccc",
-                              cursor: "pointer",
-                              "font-size": "11px",
-                            }}
-                          >
-                            Select
-                          </button>
-                        )
-                      ) : (
-                        <button
-                          onClick={() => downloadModel(model.filename)}
-                          disabled={downloadingModel() === model.filename}
-                          style={{
-                            padding: "4px 10px",
-                            background:
-                              downloadingModel() === model.filename ? "#1a1a2e" : "#2a2a3e",
-                            border: "1px solid #3a3a4e",
-                            "border-radius": "4px",
-                            color:
-                              downloadingModel() === model.filename ? "#666" : hueToHex(hue()),
-                            cursor:
-                              downloadingModel() === model.filename ? "wait" : "pointer",
-                            "font-size": "11px",
-                          }}
-                        >
-                          {downloadingModel() === model.filename ? "Downloading..." : "Download"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </For>
-              ) : (
-                <div style={{ color: "#555", "font-size": "13px" }}>
-                  Model: {settings()!.model}
-                  <div style={{ "font-size": "11px", "margin-top": "4px" }}>
-                    Model management commands will be available after backend update.
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* --- Recording Mode --- */}
-          <div style={sectionStyle}>
-            <label style={labelStyle}>Recording Mode</label>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {(["hold", "tap"] as const).map((mode) => (
-                <button
-                  onClick={() => updateSetting("recordMode", mode)}
-                  style={{
-                    flex: 1,
-                    padding: "8px 12px",
-                    background: settings()!.recordMode === mode ? `${hueToHex(hue())}22` : "#12121a",
-                    border: settings()!.recordMode === mode
-                      ? `1px solid ${hueToHex(hue())}66`
-                      : "1px solid #2a2a3e",
-                    "border-radius": "6px",
-                    color: settings()!.recordMode === mode ? hueToHex(hue()) : "#888",
-                    cursor: "pointer",
-                    "font-size": "13px",
-                    "font-weight": settings()!.recordMode === mode ? "600" : "400",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  {mode === "hold" ? "Hold to Record" : "Tap to Toggle"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* --- General --- */}
-          <div style={sectionStyle}>
-            <label style={labelStyle}>General</label>
-            <div
-              style={{
-                display: "flex",
-                "align-items": "center",
-                "justify-content": "space-between",
-              }}
-            >
-              <span style={{ "font-size": "14px" }}>Show Skin on Startup</span>
-              <button
-                onClick={() => updateSetting("showSkin", !settings()!.showSkin)}
-                style={{
-                  width: "44px",
-                  height: "24px",
-                  "border-radius": "12px",
-                  border: "none",
-                  cursor: "pointer",
-                  background: settings()!.showSkin ? hueToHex(hue()) : "#2a2a3e",
-                  position: "relative",
-                  transition: "background 0.2s ease",
-                }}
-              >
-                <div
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    "border-radius": "50%",
-                    background: "#fff",
-                    position: "absolute",
-                    top: "3px",
-                    left: settings()!.showSkin ? "23px" : "3px",
-                    transition: "left 0.2s ease",
-                  }}
-                />
-              </button>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                "align-items": "center",
-                "justify-content": "space-between",
-                "margin-top": "12px",
-              }}
-            >
-              <span style={{ "font-size": "14px" }}>Always on Top</span>
-              <button
-                onClick={toggleAlwaysOnTop}
-                style={{
-                  width: "44px",
-                  height: "24px",
-                  "border-radius": "12px",
-                  border: "none",
-                  cursor: "pointer",
-                  background: settings()!.alwaysOnTop ? hueToHex(hue()) : "#2a2a3e",
-                  position: "relative",
-                  transition: "background 0.2s ease",
-                }}
-              >
-                <div
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    "border-radius": "50%",
-                    background: "#fff",
-                    position: "absolute",
-                    top: "3px",
-                    left: settings()!.alwaysOnTop ? "23px" : "3px",
-                    transition: "left 0.2s ease",
-                  }}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* --- Version --- */}
+        {error() && (
           <div
             style={{
-              "text-align": "center",
-              "font-size": "11px",
-              color: "#444",
-              "margin-top": "12px",
+              padding: "10px 14px",
+              background: "rgba(220, 50, 50, 0.1)",
+              border: "1px solid rgba(220, 50, 50, 0.2)",
+              "border-radius": "10px",
+              color: "#ff8888",
+              "font-size": "12px",
+              "margin-bottom": "16px",
+              cursor: "pointer",
             }}
+            onClick={() => setError(null)}
           >
-            Murmur v0.1.0
+            {error()}
           </div>
-        </>
-      )}
+        )}
+
+        {settings() && (
+          <>
+            {/* Skin */}
+            <div style={glass}>
+              <label style={label}>Skin</label>
+              <div
+                style={{
+                  padding: "8px 12px",
+                  background: "rgba(0, 0, 0, 0.3)",
+                  "border-radius": "8px",
+                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                  color: "rgba(255, 255, 255, 0.7)",
+                  "font-size": "13px",
+                }}
+              >
+                Gemini V1
+                <span style={{ color: "rgba(255, 255, 255, 0.2)", "margin-left": "8px", "font-size": "11px" }}>
+                  default
+                </span>
+              </div>
+            </div>
+
+            {/* Accent Colour */}
+            <div style={glass}>
+              <label style={label}>Accent Colour</label>
+              <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={hue()}
+                  onInput={(e) => {
+                    const h = parseInt(e.currentTarget.value);
+                    setHue(h);
+                    updateSetting("accentColor", hueToHex(h));
+                  }}
+                  style={{
+                    flex: 1,
+                    height: "4px",
+                    "border-radius": "2px",
+                    appearance: "auto",
+                    cursor: "pointer",
+                    background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
+                  }}
+                />
+                <div
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    "border-radius": "50%",
+                    background: accent(),
+                    border: "2px solid rgba(255, 255, 255, 0.1)",
+                    "flex-shrink": "0",
+                    "box-shadow": `0 0 12px ${accent()}33`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Hotkey */}
+            <div style={glass}>
+              <label style={label}>Global Hotkey</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <div
+                  tabIndex={0}
+                  onFocus={() => setCapturingHotkey(true)}
+                  onBlur={() => setCapturingHotkey(false)}
+                  onKeyDown={(e) => capturingHotkey() && handleHotkeyKeyDown(e)}
+                  style={{
+                    ...inputBase,
+                    flex: "1",
+                    cursor: "pointer",
+                    "border-color": capturingHotkey() ? accent() : "rgba(255, 255, 255, 0.06)",
+                    "text-align": "center",
+                    "user-select": "none",
+                    "font-family": "monospace",
+                  }}
+                >
+                  {capturingHotkey() ? (
+                    <span style={{ color: "rgba(255, 255, 255, 0.3)", "font-style": "italic", "font-family": "-apple-system, system-ui, sans-serif" }}>
+                      Press a key combo...
+                    </span>
+                  ) : (
+                    settings()!.hotkey
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    updateSetting("hotkey", "Ctrl+Shift+Space");
+                    invoke("change_hotkey", { newHotkey: "Ctrl+Shift+Space" }).catch(() => {});
+                  }}
+                  style={{
+                    padding: "8px 12px",
+                    background: "rgba(255, 255, 255, 0.04)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                    "border-radius": "8px",
+                    color: "rgba(255, 255, 255, 0.4)",
+                    cursor: "pointer",
+                    "font-size": "11px",
+                    "white-space": "nowrap",
+                    transition: "background 0.2s ease",
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {/* Model */}
+            <div style={glass}>
+              <label style={label}>Whisper Model</label>
+              <div style={{ display: "flex", "flex-direction": "column", gap: "6px" }}>
+                {models().length > 0 ? (
+                  <For each={models()}>
+                    {(model) => (
+                      <div
+                        style={{
+                          display: "flex",
+                          "align-items": "center",
+                          gap: "10px",
+                          padding: "10px 12px",
+                          background: settings()!.model === model.filename
+                            ? "rgba(20, 184, 166, 0.06)"
+                            : "rgba(0, 0, 0, 0.2)",
+                          border: settings()!.model === model.filename
+                            ? `1px solid ${accent()}33`
+                            : "1px solid rgba(255, 255, 255, 0.04)",
+                          "border-radius": "8px",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ "font-size": "13px", "font-weight": 500, color: "rgba(255, 255, 255, 0.8)" }}>
+                            {model.name}
+                          </div>
+                          <div style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.25)", "margin-top": "2px" }}>
+                            {model.description} — {model.size_mb}MB
+                          </div>
+                        </div>
+                        {model.downloaded ? (
+                          settings()!.model === model.filename ? (
+                            <span style={{ "font-size": "10px", color: accent(), "font-weight": 600, "text-transform": "uppercase", "letter-spacing": "0.05em" }}>
+                              Active
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => selectModel(model.filename)}
+                              style={{
+                                padding: "4px 10px",
+                                background: "rgba(255, 255, 255, 0.04)",
+                                border: "1px solid rgba(255, 255, 255, 0.06)",
+                                "border-radius": "6px",
+                                color: "rgba(255, 255, 255, 0.5)",
+                                cursor: "pointer",
+                                "font-size": "10px",
+                              }}
+                            >
+                              Select
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => downloadModel(model.filename)}
+                            disabled={downloadingModel() === model.filename}
+                            style={{
+                              padding: "4px 10px",
+                              background: downloadingModel() === model.filename
+                                ? "rgba(0, 0, 0, 0.2)"
+                                : "rgba(255, 255, 255, 0.04)",
+                              border: "1px solid rgba(255, 255, 255, 0.06)",
+                              "border-radius": "6px",
+                              color: downloadingModel() === model.filename
+                                ? "rgba(255, 255, 255, 0.2)"
+                                : accent(),
+                              cursor: downloadingModel() === model.filename ? "wait" : "pointer",
+                              "font-size": "10px",
+                            }}
+                          >
+                            {downloadingModel() === model.filename ? "Downloading..." : "Download"}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </For>
+                ) : (
+                  <div style={{ color: "rgba(255, 255, 255, 0.25)", "font-size": "12px" }}>
+                    Model: {settings()!.model}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recording Mode */}
+            <div style={glass}>
+              <label style={label}>Recording Mode</label>
+              <div style={{ display: "flex", gap: "6px" }}>
+                {(["hold", "tap"] as const).map((mode) => (
+                  <button
+                    onClick={() => updateSetting("recordMode", mode)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      background: settings()!.recordMode === mode
+                        ? `${accent()}18`
+                        : "rgba(0, 0, 0, 0.3)",
+                      border: settings()!.recordMode === mode
+                        ? `1px solid ${accent()}44`
+                        : "1px solid rgba(255, 255, 255, 0.04)",
+                      "border-radius": "8px",
+                      color: settings()!.recordMode === mode
+                        ? accent()
+                        : "rgba(255, 255, 255, 0.4)",
+                      cursor: "pointer",
+                      "font-size": "12px",
+                      "font-weight": settings()!.recordMode === mode ? "600" : "400",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {mode === "hold" ? "Hold to Record" : "Tap to Toggle"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* General */}
+            <div style={glass}>
+              <label style={label}>General</label>
+              <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
+                <SettingRow label="Show Skin on Startup">
+                  <Toggle
+                    value={settings()!.showSkin}
+                    onChange={() => updateSetting("showSkin", !settings()!.showSkin)}
+                    accent={accent()}
+                  />
+                </SettingRow>
+                <SettingRow label="Always on Top">
+                  <Toggle
+                    value={settings()!.alwaysOnTop}
+                    onChange={() => updateSetting("alwaysOnTop", !settings()!.alwaysOnTop)}
+                    accent={accent()}
+                  />
+                </SettingRow>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
