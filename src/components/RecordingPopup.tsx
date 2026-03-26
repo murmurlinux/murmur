@@ -61,7 +61,7 @@ export function RecordingPopup() {
         display: "flex",
         "align-items": "flex-end",
         "justify-content": "center",
-        padding: "0 0 8px 0",
+        padding: "0 0 90px 0",
       }}
     >
       {/* The actual pill */}
