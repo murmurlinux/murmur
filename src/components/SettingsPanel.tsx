@@ -380,6 +380,34 @@ export function SettingsPanel() {
             </div>
           </div>
 
+          {/* --- Recording Mode --- */}
+          <div style={sectionStyle}>
+            <label style={labelStyle}>Recording Mode</label>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {(["hold", "tap"] as const).map((mode) => (
+                <button
+                  onClick={() => updateSetting("recordMode", mode)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    background: settings()!.recordMode === mode ? `${hueToHex(hue())}22` : "#12121a",
+                    border: settings()!.recordMode === mode
+                      ? `1px solid ${hueToHex(hue())}66`
+                      : "1px solid #2a2a3e",
+                    "border-radius": "6px",
+                    color: settings()!.recordMode === mode ? hueToHex(hue()) : "#888",
+                    cursor: "pointer",
+                    "font-size": "13px",
+                    "font-weight": settings()!.recordMode === mode ? "600" : "400",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  {mode === "hold" ? "Hold to Record" : "Tap to Toggle"}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* --- General --- */}
           <div style={sectionStyle}>
             <label style={labelStyle}>General</label>
