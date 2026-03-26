@@ -1,6 +1,6 @@
 import { onMount, onCleanup, createSignal, createEffect } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
-import { MurmurLogo } from "./MurmurLogo";
+import logoImg from "../assets/logo.png";
 
 const BAR_COUNT = 16;
 
@@ -67,7 +67,7 @@ export function RecordingPopup() {
         "box-shadow": "0 4px 20px rgba(0, 0, 0, 0.4)",
       }}
     >
-      <MurmurLogo size={24} color="#14b8a6" />
+      <img src={logoImg} alt="M" width={24} height={24} style={{ "border-radius": "4px" }} />
 
       <div
         style={{

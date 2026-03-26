@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings } from "../lib/settings";
 import { hexToHue, hueToHex, hexToRgba } from "../lib/color";
-import { MurmurLogo } from "./MurmurLogo";
+import logoImg from "../assets/logo.png";
 
 // --- Ocean Terminal Theme ---
 
@@ -212,7 +212,7 @@ export function SettingsPanel() {
             "margin-bottom": "20px",
           }}
         >
-          <MurmurLogo size={28} color="#14b8a6" />
+          <img src={logoImg} alt="Murmur" width={28} height={28} style={{ "border-radius": "6px" }} />
           <div style={{ flex: 1 }}>
             <div style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.9)" }}>
               Murmur
