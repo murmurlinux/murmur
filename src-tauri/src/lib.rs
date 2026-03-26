@@ -29,12 +29,33 @@ pub fn run() {
             commands::models::set_active_model,
         ])
         .setup(|app| {
-            // --- Check xdotool availability and start window tracker ---
-            if !inject::paste::is_xdotool_available() {
-                let _ = app.handle().emit("system-warning", serde_json::json!({
-                    "message": "xdotool not found. Text will be copied to clipboard only — install xdotool for direct typing."
-                }));
+            // --- Detect display server and start injection subsystem ---
+            let display_server = inject::display_server::detect();
+            log::info!("Display server: {}", display_server);
+            let _ = app.handle().emit("display-server", serde_json::json!({
+                "type": format!("{}", display_server)
+            }));
+
+            // Warn about missing injection tools
+            match display_server {
+                inject::display_server::DisplayServer::X11 => {
+                    if !inject::paste::is_xdotool_available() {
+                        let _ = app.handle().emit("system-warning", serde_json::json!({
+                            "message": "xdotool not found. Text will be copied to clipboard only — install xdotool for direct typing."
+                        }));
+                    }
+                }
+                inject::display_server::DisplayServer::Wayland => {
+                    // wtype is checked at injection time, not startup
+                    log::info!("Wayland session — will use wtype for text injection.");
+                }
+                inject::display_server::DisplayServer::Unknown => {
+                    let _ = app.handle().emit("system-warning", serde_json::json!({
+                        "message": "Could not detect display server. Text will be copied to clipboard only."
+                    }));
+                }
             }
+
             inject::paste::start_window_tracker();
 
             // --- Load settings from store into AppState ---
