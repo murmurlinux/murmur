@@ -185,6 +185,7 @@ export function SettingsPanel() {
         "box-sizing": "border-box",
         "font-family": "-apple-system, system-ui, sans-serif",
         "overflow-y": "auto",
+        "scrollbar-width": "none",
         position: "relative",
       }}
     >
