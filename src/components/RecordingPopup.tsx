@@ -1,5 +1,7 @@
 import { onMount, onCleanup, createSignal } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
+import { loadSettings } from "../lib/settings";
+import { hexToRgba, hexToHue } from "../lib/color";
 import logoImg from "../assets/logo.png";
 
 const BAR_COUNT = 16;
@@ -7,6 +9,7 @@ const BAR_COUNT = 16;
 export function RecordingPopup() {
   const [bars, setBars] = createSignal<number[]>(new Array(BAR_COUNT).fill(0));
   const [isActive, setIsActive] = createSignal(false);
+  const [accent, setAccent] = createSignal("#10b981");
   let currentBars = new Array(BAR_COUNT).fill(0);
   let targetBars = new Array(BAR_COUNT).fill(0);
   let animFrame: number | undefined;
@@ -30,6 +33,16 @@ export function RecordingPopup() {
   };
 
   onMount(async () => {
+    const settings = await loadSettings();
+    setAccent(settings.accentColor);
+
+    const unlistenSettings = await listen<{ key: string; value: any }>(
+      "settings-changed",
+      (e) => {
+        if (e.payload.key === "accentColor") setAccent(e.payload.value);
+      },
+    );
+
     const unlistenAudio = await listen<{ samples: number[] }>("audio-level", (e) => {
       const src = e.payload.samples;
       const step = Math.floor(src.length / BAR_COUNT);
@@ -46,6 +59,7 @@ export function RecordingPopup() {
     });
 
     onCleanup(() => {
+      unlistenSettings();
       unlistenAudio();
       unlistenState();
       if (animFrame) cancelAnimationFrame(animFrame);
@@ -73,11 +87,20 @@ export function RecordingPopup() {
           padding: "8px 14px",
           background: "rgba(30, 30, 36, 0.92)",
           "border-radius": "24px",
-          border: "1px solid rgba(20, 184, 166, 0.15)",
+          border: `1px solid ${hexToRgba(accent(), 0.2)}`,
           "box-shadow": "0 4px 20px rgba(0, 0, 0, 0.4)",
         }}
       >
-        <img src={logoImg} alt="M" width={24} height={24} style={{ "border-radius": "4px" }} />
+        <img
+          src={logoImg}
+          alt="M"
+          width={24}
+          height={24}
+          style={{
+            "border-radius": "4px",
+            filter: `hue-rotate(${hexToHue(accent()) - 168}deg)`,
+          }}
+        />
 
         <div
           style={{
@@ -92,7 +115,7 @@ export function RecordingPopup() {
               style={{
                 width: "3px",
                 height: `${Math.max(4, h * 20)}px`,
-                background: "#14b8a6",
+                background: accent(),
                 "border-radius": "1.5px",
                 opacity: `${0.3 + h * 0.7}`,
                 transition: "height 0.05s ease, opacity 0.05s ease",
