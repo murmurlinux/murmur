@@ -67,6 +67,27 @@ pub fn run() {
                 }
             }
 
+            // --- Hide skin on startup if showSkin is false ---
+            let show_skin = {
+                let handle = app.handle().clone();
+                match handle.store("settings.json") {
+                    Ok(store) => store.get("showSkin")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(true),
+                    Err(_) => true,
+                }
+            };
+            if !show_skin {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+
+            // --- Create popup window (hidden) ---
+            if let Err(e) = commands::popup::create_popup_window(app.handle()) {
+                log::error!("Failed to create popup window: {}", e);
+            }
+
             // --- System Tray ---
             let show_item =
                 MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
@@ -97,12 +118,19 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show_hide" => {
                         if let Some(window) = app.get_webview_window("main") {
-                            if window.is_visible().unwrap_or(false) {
+                            let was_visible = window.is_visible().unwrap_or(false);
+                            if was_visible {
                                 let _ = window.hide();
                             } else {
                                 let _ = window.show();
                                 let _ = window.set_focus();
                             }
+                            // Persist to store and emit event
+                            if let Ok(store) = app.store("settings.json") {
+                                let _ = store.set("showSkin", serde_json::json!(!was_visible));
+                                let _ = store.save();
+                            }
+                            let _ = app.emit("skin-visibility-changed", serde_json::json!({ "visible": !was_visible }));
                         }
                     }
                     "always_on_top" => {
@@ -131,6 +159,12 @@ pub fn run() {
                             let _ = window.unminimize();
                             let _ = window.show();
                             let _ = window.set_focus();
+                            // Persist visibility
+                            if let Ok(store) = app.store("settings.json") {
+                                let _ = store.set("showSkin", serde_json::json!(true));
+                                let _ = store.save();
+                            }
+                            let _ = app.emit("skin-visibility-changed", serde_json::json!({ "visible": true }));
                         }
                     }
                 })
