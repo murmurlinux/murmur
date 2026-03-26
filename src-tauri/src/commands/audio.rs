@@ -5,6 +5,7 @@ use crate::state::{AppState, RecordingState};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
 use tauri::{Emitter, Manager};
+use tauri_plugin_store::StoreExt;
 
 /// Read the active model filename from AppState cache
 fn get_active_model(app: &tauri::AppHandle) -> String {
@@ -58,7 +59,21 @@ fn start_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
     emit_state(app, "recording");
     super::popup::show_popup(app);
 
-    let actual_rate = capture::start_capture(app.clone(), audio_buffer, stop_flag)
+    // Read auto-stop silence setting (only active in tap mode)
+    let auto_stop = app.store("settings.json")
+        .ok()
+        .and_then(|store| {
+            let mode = store.get("recordMode")
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "hold".to_string());
+            let enabled = store.get("autoStopSilence")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            Some(mode == "tap" && enabled)
+        })
+        .unwrap_or(false);
+
+    let actual_rate = capture::start_capture(app.clone(), audio_buffer, stop_flag, auto_stop)
         .map_err(|e| format!("Failed to start audio capture: {}", e))?;
 
     // Update sample rate from actual device config

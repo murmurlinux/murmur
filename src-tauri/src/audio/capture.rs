@@ -18,6 +18,7 @@ pub fn start_capture(
     app: tauri::AppHandle,
     audio_buffer: Arc<Mutex<Vec<f32>>>,
     stop_flag: Arc<AtomicBool>,
+    auto_stop_silence: bool,
 ) -> Result<u32, anyhow::Error> {
     // Verify we can access an input device and get actual sample rate
     let host = cpal::default_host();
@@ -174,6 +175,38 @@ pub fn start_capture(
                     samples: waveform,
                 },
             );
+
+            // Auto-stop on silence (VAD) — only when enabled
+            if auto_stop_silence {
+                const SILENCE_RMS_THRESHOLD: f32 = 0.008;
+                const SILENCE_TIMEOUT_FRAMES: u32 = 156; // ~2.5s at 16ms per frame
+
+                // Use a thread-local counter (this closure runs on one thread)
+                use std::cell::Cell;
+                thread_local! {
+                    static SILENT_FRAMES: Cell<u32> = const { Cell::new(0) };
+                    static HAS_SPOKEN: Cell<bool> = const { Cell::new(false) };
+                }
+
+                SILENT_FRAMES.with(|counter| {
+                    HAS_SPOKEN.with(|spoken| {
+                        if rms < SILENCE_RMS_THRESHOLD {
+                            // Only count silence after speech has started
+                            if spoken.get() {
+                                let count = counter.get() + 1;
+                                counter.set(count);
+                                if count >= SILENCE_TIMEOUT_FRAMES {
+                                    log::info!("VAD: silence detected for {:.1}s — auto-stopping", count as f32 * 0.016);
+                                    stop_flag.store(true, Ordering::Relaxed);
+                                }
+                            }
+                        } else {
+                            counter.set(0);
+                            spoken.set(true);
+                        }
+                    });
+                });
+            }
 
             // Accumulate for STT — cap at 60 seconds (~2.6M samples at 44.1kHz)
             const MAX_SAMPLES: usize = 44100 * 60;
