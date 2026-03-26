@@ -1,7 +1,6 @@
 import { createSignal, onMount, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { loadSettings, saveSetting, type MurmurSettings } from "../lib/settings";
 import { hexToHue, hueToHex, hexToRgba } from "../lib/color";
 import { MurmurLogo } from "./MurmurLogo";
@@ -187,8 +186,6 @@ export function SettingsPanel() {
         "font-family": "-apple-system, system-ui, sans-serif",
         "overflow-y": "auto",
         position: "relative",
-        "border-radius": "12px",
-        border: "1px solid rgba(255, 255, 255, 0.06)",
       }}
     >
       {/* Subtle gradient overlay */}
@@ -206,21 +203,13 @@ export function SettingsPanel() {
       />
 
       <div style={{ position: "relative", "z-index": 1 }}>
-        {/* Draggable title bar */}
+        {/* Header */}
         <div
-          data-tauri-drag-region
           style={{
             display: "flex",
             "align-items": "center",
             gap: "10px",
             "margin-bottom": "20px",
-            cursor: "grab",
-            "user-select": "none",
-          }}
-          onMouseDown={(e) => {
-            if (!(e.target as HTMLElement).closest("button")) {
-              getCurrentWindow().startDragging();
-            }
           }}
         >
           <MurmurLogo size={28} color="#14b8a6" />
@@ -229,37 +218,9 @@ export function SettingsPanel() {
               Murmur
             </div>
           </div>
-          <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace", "margin-right": "8px" }}>
+          <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace" }}>
             v0.1.1
           </span>
-          <button
-            onClick={() => getCurrentWindow().close()}
-            style={{
-              width: "24px",
-              height: "24px",
-              "border-radius": "6px",
-              border: "none",
-              background: "rgba(255, 255, 255, 0.04)",
-              color: "rgba(255, 255, 255, 0.3)",
-              cursor: "pointer",
-              "font-size": "14px",
-              display: "flex",
-              "align-items": "center",
-              "justify-content": "center",
-              transition: "background 0.15s ease, color 0.15s ease",
-              padding: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(220, 50, 50, 0.3)";
-              e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
-              e.currentTarget.style.color = "rgba(255, 255, 255, 0.3)";
-            }}
-          >
-            ✕
-          </button>
         </div>
 
         {error() && (

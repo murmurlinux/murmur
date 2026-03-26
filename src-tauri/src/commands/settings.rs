@@ -23,7 +23,6 @@ pub fn open_settings_internal(app: &AppHandle) {
     .title("Murmur Settings")
     .inner_size(480.0, 560.0)
     .resizable(false)
-    .decorations(false)
     .center()
     .build();
 }
