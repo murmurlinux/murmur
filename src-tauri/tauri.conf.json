@@ -1,6 +1,6 @@
 {
   "productName": "Murmur",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.murmurlinux.murmur",
   "build": {
     "frontendDist": "../dist",
@@ -20,6 +20,19 @@
         "transparent": true,
         "alwaysOnTop": true,
         "visible": true,
+        "skipTaskbar": true
+      },
+      {
+        "label": "popup",
+        "title": "Murmur Recording",
+        "url": "popup.html",
+        "width": 200,
+        "height": 48,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
         "skipTaskbar": true
       }
     ],
