@@ -418,6 +418,42 @@ export function SettingsPanel() {
                 "justify-content": "space-between",
               }}
             >
+              <span style={{ "font-size": "14px" }}>Show Skin on Startup</span>
+              <button
+                onClick={() => updateSetting("showSkin", !settings()!.showSkin)}
+                style={{
+                  width: "44px",
+                  height: "24px",
+                  "border-radius": "12px",
+                  border: "none",
+                  cursor: "pointer",
+                  background: settings()!.showSkin ? hueToHex(hue()) : "#2a2a3e",
+                  position: "relative",
+                  transition: "background 0.2s ease",
+                }}
+              >
+                <div
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    "border-radius": "50%",
+                    background: "#fff",
+                    position: "absolute",
+                    top: "3px",
+                    left: settings()!.showSkin ? "23px" : "3px",
+                    transition: "left 0.2s ease",
+                  }}
+                />
+              </button>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                "align-items": "center",
+                "justify-content": "space-between",
+                "margin-top": "12px",
+              }}
+            >
               <span style={{ "font-size": "14px" }}>Always on Top</span>
               <button
                 onClick={toggleAlwaysOnTop}
