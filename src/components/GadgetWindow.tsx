@@ -27,11 +27,13 @@ export function GadgetWindow() {
   const appWindow = getCurrentWindow();
   const [skin, setSkin] = createSignal<LoadedSkin>(defaultSkin);
   const [accentColor, setAccentColor] = createSignal("#10b981");
+  const [recordMode, setRecordMode] = createSignal<"hold" | "tap">("hold");
 
   // Load settings and skin on mount
   onMount(async () => {
     const settings = await loadSettings();
     setAccentColor(settings.accentColor);
+    setRecordMode(settings.recordMode);
 
     const loaded = loadSkin(settings.skin);
     if (loaded) setSkin(loaded);
@@ -48,6 +50,8 @@ export function GadgetWindow() {
           setAccentColor(value);
         } else if (key === "alwaysOnTop") {
           appWindow.setAlwaysOnTop(value).catch(() => {});
+        } else if (key === "recordMode") {
+          setRecordMode(value);
         }
       },
     );
@@ -146,6 +150,7 @@ export function GadgetWindow() {
           sourceWidth={sw()}
           sourceHeight={sh()}
           accentColor={accentColor()}
+          recordMode={recordMode()}
         />
         <GearButton
           zone={zones().gearButton}

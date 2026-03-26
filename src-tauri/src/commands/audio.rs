@@ -56,6 +56,7 @@ fn start_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
     }
 
     emit_state(app, "recording");
+    super::popup::show_popup(app);
 
     let actual_rate = capture::start_capture(app.clone(), audio_buffer, stop_flag)
         .map_err(|e| format!("Failed to start audio capture: {}", e))?;
@@ -91,6 +92,7 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
     };
 
     emit_state(app, "processing");
+    super::popup::hide_popup(app);
 
     log::info!(
         "Recording stopped. {} samples at {}Hz ({:.1}s)",
@@ -101,6 +103,7 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
 
     if audio_data.is_empty() {
         emit_state(app, "idle");
+        super::popup::hide_popup(app);
         if let Ok(mut inner) = state_handle.lock() {
             inner.recording_state = RecordingState::Idle;
         }

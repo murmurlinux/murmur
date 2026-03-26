@@ -1,6 +1,6 @@
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{AppHandle, Manager};
-use tauri_utils::config::WebviewUrl;
+use tauri_utils::config::{Color, WebviewUrl};
 
 #[tauri::command]
 pub fn open_settings(app: AppHandle) -> Result<(), String> {
@@ -22,7 +22,8 @@ pub fn open_settings_internal(app: &AppHandle) {
     )
     .title("Murmur Settings")
     .inner_size(480.0, 560.0)
-    .resizable(false)
+    .min_inner_size(480.0, 400.0)
+    .background_color(Color(6, 13, 24, 255)) // #060d18 — ocean-deep, eliminates white flash
     .center()
     .build();
 }

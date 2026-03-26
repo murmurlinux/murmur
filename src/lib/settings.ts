@@ -6,6 +6,8 @@ export interface MurmurSettings {
   hotkey: string;
   model: string;
   alwaysOnTop: boolean;
+  recordMode: "hold" | "tap";
+  showSkin: boolean;
 }
 
 const DEFAULTS: MurmurSettings = {
@@ -14,6 +16,8 @@ const DEFAULTS: MurmurSettings = {
   hotkey: "Ctrl+Shift+Space",
   model: "ggml-tiny.en.bin",
   alwaysOnTop: true,
+  recordMode: "hold",
+  showSkin: true,
 };
 
 let storeInstance: Store | null = null;
