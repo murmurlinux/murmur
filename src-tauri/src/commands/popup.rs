@@ -1,18 +1,13 @@
 use tauri::{AppHandle, Manager, PhysicalPosition};
 
-const POPUP_WIDTH: u32 = 180;
-const POPUP_HEIGHT: u32 = 44;
-const POPUP_MARGIN_BOTTOM: u32 = 40;
+const POPUP_WIDTH: u32 = 300;
+const POPUP_HEIGHT: u32 = 300;
+const POPUP_MARGIN_BOTTOM: u32 = 0;
 
 /// Position and resize the popup window at bottom-center of the primary monitor.
 /// The window is declared in tauri.conf.json (transparent, hidden).
 pub fn setup_popup_position(app: &AppHandle) {
     if let Some(popup) = app.get_webview_window("popup") {
-        // Force the window to the exact pill size — GTK may ignore config values
-        let _ = popup.set_size(tauri::PhysicalSize::new(POPUP_WIDTH, POPUP_HEIGHT));
-        let _ = popup.set_min_size(Some(tauri::PhysicalSize::new(1u32, 1u32)));
-        let _ = popup.set_size(tauri::PhysicalSize::new(POPUP_WIDTH, POPUP_HEIGHT));
-
         let (x, y) = get_bottom_center_position(app);
         let _ = popup.set_position(PhysicalPosition::new(x, y));
         log::info!("Popup sized to {}x{} at ({}, {})", POPUP_WIDTH, POPUP_HEIGHT, x, y);
