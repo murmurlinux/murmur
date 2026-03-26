@@ -17,7 +17,7 @@
 
 No cloud. No account. No telemetry. Your voice never leaves your machine.
 
-## Why Murmur?
+## How Murmur compares
 
 | | Murmur | Vocalinux | Wispr Flow | Nerd Dictation |
 |---|:---:|:---:|:---:|:---:|
@@ -33,7 +33,7 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 ## Features
 
 - **100% Offline** — whisper.cpp runs locally on your CPU. Zero network requests after model download.
-- **Floating Comm Badge** — a desktop gadget with customisable skins and accent colours. Not a boring tray icon.
+- **Floating Comm Badge** — a desktop gadget with customisable skins and accent colours. Always visible, always ready.
 - **Universal Text Injection** — types into any app via XTEST. Terminals, IDEs, browsers, chat — if it has a cursor, Murmur types into it.
 - **Push-to-Talk** — configurable global hotkey. Hold to record, release to transcribe.
 - **Multiple Models** — Tiny (75 MB, ~3s), Base (142 MB, ~8s), Small (466 MB, best accuracy). Choose your tradeoff.
