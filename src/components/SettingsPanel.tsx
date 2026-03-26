@@ -180,12 +180,10 @@ export function SettingsPanel() {
         background: "#060d18",
         color: "rgba(255, 255, 255, 0.6)",
         width: "100%",
-        height: "100vh",
+        "min-height": "100vh",
         padding: "20px",
         "box-sizing": "border-box",
         "font-family": "-apple-system, system-ui, sans-serif",
-        "overflow-y": "auto",
-        "scrollbar-width": "none",
         position: "relative",
       }}
     >
