@@ -28,14 +28,13 @@
         "url": "popup.html",
         "width": 180,
         "height": 44,
-        "minWidth": 1,
-        "minHeight": 1,
         "resizable": false,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "visible": false,
-        "skipTaskbar": true
+        "skipTaskbar": true,
+        "backgroundColor": [0, 0, 0, 0]
       }
     ],
     "security": {
