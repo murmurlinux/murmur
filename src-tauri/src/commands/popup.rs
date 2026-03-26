@@ -1,39 +1,17 @@
-use tauri::webview::WebviewWindowBuilder;
-use tauri::{AppHandle, Manager, WebviewUrl};
-use tauri_utils::config::Color;
+use tauri::{AppHandle, Manager, PhysicalPosition};
 
-const POPUP_WIDTH: u32 = 280;
+const POPUP_WIDTH: u32 = 200;
 const POPUP_HEIGHT: u32 = 48;
 const POPUP_MARGIN_BOTTOM: u32 = 40;
 
-/// Create the popup window (hidden initially). Call once during setup.
-pub fn create_popup_window(app: &AppHandle) -> Result<(), String> {
-    if app.get_webview_window("popup").is_some() {
-        return Ok(());
+/// Position the popup window at bottom-center of the primary monitor.
+/// The window is declared in tauri.conf.json (transparent, hidden).
+pub fn setup_popup_position(app: &AppHandle) {
+    if let Some(popup) = app.get_webview_window("popup") {
+        let (x, y) = get_bottom_center_position(app);
+        let _ = popup.set_position(PhysicalPosition::new(x, y));
+        log::info!("Popup positioned at ({}, {})", x, y);
     }
-
-    let (x, y) = get_bottom_center_position(app);
-
-    let _window = WebviewWindowBuilder::new(
-        app,
-        "popup",
-        WebviewUrl::App("popup.html".into()),
-    )
-    .title("Murmur Recording")
-    .inner_size(POPUP_WIDTH as f64, POPUP_HEIGHT as f64)
-    .position(x as f64, y as f64)
-    .resizable(false)
-    .decorations(false)
-    .transparent(true)
-    .background_color(Color(0, 0, 0, 0)) // Fully transparent WebView background
-    .always_on_top(true)
-    .skip_taskbar(true)
-    .visible(false)
-    .build()
-    .map_err(|e| e.to_string())?;
-
-    log::info!("Popup window created at ({}, {})", x, y);
-    Ok(())
 }
 
 fn get_bottom_center_position(app: &AppHandle) -> (i32, i32) {
