@@ -462,6 +462,19 @@ export function SettingsPanel() {
                   </button>
                 ))}
               </div>
+              {/* Auto-stop on silence (only meaningful in tap mode) */}
+              <div style={{ "margin-top": "10px" }}>
+                <SettingRow label="Auto-stop on Silence">
+                  <Toggle
+                    value={settings()!.autoStopSilence}
+                    onChange={() => updateSetting("autoStopSilence", !settings()!.autoStopSilence)}
+                    accent={accent()}
+                  />
+                </SettingRow>
+                <div style={{ "font-size": "10px", color: "rgba(255,255,255,0.2)", "margin-top": "4px" }}>
+                  Stops recording after ~2s of silence in tap mode
+                </div>
+              </div>
             </div>
 
             {/* General */}

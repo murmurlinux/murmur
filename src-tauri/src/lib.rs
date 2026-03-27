@@ -7,7 +7,7 @@ mod stt;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager,
+    Emitter, Listener, Manager,
 };
 use tauri_plugin_store::StoreExt;
 
@@ -106,6 +106,13 @@ pub fn run() {
 
             // --- Position popup window (declared in tauri.conf.json, hidden) ---
             commands::popup::setup_popup_position(app.handle());
+
+            // --- Listen for auto-stop from capture thread (VAD / max duration) ---
+            let handle_for_autostop = app.handle().clone();
+            app.listen("capture-auto-stopped", move |_| {
+                eprintln!("[MURMUR] Capture auto-stopped — triggering full stop flow");
+                let _ = commands::audio::stop_recording_internal(handle_for_autostop.clone());
+            });
 
             // --- System Tray ---
             let show_item =
