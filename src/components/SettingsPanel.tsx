@@ -95,6 +95,7 @@ export function SettingsPanel() {
   const [models, setModels] = createSignal<any[]>([]);
   const [downloadingModel, setDownloadingModel] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
+  const [version, setVersion] = createSignal("...");
 
   const accent = () => hueToHex(hue());
 
@@ -104,6 +105,12 @@ export function SettingsPanel() {
   };
 
   onMount(async () => {
+    // Read version from Tauri config (not hardcoded)
+    try {
+      const { getVersion } = await import("@tauri-apps/api/app");
+      setVersion(await getVersion());
+    } catch { /* fallback stays as "..." */ }
+
     const s = await loadSettings();
     setSettings(s);
     setHue(hexToHue(s.accentColor));
@@ -218,7 +225,7 @@ export function SettingsPanel() {
             </div>
           </div>
           <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace" }}>
-            v0.1.1
+            v{version()}
           </span>
         </div>
 

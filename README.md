@@ -89,7 +89,7 @@ Open settings via the gear icon on the Comm Badge:
 - **Accent colour** — customise the Comm Badge glow
 - **Skin** — choose your widget style
 
-Settings are stored in `~/.local/share/murmur/settings.json`.
+Settings are stored in `~/.local/share/com.murmurlinux.murmur/settings.json`.
 
 ## Tech Stack
 

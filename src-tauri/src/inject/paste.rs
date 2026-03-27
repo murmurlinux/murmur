@@ -105,11 +105,6 @@ pub fn start_window_tracker() {
     });
 }
 
-/// Stop the window tracker thread (called on app shutdown).
-#[allow(dead_code)]
-pub fn stop_window_tracker() {
-    TRACKER_STOP.store(true, Ordering::Relaxed);
-}
 
 /// Get the last known non-Murmur window ID (X11 only).
 pub fn get_last_external_window() -> Option<String> {
