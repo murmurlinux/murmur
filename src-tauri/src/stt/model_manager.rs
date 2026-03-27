@@ -130,36 +130,26 @@ fn verify_checksum(path: &PathBuf, expected_sha256: &str) -> Result<bool, anyhow
     Ok(hash == expected_sha256)
 }
 
-/// Simple SHA256 implementation using manual computation.
-/// We avoid adding a new crate by using a minimal hasher.
+/// SHA256 hasher using the sha2 crate — no shell-out, no memory doubling.
 struct Sha256Hasher {
-    data: Vec<u8>,
+    hasher: sha2::Sha256,
 }
 
 fn sha2_hash_context() -> Sha256Hasher {
-    Sha256Hasher { data: Vec::new() }
+    use sha2::Digest;
+    Sha256Hasher { hasher: sha2::Sha256::new() }
 }
 
 impl Sha256Hasher {
     fn update(&mut self, bytes: &[u8]) {
-        self.data.extend_from_slice(bytes);
+        use sha2::Digest;
+        self.hasher.update(bytes);
     }
 
     fn finalize_hex(self) -> String {
-        // Use the system sha256sum command for verification
-        use std::io::Write;
-        use std::process::{Command, Stdio};
-
-        let mut child = Command::new("sha256sum")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("sha256sum not found");
-
-        child.stdin.take().unwrap().write_all(&self.data).unwrap();
-        let output = child.wait_with_output().unwrap();
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        stdout.split_whitespace().next().unwrap_or("").to_string()
+        use sha2::Digest;
+        let result = self.hasher.finalize();
+        hex::encode(result)
     }
 }
 
