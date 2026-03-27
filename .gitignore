@@ -17,8 +17,13 @@ credentials*
 # Research & design (not part of the app)
 .firecrawl/
 .claude/
-design/COMPETITOR-RESEARCH.*
-design/DESIGN.html
-design/skin-test.html
-design/website-*.html
+design/
 AUDIT.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

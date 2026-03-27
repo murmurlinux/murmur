@@ -110,7 +110,7 @@ pub fn run() {
             // --- Listen for auto-stop from capture thread (VAD / max duration) ---
             let handle_for_autostop = app.handle().clone();
             app.listen("capture-auto-stopped", move |_| {
-                eprintln!("[MURMUR] Capture auto-stopped — triggering full stop flow");
+                log::debug!("Capture auto-stopped — triggering full stop flow");
                 let _ = commands::audio::stop_recording_internal(handle_for_autostop.clone());
             });
 
