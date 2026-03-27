@@ -2,6 +2,32 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.2.0] - 2026-03-27
+
+### Added
+
+- **Wayland support** — auto-detects display server (X11 vs Wayland). Uses wtype for Wayland text injection with clipboard+Ctrl+V fallback. Window tracking skipped on Wayland (by design).
+- **Voice Activity Detection** — auto-stops recording after ~2s of silence in tap mode. Configurable via "Auto-stop on Silence" toggle in settings.
+
+### Security
+
+- Replace sha256sum shell-out with sha2 Rust crate (eliminates crash risk and memory doubling)
+- Remove debug eprintln! output from production code
+- Add rate limiting to website waitlist API (5 req/min per IP)
+- Tighten CSRF origin check on waitlist API
+- Remove "Coming Soon" chat placeholder from website
+
+### Fixed
+
+- Version display in settings now reads from Tauri config (not hardcoded)
+- README settings path corrected to `~/.local/share/com.murmurlinux.murmur/`
+- .gitignore expanded to cover design files, IDE directories
+- Remove dead stop_window_tracker() function
+- Website Wayland claim corrected (X11 only in current release)
+- Website changelog updated with v0.1.1 entry
+
+---
+
 ## [0.1.1] - 2026-03-26
 
 ### Added
