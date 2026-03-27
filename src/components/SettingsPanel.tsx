@@ -472,7 +472,7 @@ export function SettingsPanel() {
                   />
                 </SettingRow>
                 <div style={{ "font-size": "10px", color: "rgba(255,255,255,0.2)", "margin-top": "4px" }}>
-                  Stops recording after ~2.5s of silence in tap mode
+                  Stops recording after ~2s of silence in tap mode
                 </div>
               </div>
             </div>

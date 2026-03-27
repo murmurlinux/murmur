@@ -179,7 +179,7 @@ pub fn start_capture(
             // Auto-stop on silence (VAD) — only when enabled
             if auto_stop_silence {
                 const SILENCE_RMS_THRESHOLD: f32 = 0.008;
-                const SILENCE_TIMEOUT_FRAMES: u32 = 156; // ~2.5s at 16ms per frame
+                const SILENCE_TIMEOUT_FRAMES: u32 = 125; // ~2s at 16ms per frame
 
                 // Use a thread-local counter (this closure runs on one thread)
                 use std::cell::Cell;
@@ -191,12 +191,11 @@ pub fn start_capture(
                 SILENT_FRAMES.with(|counter| {
                     HAS_SPOKEN.with(|spoken| {
                         if rms < SILENCE_RMS_THRESHOLD {
-                            // Only count silence after speech has started
                             if spoken.get() {
                                 let count = counter.get() + 1;
                                 counter.set(count);
                                 if count >= SILENCE_TIMEOUT_FRAMES {
-                                    log::info!("VAD: silence detected for {:.1}s — auto-stopping", count as f32 * 0.016);
+                                    eprintln!("[VAD] silence detected ({:.1}s) — auto-stopping", count as f32 * 0.016);
                                     stop_flag.store(true, Ordering::Relaxed);
                                 }
                             }
@@ -225,7 +224,10 @@ pub fn start_capture(
 
         // Stream drops here, stopping audio capture
         drop(stream);
-        log::debug!("Audio capture thread stopped");
+
+        // If capture ended due to VAD or max duration (not user-initiated stop),
+        // notify the system to run the full stop flow (transcribe, inject, hide popup)
+        let _ = app_handle.emit("capture-auto-stopped", ());
     });
 
     Ok(actual_sample_rate)

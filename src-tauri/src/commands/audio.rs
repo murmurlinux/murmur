@@ -69,6 +69,7 @@ fn start_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
             let enabled = store.get("autoStopSilence")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
+            eprintln!("[MURMUR] VAD settings: recordMode={}, autoStopSilence={}, auto_stop={}", mode, enabled, mode == "tap" && enabled);
             Some(mode == "tap" && enabled)
         })
         .unwrap_or(false);
