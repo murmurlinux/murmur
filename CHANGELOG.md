@@ -6,10 +6,10 @@ All notable changes to Murmur will be documented in this file.
 
 ### Added
 
-- **Tap-to-toggle recording** — new recording mode alongside hold-to-record. Tap hotkey or mic button once to start, again to stop. Configurable in settings.
-- **Show/hide skin** — hide the Comm Badge to system tray via menu or setting. Persists across restarts. "Show skin on startup" toggle in settings.
-- **Recording indicator popup** — floating teal pill with M logo and animated waveform bars. Appears at bottom-center of screen when recording with skin hidden. Accent colour follows user's colour picker.
-- **Settings redesign** — ocean terminal theme with glass cards, teal accent labels, brand logo header. Native GNOME window with proper resize/snap behaviour.
+- **Tap-to-toggle recording**:new recording mode alongside hold-to-record. Tap hotkey or mic button once to start, again to stop. Configurable in settings.
+- **Show/hide skin**:hide the Comm Badge to system tray via menu or setting. Persists across restarts. "Show skin on startup" toggle in settings.
+- **Recording indicator popup**:floating teal pill with M logo and animated waveform bars. Appears at bottom-center of screen when recording with skin hidden. Accent colour follows user's colour picker.
+- **Settings redesign**:ocean terminal theme with glass cards, teal accent labels, brand logo header. Native GNOME window with proper resize/snap behaviour.
 
 ### Fixed
 
@@ -23,11 +23,11 @@ All notable changes to Murmur will be documented in this file.
 
 ### Added
 
-- **Slice 1** — Transparent skinned gadget window with interactive zones (mic button, gear button, status LEDs)
-- **Slice 2** — Audio capture pipeline with live waveform visualisation via cpal (PipeWire/PulseAudio)
-- **Slice 3** — Whisper transcription via whisper.cpp, text injection via xdotool, global hotkey (Ctrl+Shift+Space)
-- **Slice 4** — Settings panel (hotkey, model, accent colour), click-through transparency, .deb + .AppImage packaging
-- **Security audit** — 22 findings identified and resolved
+- **Slice 1**:Transparent skinned gadget window with interactive zones (mic button, gear button, status LEDs)
+- **Slice 2**:Audio capture pipeline with live waveform visualisation via cpal (PipeWire/PulseAudio)
+- **Slice 3**:Whisper transcription via whisper.cpp, text injection via xdotool, global hotkey (Ctrl+Shift+Space)
+- **Slice 4**:Settings panel (hotkey, model, accent colour), click-through transparency, .deb + .AppImage packaging
+- **Security audit**:22 findings identified and resolved
 
 ### Technical Details
 
