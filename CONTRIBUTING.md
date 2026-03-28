@@ -81,7 +81,7 @@ Skins are defined by two files in `src/assets/skins/<skin-name>/`:
 - `body.png`:the skin image (transparent background, ~1380x752)
 - `skin.json`:interactive zones, LED positions, accent colour config
 
-See the existing `gemini-v1` skin for reference. Skin development docs coming soon.
+See the existing `comm-badge` skin for reference. Skin development docs coming soon.
 
 ## Reporting Issues
 

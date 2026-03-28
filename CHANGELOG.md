@@ -37,4 +37,4 @@ All notable changes to Murmur will be documented in this file.
 - xdotool (XTEST) for universal text injection
 - Configurable global hotkey via tauri-plugin-global-shortcut
 - Persistent settings via tauri-plugin-store
-- Gemini v1 skin with accent colour hue rotation
+- Comm Badge skin with accent colour hue rotation
