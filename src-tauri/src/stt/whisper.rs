@@ -47,12 +47,7 @@ pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Err
     };
 
     if needs_reload {
-        let gpu_enabled = cfg!(feature = "gpu");
-        log::info!(
-            "Loading whisper model: {} (GPU: {})",
-            model_path,
-            if gpu_enabled { "Vulkan" } else { "CPU-only" }
-        );
+        log::info!("Loading whisper model: {} (Vulkan GPU enabled)", model_path);
         let ctx = WhisperContext::new_with_params(model_path, WhisperContextParameters::default())
             .map_err(|e| anyhow::anyhow!("Failed to load whisper model: {}", e))?;
         *cache = Some(CachedContext {
