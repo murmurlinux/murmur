@@ -47,6 +47,7 @@ pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Err
     };
 
     if needs_reload {
+        log::info!("Loading whisper model: {} (Vulkan GPU enabled)", model_path);
         let ctx = WhisperContext::new_with_params(model_path, WhisperContextParameters::default())
             .map_err(|e| anyhow::anyhow!("Failed to load whisper model: {}", e))?;
         *cache = Some(CachedContext {
@@ -64,7 +65,7 @@ pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Err
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
     params.set_suppress_blank(true);
-    params.set_suppress_non_speech_tokens(true);
+    params.set_suppress_nst(true);
 
     let mut state = cached
         .ctx
@@ -75,14 +76,10 @@ pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Err
         .full(params, audio)
         .map_err(|e| anyhow::anyhow!("Transcription failed: {}", e))?;
 
-    let num_segments = state
-        .full_n_segments()
-        .map_err(|e| anyhow::anyhow!("Failed to get segments: {}", e))?;
-
     let mut text = String::new();
-    for i in 0..num_segments {
-        if let Ok(segment) = state.full_get_segment_text(i) {
-            text.push_str(&segment);
+    for segment in state.as_iter() {
+        if let Ok(s) = segment.to_str() {
+            text.push_str(s);
         }
     }
 
