@@ -158,7 +158,11 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
             }
         };
 
-        let audio_16k = whisper::resample(&audio_data, sample_rate, 16000);
+        // Trim trailing silence to prevent Whisper hallucinations.
+        // When VAD auto-stops, the last ~2s are silence that Whisper fills
+        // with phantom text ("Thank you", "♪♪", repeated words, etc.).
+        let trimmed = trim_trailing_silence(&audio_data, sample_rate);
+        let audio_16k = whisper::resample(trimmed, sample_rate, 16000);
 
         match whisper::transcribe(&model_path.to_string_lossy(), &audio_16k) {
             Ok(text) => {
@@ -192,6 +196,43 @@ pub fn start_recording(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn stop_recording(app: tauri::AppHandle) -> Result<(), String> {
     stop_recording_core(&app)
+}
+
+/// Trim trailing silence from audio to prevent Whisper hallucinations.
+/// Walks backwards from the end, finding the last sample above the threshold,
+/// then keeps a small tail (~100ms) for natural trailing off.
+fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
+    const RMS_THRESHOLD: f32 = 0.01;
+    const CHUNK_MS: u32 = 30;
+    let chunk_size = (sample_rate * CHUNK_MS / 1000) as usize;
+    let tail_padding = (sample_rate as f32 * 0.1) as usize; // keep 100ms after last speech
+
+    if audio.len() < chunk_size {
+        return audio;
+    }
+
+    let mut last_speech = audio.len();
+    let mut i = audio.len();
+    while i >= chunk_size {
+        let start = i - chunk_size;
+        let chunk = &audio[start..i];
+        let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len() as f32).sqrt();
+        if rms >= RMS_THRESHOLD {
+            last_speech = i;
+            break;
+        }
+        i -= chunk_size;
+    }
+
+    let end = (last_speech + tail_padding).min(audio.len());
+    let trimmed_duration = audio.len() - end;
+    if trimmed_duration > 0 {
+        log::debug!(
+            "Trimmed {:.1}s of trailing silence",
+            trimmed_duration as f32 / sample_rate as f32
+        );
+    }
+    &audio[..end]
 }
 
 // --- Internal wrappers (called from hotkey handler) ---
