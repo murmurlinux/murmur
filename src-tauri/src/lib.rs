@@ -154,7 +154,7 @@ pub fn run() {
                             }
                             // Persist to store and emit event
                             if let Ok(store) = app.store("settings.json") {
-                                let _ = store.set("showSkin", serde_json::json!(!was_visible));
+                                store.set("showSkin", serde_json::json!(!was_visible));
                                 let _ = store.save();
                             }
                             let _ = app.emit("skin-visibility-changed", serde_json::json!({ "visible": !was_visible }));
@@ -188,7 +188,7 @@ pub fn run() {
                             let _ = window.set_focus();
                             // Persist visibility
                             if let Ok(store) = app.store("settings.json") {
-                                let _ = store.set("showSkin", serde_json::json!(true));
+                                store.set("showSkin", serde_json::json!(true));
                                 let _ = store.save();
                             }
                             let _ = app.emit("skin-visibility-changed", serde_json::json!({ "visible": true }));

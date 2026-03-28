@@ -39,7 +39,9 @@ pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Err
     let start = std::time::Instant::now();
 
     // Use cached context — hold the lock for the duration of transcription
-    let mut cache = WHISPER_CACHE.lock().map_err(|e| anyhow::anyhow!("Cache lock poisoned: {}", e))?;
+    let mut cache = WHISPER_CACHE
+        .lock()
+        .map_err(|e| anyhow::anyhow!("Cache lock poisoned: {}", e))?;
 
     let needs_reload = match &*cache {
         Some(cached) => cached.model_path != model_path,
