@@ -502,6 +502,17 @@ export function SettingsPanel() {
                     accent={accent()}
                   />
                 </SettingRow>
+                <SettingRow label="Start on Login">
+                  <Toggle
+                    value={settings()!.startOnLogin}
+                    onChange={async () => {
+                      const next = !settings()!.startOnLogin;
+                      await invoke("set_start_on_login", { enabled: next });
+                      updateSetting("startOnLogin", next);
+                    }}
+                    accent={accent()}
+                  />
+                </SettingRow>
               </div>
             </div>
           </>
