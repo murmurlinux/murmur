@@ -195,7 +195,10 @@ pub fn start_capture(
                                 let count = counter.get() + 1;
                                 counter.set(count);
                                 if count >= SILENCE_TIMEOUT_FRAMES {
-                                    log::debug!("VAD: silence detected ({:.1}s) — auto-stopping", count as f32 * 0.016);
+                                    log::debug!(
+                                        "VAD: silence detected ({:.1}s) — auto-stopping",
+                                        count as f32 * 0.016
+                                    );
                                     stop_flag.store(true, Ordering::Relaxed);
                                 }
                             }
