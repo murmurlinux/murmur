@@ -12,6 +12,7 @@ export default defineConfig({
         main: resolve(__dirname, "index.html"),
         settings: resolve(__dirname, "settings.html"),
         popup: resolve(__dirname, "popup.html"),
+        onboarding: resolve(__dirname, "onboarding.html"),
       },
     },
   },
