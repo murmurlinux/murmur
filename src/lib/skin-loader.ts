@@ -54,7 +54,7 @@ export interface LoadedSkin {
 }
 
 function extractSkinName(path: string): string {
-  // Path looks like "../assets/skins/gemini-v1/skin.json"
+  // Path looks like "../assets/skins/comm-badge/skin.json"
   const parts = path.split("/");
   return parts[parts.length - 2];
 }

@@ -262,7 +262,7 @@ export function SettingsPanel() {
                   "font-size": "13px",
                 }}
               >
-                Gemini V1
+                Comm Badge
                 <span style={{ color: "rgba(255, 255, 255, 0.2)", "margin-left": "8px", "font-size": "11px" }}>
                   default
                 </span>
