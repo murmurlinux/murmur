@@ -1,7 +1,7 @@
 use crate::audio::capture;
 use crate::inject::paste;
-use crate::stt::{model_manager, whisper};
 use crate::state::{AppState, RecordingState};
+use crate::stt::{model_manager, whisper};
 use serde::Serialize;
 use std::sync::atomic::Ordering;
 use tauri::{Emitter, Manager};
@@ -29,7 +29,9 @@ struct TranscriptionResult {
 fn emit_state(app: &tauri::AppHandle, state: &str) {
     let _ = app.emit(
         "recording-state",
-        RecordingStatePayload { state: state.to_string() },
+        RecordingStatePayload {
+            state: state.to_string(),
+        },
     );
 }
 
@@ -60,17 +62,25 @@ fn start_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
     super::popup::show_popup(app);
 
     // Read auto-stop silence setting (only active in tap mode)
-    let auto_stop = app.store("settings.json")
+    let auto_stop = app
+        .store("settings.json")
         .ok()
-        .and_then(|store| {
-            let mode = store.get("recordMode")
+        .map(|store| {
+            let mode = store
+                .get("recordMode")
                 .and_then(|v| v.as_str().map(String::from))
                 .unwrap_or_else(|| "hold".to_string());
-            let enabled = store.get("autoStopSilence")
+            let enabled = store
+                .get("autoStopSilence")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
-            log::debug!("VAD settings: recordMode={}, autoStopSilence={}, auto_stop={}", mode, enabled, mode == "tap" && enabled);
-            Some(mode == "tap" && enabled)
+            log::debug!(
+                "VAD settings: recordMode={}, autoStopSilence={}, auto_stop={}",
+                mode,
+                enabled,
+                mode == "tap" && enabled
+            );
+            mode == "tap" && enabled
         })
         .unwrap_or(false);
 
@@ -145,9 +155,10 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
             Some(p) => p,
             None => {
                 log::info!("Model '{}' not found, downloading...", active_model);
-                match tauri::async_runtime::block_on(
-                    model_manager::download_model_by_name(app_handle.clone(), &active_model),
-                ) {
+                match tauri::async_runtime::block_on(model_manager::download_model_by_name(
+                    app_handle.clone(),
+                    &active_model,
+                )) {
                     Ok(p) => p,
                     Err(e) => {
                         log::error!("Model download failed: {}", e);

@@ -1,0 +1,6 @@
+[advisories]
+ignore = [
+    # glib 0.18.5 VariantStrIter unsoundness. Transitive dep from Tauri/tao.
+    # Murmur does not use VariantStrIter. Resolves when Tauri 3.0 ships with GTK4.
+    "RUSTSEC-2024-0429",
+]

@@ -137,7 +137,9 @@ struct Sha256Hasher {
 
 fn sha2_hash_context() -> Sha256Hasher {
     use sha2::Digest;
-    Sha256Hasher { hasher: sha2::Sha256::new() }
+    Sha256Hasher {
+        hasher: sha2::Sha256::new(),
+    }
 }
 
 impl Sha256Hasher {
@@ -167,8 +169,8 @@ pub async fn download_model_by_name(
         return Ok(dest);
     }
 
-    let (url, expected_sha) = get_model_meta(filename)
-        .ok_or_else(|| anyhow::anyhow!("Unknown model: {}", filename))?;
+    let (url, expected_sha) =
+        get_model_meta(filename).ok_or_else(|| anyhow::anyhow!("Unknown model: {}", filename))?;
 
     log::info!("Downloading whisper model to: {}", dest.display());
 
