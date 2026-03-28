@@ -9,6 +9,7 @@ export interface MurmurSettings {
   recordMode: "hold" | "tap";
   showSkin: boolean;
   autoStopSilence: boolean;
+  startOnLogin: boolean;
 }
 
 const DEFAULTS: MurmurSettings = {
@@ -20,6 +21,7 @@ const DEFAULTS: MurmurSettings = {
   recordMode: "hold",
   showSkin: true,
   autoStopSilence: true,
+  startOnLogin: false,
 };
 
 let storeInstance: Store | null = null;
