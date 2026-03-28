@@ -12,7 +12,7 @@ export interface MurmurSettings {
 }
 
 const DEFAULTS: MurmurSettings = {
-  skin: "gemini-v1",
+  skin: "comm-badge",
   accentColor: "#10b981",
   hotkey: "Ctrl+Shift+Space",
   model: "ggml-tiny.en.bin",
