@@ -27,6 +27,7 @@ pub fn run() {
             commands::models::list_models,
             commands::models::download_model,
             commands::models::set_active_model,
+            commands::settings::set_start_on_login,
         ])
         .setup(|app| {
             // --- Detect display server and start injection subsystem ---
