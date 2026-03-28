@@ -10,8 +10,8 @@ import { StatusLed } from "./StatusLed";
 import { loadSettings } from "../lib/settings";
 import { hexToHue } from "../lib/color";
 import { loadSkin, type LoadedSkin, type SkinConfig } from "../lib/skin-loader";
-import defaultSkinConfig from "../assets/skins/gemini-v1/skin.json";
-import defaultBodyImage from "../assets/skins/gemini-v1/body.png";
+import defaultSkinConfig from "../assets/skins/comm-badge/skin.json";
+import defaultBodyImage from "../assets/skins/comm-badge/body.png";
 
 // Scale the skin down inside the window — leaves transparent padding around edges
 // so the proximity zone fits entirely within the window bounds
