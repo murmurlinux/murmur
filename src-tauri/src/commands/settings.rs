@@ -37,6 +37,45 @@ fn dirs_autostart() -> Option<PathBuf> {
     directories::BaseDirs::new().map(|d| d.config_dir().join("autostart"))
 }
 
+#[derive(serde::Serialize)]
+pub struct MicrophoneInfo {
+    pub name: String,
+    pub available: bool,
+}
+
+/// Check if a microphone is available and return its name.
+#[tauri::command]
+pub fn check_microphone() -> MicrophoneInfo {
+    use cpal::traits::{DeviceTrait, HostTrait};
+
+    let host = cpal::default_host();
+    match host.default_input_device() {
+        Some(device) => MicrophoneInfo {
+            name: device.name().unwrap_or_else(|_| "Unknown".to_string()),
+            available: true,
+        },
+        None => MicrophoneInfo {
+            name: "No microphone detected".to_string(),
+            available: false,
+        },
+    }
+}
+
+pub fn open_onboarding_internal(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("onboarding") {
+        let _ = window.set_focus();
+        return;
+    }
+
+    let _ = WebviewWindowBuilder::new(app, "onboarding", WebviewUrl::App("onboarding.html".into()))
+        .title("Welcome to Murmur")
+        .inner_size(520.0, 480.0)
+        .resizable(false)
+        .background_color(Color(6, 13, 24, 255))
+        .center()
+        .build();
+}
+
 pub fn open_settings_internal(app: &AppHandle) {
     // If settings window already exists, just focus it
     if let Some(window) = app.get_webview_window("settings") {

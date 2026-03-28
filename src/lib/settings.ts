@@ -10,6 +10,7 @@ export interface MurmurSettings {
   showSkin: boolean;
   autoStopSilence: boolean;
   startOnLogin: boolean;
+  onboardingComplete: boolean;
 }
 
 const DEFAULTS: MurmurSettings = {
@@ -22,6 +23,7 @@ const DEFAULTS: MurmurSettings = {
   showSkin: true,
   autoStopSilence: true,
   startOnLogin: false,
+  onboardingComplete: false,
 };
 
 let storeInstance: Store | null = null;
