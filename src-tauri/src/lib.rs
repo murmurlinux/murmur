@@ -28,6 +28,7 @@ pub fn run() {
             commands::models::download_model,
             commands::models::set_active_model,
             commands::settings::set_start_on_login,
+            commands::settings::check_microphone,
         ])
         .setup(|app| {
             // --- Detect display server and start injection subsystem ---
@@ -105,8 +106,37 @@ pub fn run() {
                 }
             }
 
+            // --- First-run onboarding wizard ---
+            let onboarding_complete = {
+                let handle = app.handle().clone();
+                match handle.store("settings.json") {
+                    Ok(store) => store
+                        .get("onboardingComplete")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false),
+                    Err(_) => false,
+                }
+            };
+            if !onboarding_complete {
+                // Hide main skin, show onboarding wizard
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+                commands::settings::open_onboarding_internal(app.handle());
+            }
+
             // --- Position popup window (declared in tauri.conf.json, hidden) ---
             commands::popup::setup_popup_position(app.handle());
+
+            // --- Listen for onboarding completion ---
+            let handle_for_onboarding = app.handle().clone();
+            app.listen("onboarding-complete", move |_| {
+                log::info!("Onboarding complete — showing main window");
+                if let Some(window) = handle_for_onboarding.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            });
 
             // --- Listen for auto-stop from capture thread (VAD / max duration) ---
             let handle_for_autostop = app.handle().clone();
