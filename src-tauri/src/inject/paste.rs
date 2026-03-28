@@ -105,7 +105,6 @@ pub fn start_window_tracker() {
     });
 }
 
-
 /// Get the last known non-Murmur window ID (X11 only).
 pub fn get_last_external_window() -> Option<String> {
     LAST_EXTERNAL_WINDOW.lock().ok().and_then(|w| w.clone())
@@ -188,10 +187,7 @@ fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
     // Try wtype first — Wayland-native, supports Unicode/CJK
     if is_wtype_available() {
-        let status = Command::new("wtype")
-            .arg("--")
-            .arg(text)
-            .status();
+        let status = Command::new("wtype").arg("--").arg(text).status();
 
         match status {
             Ok(s) if s.success() => {

@@ -10,7 +10,13 @@ pub fn setup_popup_position(app: &AppHandle) {
     if let Some(popup) = app.get_webview_window("popup") {
         let (x, y) = get_bottom_center_position(app);
         let _ = popup.set_position(PhysicalPosition::new(x, y));
-        log::info!("Popup sized to {}x{} at ({}, {})", POPUP_WIDTH, POPUP_HEIGHT, x, y);
+        log::info!(
+            "Popup sized to {}x{} at ({}, {})",
+            POPUP_WIDTH,
+            POPUP_HEIGHT,
+            x,
+            y
+        );
     }
 }
 
@@ -25,7 +31,10 @@ fn get_bottom_center_position(app: &AppHandle) -> (i32, i32) {
         }
     }
     // Fallback: assume 1920x1080
-    ((1920 - POPUP_WIDTH as i32) / 2, 1080 - POPUP_HEIGHT as i32 - POPUP_MARGIN_BOTTOM as i32)
+    (
+        (1920 - POPUP_WIDTH as i32) / 2,
+        1080 - POPUP_HEIGHT as i32 - POPUP_MARGIN_BOTTOM as i32,
+    )
 }
 
 /// Show the popup if the main skin is hidden.
