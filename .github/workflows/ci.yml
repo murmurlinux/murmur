@@ -21,6 +21,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            libasound2-dev \
             libclang-dev \
             libvulkan-dev \
             libwebkit2gtk-4.1-dev \
