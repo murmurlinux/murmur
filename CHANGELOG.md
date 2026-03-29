@@ -2,6 +2,24 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.0] - 2026-03-29
+
+### Added
+
+- **GPU acceleration (Vulkan)**: upgraded whisper-rs to 0.16 with Vulkan GPU support. Transcription is significantly faster on systems with compatible GPUs.
+- **First-run onboarding wizard**: three-step guided setup on first launch. Microphone check, model download with progress, and hotkey confirmation.
+- **Start on login**: new setting to launch Murmur automatically on desktop login via XDG autostart.
+- **Auto-update system**: AppImage users receive in-app updates automatically via the Tauri updater plugin. Debian users can add the apt repository for updates via `apt upgrade`.
+- **CI/CD pipeline**: automated lint, format, and build checks on every PR. Automated release pipeline builds signed .deb and .AppImage on version tags.
+
+### Fixed
+
+- Whisper hallucinations on VAD auto-stop (trailing silence trimmed before transcription)
+- Default skin renamed from "Gemini V1" to "Comm Badge"
+- All clippy warnings and rustfmt formatting issues resolved
+
+---
+
 ## [0.1.1] - 2026-03-26
 
 ### Added
