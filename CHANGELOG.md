@@ -2,6 +2,15 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.1] - 2026-03-30
+
+### Fixed
+
+- APT repository packaging: added missing section field to .deb metadata
+- Fixed reprepro config for automated apt repo deployment
+
+---
+
 ## [0.3.0] - 2026-03-29
 
 ### Added

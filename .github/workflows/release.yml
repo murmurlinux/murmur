@@ -122,7 +122,7 @@ DISTEOF
           echo "SignWith: ${{ steps.gpg.outputs.key_id }}" >> repo/conf/distributions
 
           for deb in ./debs/*.deb; do
-            reprepro -b repo includedeb stable "$deb"
+            reprepro -b repo --ignore=missingfield includedeb stable "$deb"
           done
 
           gpg --armor --export dev@murmurlinux.com > repo/gpg.key
