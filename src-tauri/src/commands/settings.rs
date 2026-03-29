@@ -87,7 +87,7 @@ pub fn open_settings_internal(app: &AppHandle) {
         .title("Murmur Settings")
         .inner_size(480.0, 560.0)
         .min_inner_size(480.0, 400.0)
-        .background_color(Color(6, 13, 24, 255)) // #060d18 — ocean-deep, eliminates white flash
+        .background_color(Color(6, 13, 24, 255)) // #060d18 -- ocean-deep, eliminates white flash
         .center()
         .build();
 }

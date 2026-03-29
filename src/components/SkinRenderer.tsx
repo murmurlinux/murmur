@@ -15,7 +15,7 @@ export function SkinRenderer(props: SkinRendererProps) {
         "pointer-events": "none",
       }}
     >
-      {/* Body layer — the main device image */}
+      {/* Body layer -- the main device image */}
       <img
         src={props.imageSrc}
         alt=""

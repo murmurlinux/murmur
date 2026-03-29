@@ -59,10 +59,6 @@ function extractSkinName(path: string): string {
   return parts[parts.length - 2];
 }
 
-export function listSkins(): string[] {
-  return Object.keys(skinConfigs).map(extractSkinName);
-}
-
 export function loadSkin(name: string): LoadedSkin | null {
   const configKey = Object.keys(skinConfigs).find(
     (k) => extractSkinName(k) === name,

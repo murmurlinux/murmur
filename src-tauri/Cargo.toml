@@ -1,8 +1,8 @@
 [package]
 name = "murmur"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-description = "AI voice-to-text gadget for Linux — speak anywhere, type everywhere"
+description = "AI voice-to-text gadget for Linux. Speak anywhere, type everywhere."
 homepage = "https://murmurlinux.com"
 repository = "https://github.com/murmurlinux/murmur"
 license = "GPL-3.0"

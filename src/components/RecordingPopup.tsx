@@ -67,7 +67,7 @@ export function RecordingPopup() {
   });
 
   return (
-    // Transparent container fills the whole window — only the pill is visible
+    // Transparent container fills the whole window -- only the pill is visible
     <div
       style={{
         width: "100%",

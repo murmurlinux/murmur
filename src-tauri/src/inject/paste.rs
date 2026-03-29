@@ -53,12 +53,12 @@ pub fn get_active_window() -> Option<String> {
 }
 
 /// Start a background thread that tracks the last non-Murmur focused window.
-/// Only runs on X11 — Wayland doesn't expose window IDs.
+/// Only runs on X11 -- Wayland doesn't expose window IDs.
 pub fn start_window_tracker() {
     let ds = display_server::detect();
 
     if ds == DisplayServer::Wayland {
-        log::info!("Wayland detected — window tracking not available (by design).");
+        log::info!("Wayland detected -- window tracking not available (by design).");
         return;
     }
 
@@ -126,7 +126,7 @@ fn sanitise_for_injection(text: &str) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// X11 injection (xdotool — existing approach)
+// X11 injection (xdotool -- existing approach)
 // ---------------------------------------------------------------------------
 
 /// Inject text on X11 via xdotool XTEST.
@@ -185,7 +185,7 @@ fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 
 /// Inject text on Wayland via wtype, falling back to clipboard + Ctrl+V.
 fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
-    // Try wtype first — Wayland-native, supports Unicode/CJK
+    // Try wtype first -- Wayland-native, supports Unicode/CJK
     if is_wtype_available() {
         let status = Command::new("wtype").arg("--").arg(text).status();
 
@@ -222,14 +222,14 @@ fn paste_via_ctrl_v_wayland() -> Result<(), anyhow::Error> {
             Ok(())
         }
         _ => {
-            log::warn!("Ctrl+V simulation failed. Text is on clipboard — paste manually.");
+            log::warn!("Ctrl+V simulation failed. Text is on clipboard -- paste manually.");
             Ok(())
         }
     }
 }
 
 // ---------------------------------------------------------------------------
-// Main entry point — dispatches based on display server
+// Main entry point -- dispatches based on display server
 // ---------------------------------------------------------------------------
 
 /// Inject transcribed text into the target application.
@@ -263,7 +263,7 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
         DisplayServer::X11 => paste_text_x11(text, target_window),
         DisplayServer::Wayland => paste_text_wayland(text),
         DisplayServer::Unknown => {
-            log::warn!("Unknown display server. Text is on clipboard — paste manually.");
+            log::warn!("Unknown display server. Text is on clipboard -- paste manually.");
             Ok(())
         }
     }
