@@ -71,13 +71,13 @@ pub fn run() {
                 inject::display_server::DisplayServer::X11 => {
                     if !inject::paste::is_xdotool_available() {
                         let _ = app.handle().emit("system-warning", serde_json::json!({
-                            "message": "xdotool not found. Text will be copied to clipboard only — install xdotool for direct typing."
+                            "message": "xdotool not found. Text will be copied to clipboard only -- install xdotool for direct typing."
                         }));
                     }
                 }
                 inject::display_server::DisplayServer::Wayland => {
                     // wtype is checked at injection time, not startup
-                    log::info!("Wayland session — will use wtype for text injection.");
+                    log::info!("Wayland session -- will use wtype for text injection.");
                 }
                 inject::display_server::DisplayServer::Unknown => {
                     let _ = app.handle().emit("system-warning", serde_json::json!({
@@ -159,7 +159,7 @@ pub fn run() {
             // --- Listen for onboarding completion ---
             let handle_for_onboarding = app.handle().clone();
             app.listen("onboarding-complete", move |_| {
-                log::info!("Onboarding complete — showing main window");
+                log::info!("Onboarding complete -- showing main window");
                 if let Some(window) = handle_for_onboarding.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.set_focus();
@@ -169,7 +169,7 @@ pub fn run() {
             // --- Listen for auto-stop from capture thread (VAD / max duration) ---
             let handle_for_autostop = app.handle().clone();
             app.listen("capture-auto-stopped", move |_| {
-                log::debug!("Capture auto-stopped — triggering full stop flow");
+                log::debug!("Capture auto-stopped -- triggering full stop flow");
                 let _ = commands::audio::stop_recording_internal(handle_for_autostop.clone());
             });
 
@@ -197,7 +197,7 @@ pub fn run() {
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().expect("No default window icon configured in tauri.conf.json").clone())
-                .tooltip("Murmur — Voice to Text")
+                .tooltip("Murmur -- Voice to Text")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {

@@ -62,4 +62,13 @@ export async function saveSetting<K extends keyof MurmurSettings>(
   await store.save();
 }
 
+export interface ModelInfo {
+  name: string;
+  filename: string;
+  url: string;
+  size_mb: number;
+  description: string;
+  downloaded: boolean;
+}
+
 export { DEFAULTS as SETTING_DEFAULTS };

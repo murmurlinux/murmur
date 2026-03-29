@@ -89,7 +89,7 @@ pub fn models_dir() -> PathBuf {
     }
 }
 
-/// Validate a model filename — prevent path traversal.
+/// Validate a model filename -- prevent path traversal.
 fn validate_filename(filename: &str) -> Result<(), anyhow::Error> {
     if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
         return Err(anyhow::anyhow!("Invalid model filename: {}", filename));
@@ -154,7 +154,7 @@ fn verify_checksum(path: &PathBuf, expected_sha256: &str) -> Result<bool, anyhow
     Ok(hash == expected_sha256)
 }
 
-/// SHA256 hasher using the sha2 crate — no shell-out, no memory doubling.
+/// SHA256 hasher using the sha2 crate -- no shell-out, no memory doubling.
 struct Sha256Hasher {
     hasher: sha2::Sha256,
 }
@@ -251,7 +251,7 @@ pub async fn download_model_by_name(
     // Verify checksum
     match verify_checksum(&tmp_dest, expected_sha) {
         Ok(true) => {
-            // Checksum matches — atomically rename to final destination
+            // Checksum matches -- atomically rename to final destination
             std::fs::rename(&tmp_dest, &dest)?;
             log::info!("Model download complete and verified: {} bytes", downloaded);
             Ok(dest)
@@ -259,7 +259,7 @@ pub async fn download_model_by_name(
         Ok(false) => {
             let _ = std::fs::remove_file(&tmp_dest);
             Err(anyhow::anyhow!(
-                "Model checksum verification failed — file may be corrupted. Please try again."
+                "Model checksum verification failed -- file may be corrupted. Please try again."
             ))
         }
         Err(e) => {

@@ -13,7 +13,7 @@ import { loadSkin, type LoadedSkin, type SkinConfig } from "../lib/skin-loader";
 import defaultSkinConfig from "../assets/skins/comm-badge/skin.json";
 import defaultBodyImage from "../assets/skins/comm-badge/body.png";
 
-// Scale the skin down inside the window — leaves transparent padding around edges
+// Scale the skin down inside the window -- leaves transparent padding around edges
 // so the proximity zone fits entirely within the window bounds
 const SKIN_SCALE = 0.65;
 
@@ -128,7 +128,7 @@ export function GadgetWindow() {
         "justify-content": "center",
       }}
     >
-      {/* Inner container scaled down — all children use percentage positioning
+      {/* Inner container scaled down -- all children use percentage positioning
           relative to this container, so everything stays aligned */}
       <div
         data-skin-container
