@@ -1,6 +1,6 @@
 {
   "productName": "Murmur",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "identifier": "com.murmurlinux.murmur",
   "build": {
     "frontendDist": "../dist",
@@ -65,7 +65,8 @@
     "category": "Utility",
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "xdotool"]
+        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "xdotool"],
+        "section": "utils"
       }
     }
   }
