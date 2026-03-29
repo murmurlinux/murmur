@@ -39,6 +39,30 @@ const MODELS: &[(&str, &str, &str, u32, &str, &str)] = &[
         "Best accuracy, slowest (~20-30s)",
         "6083e2549b2a66e4ba9a85b1a46833d7a8e43e4e065daca3b19e0d4e2b3304f2",
     ),
+    (
+        "Tiny (Multilingual)",
+        "ggml-tiny.bin",
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
+        75,
+        "Fastest, 99+ languages (~3-4s)",
+        "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+    ),
+    (
+        "Base (Multilingual)",
+        "ggml-base.bin",
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
+        142,
+        "Good balance, 99+ languages (~8-10s)",
+        "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+    ),
+    (
+        "Small (Multilingual)",
+        "ggml-small.bin",
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+        466,
+        "Best accuracy, 99+ languages (~20-30s)",
+        "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+    ),
 ];
 
 #[derive(Clone, Serialize)]
