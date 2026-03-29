@@ -31,7 +31,12 @@ pub fn resample(samples: &[f32], from_rate: u32, to_rate: u32) -> Vec<f32> {
 
 /// Transcribe audio using whisper.cpp with cached model context.
 /// `audio` must be 16kHz f32 mono
-pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Error> {
+pub fn transcribe(
+    model_path: &str,
+    audio: &[f32],
+    language: &str,
+    translate: bool,
+) -> Result<String, anyhow::Error> {
     if audio.is_empty() {
         return Ok(String::new());
     }
@@ -61,7 +66,12 @@ pub fn transcribe(model_path: &str, audio: &[f32]) -> Result<String, anyhow::Err
     let cached = cache.as_ref().unwrap(); // Safe: we just ensured it's Some
 
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    params.set_language(Some("en"));
+    if language == "auto" {
+        params.set_language(None);
+    } else {
+        params.set_language(Some(language));
+    }
+    params.set_translate(translate);
     params.set_print_special(false);
     params.set_print_progress(false);
     params.set_print_realtime(false);
