@@ -126,7 +126,7 @@ Models auto-download from Hugging Face on first use. SHA256 verified.
 - [x] Start on login (v0.3.0)
 - [x] Auto-update system (v0.3.0)
 - [ ] Multi-language support (99+ languages)
-- [ ] Transcript history
+- [ ] Transcript history (Pro tier)
 - [ ] Additional skins (Pro tier)
 - [ ] Cloud STT option (Pro tier)
 - [ ] LLM post-processing (Pro tier)
