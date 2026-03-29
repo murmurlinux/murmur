@@ -19,6 +19,7 @@ pub fn run() {
         .manage(state::AppState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             commands::audio::start_recording,
             commands::audio::stop_recording,
@@ -31,6 +32,33 @@ pub fn run() {
             commands::settings::check_microphone,
         ])
         .setup(|app| {
+            // --- Updater plugin (registers inside setup, not on builder) ---
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+
+            // --- Check for updates in background ---
+            let update_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                match tauri_plugin_updater::UpdaterExt::updater(&update_handle) {
+                    Ok(updater) => match updater.check().await {
+                        Ok(Some(update)) => {
+                            log::info!(
+                                "Update available: v{} (current: {})",
+                                update.version,
+                                update.current_version
+                            );
+                            let _ = update_handle.emit("update-available", serde_json::json!({
+                                "version": update.version,
+                                "current": update.current_version,
+                            }));
+                        }
+                        Ok(None) => log::debug!("No updates available"),
+                        Err(e) => log::debug!("Update check failed (non-fatal): {}", e),
+                    },
+                    Err(e) => log::debug!("Updater init failed (non-fatal): {}", e),
+                }
+            });
+
             // --- Detect display server and start injection subsystem ---
             let display_server = inject::display_server::detect();
             log::info!("Display server: {}", display_server);

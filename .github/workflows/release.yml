@@ -64,22 +64,73 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri app
-        run: pnpm tauri build
-
-      - name: Find build artifacts
-        id: artifacts
-        run: |
-          DEB=$(find src-tauri/target/release/bundle/deb -name '*.deb' | head -1)
-          APPIMAGE=$(find src-tauri/target/release/bundle/appimage -name '*.AppImage' | head -1)
-          echo "deb=$DEB" >> "$GITHUB_OUTPUT"
-          echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
-          echo "Found: $DEB, $APPIMAGE"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Build Tauri app (signed)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          generate_release_notes: true
-          files: |
-            ${{ steps.artifacts.outputs.deb }}
-            ${{ steps.artifacts.outputs.appimage }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "Murmur ${{ github.ref_name }}"
+          releaseBody: "See the [CHANGELOG](https://github.com/murmurlinux/murmur/blob/main/CHANGELOG.md) for details."
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+
+  update-apt-repo:
+    name: Update APT Repository
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download .deb from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release download "$TAG" --repo murmurlinux/murmur --pattern '*.deb' --dir ./debs
+
+      - name: Import GPG signing key
+        run: |
+          echo "$APT_SIGNING_KEY" | gpg --batch --import
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+
+      - name: Get GPG key ID
+        id: gpg
+        run: |
+          KEY_ID=$(gpg --list-keys --keyid-format long dev@murmurlinux.com | grep -oP '(?<=\/)[A-F0-9]{16}' | head -1)
+          echo "key_id=$KEY_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Setup apt repo with reprepro
+        run: |
+          sudo apt-get install -y reprepro
+
+          mkdir -p repo/conf
+          cat > repo/conf/distributions <<DISTEOF
+          Origin: Murmur Linux
+          Label: Murmur
+          Codename: stable
+          Architectures: amd64
+          Components: main
+          Description: Murmur voice-to-text for Linux
+          SignWith: ${{ steps.gpg.outputs.key_id }}
+          DISTEOF
+
+          for deb in ./debs/*.deb; do
+            reprepro -b repo includedeb stable "$deb"
+          done
+
+          gpg --armor --export dev@murmurlinux.com > repo/gpg.key
+
+      - name: Deploy to apt repo
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          external_repository: murmurlinux/apt
+          publish_branch: gh-pages
+          publish_dir: ./repo
+          keep_files: false
