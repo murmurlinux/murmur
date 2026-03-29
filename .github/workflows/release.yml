@@ -129,7 +129,7 @@ jobs:
       - name: Deploy to apt repo
         uses: peaceiris/actions-gh-pages@v4
         with:
-          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.APT_DEPLOY_TOKEN }}
           external_repository: murmurlinux/apt
           publish_branch: gh-pages
           publish_dir: ./repo
