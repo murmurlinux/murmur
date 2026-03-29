@@ -1,7 +1,7 @@
 import { createSignal, onMount, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
-import { loadSettings, saveSetting, type MurmurSettings } from "../lib/settings";
+import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
 import { hexToHue, hueToHex, hexToRgba } from "../lib/color";
 import logoImg from "../assets/logo.png";
 
@@ -92,7 +92,7 @@ export function SettingsPanel() {
   const [settings, setSettings] = createSignal<MurmurSettings | null>(null);
   const [hue, setHue] = createSignal(160);
   const [capturingHotkey, setCapturingHotkey] = createSignal(false);
-  const [models, setModels] = createSignal<any[]>([]);
+  const [models, setModels] = createSignal<ModelInfo[]>([]);
   const [downloadingModel, setDownloadingModel] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
   const [version, setVersion] = createSignal("...");
@@ -116,7 +116,7 @@ export function SettingsPanel() {
     setHue(hexToHue(s.accentColor));
 
     try {
-      const list = await invoke<any[]>("list_models");
+      const list = await invoke<ModelInfo[]>("list_models");
       setModels(list);
     } catch {
       // Models command may not exist yet
@@ -167,7 +167,7 @@ export function SettingsPanel() {
     setDownloadingModel(filename);
     try {
       await invoke("download_model", { modelFilename: filename });
-      const list = await invoke<any[]>("list_models");
+      const list = await invoke<ModelInfo[]>("list_models");
       setModels(list);
     } catch (e) {
       showError(`Download failed: ${e}`);
@@ -383,7 +383,7 @@ export function SettingsPanel() {
                             {model.name}
                           </div>
                           <div style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.25)", "margin-top": "2px" }}>
-                            {model.description} — {model.size_mb}MB
+                            {model.description} -- {model.size_mb}MB
                           </div>
                         </div>
                         {model.downloaded ? (

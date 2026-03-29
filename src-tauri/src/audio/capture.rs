@@ -94,7 +94,7 @@ pub fn start_capture(
             return;
         }
 
-        // Processing loop — runs on this thread alongside the stream
+        // Processing loop -- runs on this thread alongside the stream
         const WAVEFORM_BARS: usize = 48;
         let emit_interval = std::time::Duration::from_millis(16); // ~60fps
         let mut last_emit = std::time::Instant::now();
@@ -176,7 +176,7 @@ pub fn start_capture(
                 },
             );
 
-            // Auto-stop on silence (VAD) — only when enabled
+            // Auto-stop on silence (VAD) -- only when enabled
             if auto_stop_silence {
                 const SILENCE_RMS_THRESHOLD: f32 = 0.008;
                 const SILENCE_TIMEOUT_FRAMES: u32 = 125; // ~2s at 16ms per frame
@@ -196,7 +196,7 @@ pub fn start_capture(
                                 counter.set(count);
                                 if count >= SILENCE_TIMEOUT_FRAMES {
                                     log::debug!(
-                                        "VAD: silence detected ({:.1}s) — auto-stopping",
+                                        "VAD: silence detected ({:.1}s) -- auto-stopping",
                                         count as f32 * 0.016
                                     );
                                     stop_flag.store(true, Ordering::Relaxed);
@@ -210,7 +210,7 @@ pub fn start_capture(
                 });
             }
 
-            // Accumulate for STT — cap at 60 seconds (~2.6M samples at 44.1kHz)
+            // Accumulate for STT -- cap at 60 seconds (~2.6M samples at 44.1kHz)
             const MAX_SAMPLES: usize = 44100 * 60;
             if let Ok(mut buf) = audio_buffer.lock() {
                 if buf.len() < MAX_SAMPLES {
@@ -218,7 +218,7 @@ pub fn start_capture(
                     let to_add = samples.len().min(remaining);
                     buf.extend_from_slice(&samples[..to_add]);
                     if buf.len() >= MAX_SAMPLES {
-                        log::info!("Max recording duration (60s) reached — auto-stopping");
+                        log::info!("Max recording duration (60s) reached -- auto-stopping");
                         stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
                     }
                 }

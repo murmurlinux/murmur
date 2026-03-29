@@ -106,7 +106,7 @@ export function Waveform(props: WaveformProps) {
     // Stop the loop once fully decayed to idle
     const maxBar = Math.max(...currentBars);
     if (!isActive() && maxBar < 0.005) {
-      animFrameId = undefined; // Stop looping — will restart on next audio event
+      animFrameId = undefined; // Stop looping -- will restart on next audio event
       return;
     }
 

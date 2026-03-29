@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://murmurlinux.com">
-    <img src=".github/banner.png" alt="Murmur — AI voice to text for Linux" width="100%">
+    <img src=".github/banner.png" alt="Murmur: AI voice to text for Linux" width="100%">
   </a>
 </p>
 

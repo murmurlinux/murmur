@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
-/// Cached WhisperContext — avoids reloading the model from disk on every transcription.
+/// Cached WhisperContext -- avoids reloading the model from disk on every transcription.
 /// The cache is invalidated when the model path changes.
 struct CachedContext {
     ctx: WhisperContext,
@@ -43,7 +43,7 @@ pub fn transcribe(
 
     let start = std::time::Instant::now();
 
-    // Use cached context — hold the lock for the duration of transcription
+    // Use cached context -- hold the lock for the duration of transcription
     let mut cache = WHISPER_CACHE
         .lock()
         .map_err(|e| anyhow::anyhow!("Cache lock poisoned: {}", e))?;

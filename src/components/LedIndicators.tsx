@@ -22,7 +22,7 @@ export function LedIndicators(props: LedIndicatorsProps) {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    // Mouse outside the window entirely — reset
+    // Mouse outside the window entirely -- reset
     const windowRect = document.documentElement.getBoundingClientRect();
     if (e.clientX < windowRect.left || e.clientY < windowRect.top ||
         e.clientX > windowRect.right || e.clientY > windowRect.bottom) {

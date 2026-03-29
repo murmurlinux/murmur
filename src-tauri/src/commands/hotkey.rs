@@ -37,20 +37,20 @@ pub fn register_hotkey(app: &AppHandle, shortcut: &str) -> Result<(), String> {
             ShortcutState::Pressed => {
                 if mode == "tap" {
                     if is_recording(app) {
-                        log::debug!("Hotkey tap — stopping recording");
+                        log::debug!("Hotkey tap -- stopping recording");
                         let _ = audio::stop_recording_internal(app.clone());
                     } else {
-                        log::debug!("Hotkey tap — starting recording");
+                        log::debug!("Hotkey tap -- starting recording");
                         let _ = audio::start_recording_internal(app.clone());
                     }
                 } else {
-                    log::debug!("Hotkey pressed — starting recording");
+                    log::debug!("Hotkey pressed -- starting recording");
                     let _ = audio::start_recording_internal(app.clone());
                 }
             }
             ShortcutState::Released => {
                 if mode != "tap" {
-                    log::debug!("Hotkey released — stopping recording");
+                    log::debug!("Hotkey released -- stopping recording");
                     let _ = audio::stop_recording_internal(app.clone());
                 }
             }

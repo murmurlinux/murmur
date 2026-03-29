@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MurmurLogo } from "./MurmurLogo";
-import { saveSetting } from "../lib/settings";
+import { saveSetting, type ModelInfo } from "../lib/settings";
 
 const ACCENT = "#14b8a6";
 
@@ -39,9 +39,10 @@ export function OnboardingWizard() {
   const [step, setStep] = createSignal(0);
   const [micName, setMicName] = createSignal("Checking...");
   const [micAvailable, setMicAvailable] = createSignal(false);
-  const [models, setModels] = createSignal<any[]>([]);
+  const [models, setModels] = createSignal<ModelInfo[]>([]);
   const [downloading, setDownloading] = createSignal<string | null>(null);
   const [downloadPercent, setDownloadPercent] = createSignal(0);
+  const [downloadError, setDownloadError] = createSignal<string | null>(null);
   const [selectedModel, setSelectedModel] = createSignal("ggml-tiny.en.bin");
 
   onMount(async () => {
@@ -57,7 +58,7 @@ export function OnboardingWizard() {
 
     // Load models
     try {
-      const list = await invoke<any[]>("list_models");
+      const list = await invoke<ModelInfo[]>("list_models");
       setModels(list);
       // If any model is already downloaded, pre-select it
       const downloaded = list.find((m: any) => m.downloaded);
@@ -77,13 +78,13 @@ export function OnboardingWizard() {
     setDownloadPercent(0);
     try {
       await invoke("download_model", { modelFilename: filename });
-      const list = await invoke<any[]>("list_models");
+      const list = await invoke<ModelInfo[]>("list_models");
       setModels(list);
       setSelectedModel(filename);
       await invoke("set_active_model", { modelFilename: filename });
       await saveSetting("model", filename);
-    } catch {
-      // Error handled silently, user can retry
+    } catch (e) {
+      setDownloadError(`Download failed: ${e}`);
     } finally {
       setDownloading(null);
     }
@@ -327,7 +328,7 @@ export function OnboardingWizard() {
                           "margin-top": "2px",
                         }}
                       >
-                        {model.description} — {model.size_mb}MB
+                        {model.description} -- {model.size_mb}MB
                       </div>
                     </div>
                     {model.downloaded ? (

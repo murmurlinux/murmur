@@ -10,6 +10,7 @@ All notable changes to Murmur will be documented in this file.
 - **First-run onboarding wizard**: three-step guided setup on first launch. Microphone check, model download with progress, and hotkey confirmation.
 - **Start on login**: new setting to launch Murmur automatically on desktop login via XDG autostart.
 - **Auto-update system**: AppImage users receive in-app updates automatically via the Tauri updater plugin. Debian users can add the apt repository for updates via `apt upgrade`.
+- **Multi-language support**: language selector with 19 languages plus auto-detect. Translation toggle to convert any language to English output. Multilingual whisper models added.
 - **CI/CD pipeline**: automated lint, format, and build checks on every PR. Automated release pipeline builds signed .deb and .AppImage on version tags.
 
 ### Fixed
@@ -17,6 +18,19 @@ All notable changes to Murmur will be documented in this file.
 - Whisper hallucinations on VAD auto-stop (trailing silence trimmed before transcription)
 - Default skin renamed from "Gemini V1" to "Comm Badge"
 - All clippy warnings and rustfmt formatting issues resolved
+
+---
+
+## [0.2.0] - 2026-03-27
+
+### Added
+
+- **Wayland support**: text injection via wtype with automatic X11/Wayland detection at startup. Clipboard + Ctrl+V fallback for GNOME Wayland.
+- **Voice activity detection (VAD)**: auto-stop recording after ~2 seconds of silence in tap mode. Configurable in settings.
+
+### Fixed
+
+- Pre-release security audit: all critical findings addressed
 
 ---
 
