@@ -121,11 +121,17 @@ Models auto-download from Hugging Face on first use. SHA256 verified.
 - [x] Settings redesign (v0.1.1)
 - [x] Wayland support via wtype (v0.2.0)
 - [x] Voice activity detection / silence auto-stop (v0.2.0)
-- [ ] GPU acceleration (Vulkan)
-- [ ] Additional skins
-- [ ] Cloud STT option (Pro tier)
-- [ ] CLI mode (`murmur-cli`)
+- [x] GPU acceleration via Vulkan (v0.3.0)
+- [x] First-run onboarding wizard (v0.3.0)
+- [x] Start on login (v0.3.0)
+- [x] Auto-update system (v0.3.0)
+- [x] CI/CD pipeline with automated releases (v0.3.0)
 - [ ] Multi-language support (99+ languages)
+- [ ] Transcript history
+- [ ] Additional skins (Pro tier)
+- [ ] Cloud STT option (Pro tier)
+- [ ] LLM post-processing (Pro tier)
+- [ ] CLI mode (Pro tier)
 
 See the full [roadmap](https://murmurlinux.com/about) on our website.
 
