@@ -136,6 +136,23 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
+    // Read language settings for transcription
+    let (language, translate) = app
+        .store("settings.json")
+        .ok()
+        .map(|store| {
+            let lang = store
+                .get("language")
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "en".to_string());
+            let trans = store
+                .get("translateToEnglish")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            (lang, trans)
+        })
+        .unwrap_or_else(|| ("en".to_string(), false));
+
     // Spawn transcription on a background thread
     let active_model = get_active_model(app);
     let app_handle = app.clone();
@@ -175,7 +192,12 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
         let trimmed = trim_trailing_silence(&audio_data, sample_rate);
         let audio_16k = whisper::resample(trimmed, sample_rate, 16000);
 
-        match whisper::transcribe(&model_path.to_string_lossy(), &audio_16k) {
+        match whisper::transcribe(
+            &model_path.to_string_lossy(),
+            &audio_16k,
+            &language,
+            translate,
+        ) {
             Ok(text) => {
                 let duration_ms = start.elapsed().as_millis() as u64;
                 if !text.is_empty() {

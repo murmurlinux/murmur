@@ -484,6 +484,69 @@ export function SettingsPanel() {
               </div>
             </div>
 
+            {/* Language */}
+            <div style={glass}>
+              <label style={label}>Language</label>
+              <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
+                <select
+                  value={settings()!.language}
+                  onChange={(e) => updateSetting("language", e.currentTarget.value)}
+                  style={{
+                    padding: "8px 12px",
+                    background: "rgba(0, 0, 0, 0.3)",
+                    border: "1px solid rgba(255, 255, 255, 0.06)",
+                    "border-radius": "8px",
+                    color: "rgba(255, 255, 255, 0.7)",
+                    "font-size": "13px",
+                    cursor: "pointer",
+                    appearance: "none" as any,
+                    "-webkit-appearance": "none",
+                  }}
+                >
+                  <option value="en">English</option>
+                  <option value="auto">Auto-detect</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="it">Italian</option>
+                  <option value="pt">Portuguese</option>
+                  <option value="ru">Russian</option>
+                  <option value="ja">Japanese</option>
+                  <option value="zh">Chinese</option>
+                  <option value="ko">Korean</option>
+                  <option value="ar">Arabic</option>
+                  <option value="hi">Hindi</option>
+                  <option value="nl">Dutch</option>
+                  <option value="pl">Polish</option>
+                  <option value="tr">Turkish</option>
+                  <option value="sv">Swedish</option>
+                  <option value="id">Indonesian</option>
+                  <option value="uk">Ukrainian</option>
+                </select>
+                {settings()!.language !== "en" && (
+                  <SettingRow label="Translate to English">
+                    <Toggle
+                      value={settings()!.translateToEnglish}
+                      onChange={() => updateSetting("translateToEnglish", !settings()!.translateToEnglish)}
+                      accent={accent()}
+                    />
+                  </SettingRow>
+                )}
+                {settings()!.language !== "en" && settings()!.model.includes(".en.") && (
+                  <div style={{
+                    "font-size": "11px",
+                    color: "#f59e0b",
+                    padding: "8px 10px",
+                    background: "rgba(245, 158, 11, 0.08)",
+                    "border-radius": "6px",
+                    border: "1px solid rgba(245, 158, 11, 0.15)",
+                  }}>
+                    Your current model is English-only. Download a multilingual model above for best results.
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* General */}
             <div style={glass}>
               <label style={label}>General</label>

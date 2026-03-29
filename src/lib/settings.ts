@@ -11,6 +11,8 @@ export interface MurmurSettings {
   autoStopSilence: boolean;
   startOnLogin: boolean;
   onboardingComplete: boolean;
+  language: string;
+  translateToEnglish: boolean;
 }
 
 const DEFAULTS: MurmurSettings = {
@@ -24,6 +26,8 @@ const DEFAULTS: MurmurSettings = {
   autoStopSilence: true,
   startOnLogin: false,
   onboardingComplete: false,
+  language: "en",
+  translateToEnglish: false,
 };
 
 let storeInstance: Store | null = null;
