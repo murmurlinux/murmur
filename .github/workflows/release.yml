@@ -110,15 +110,16 @@ jobs:
           sudo apt-get install -y reprepro
 
           mkdir -p repo/conf
-          cat > repo/conf/distributions <<DISTEOF
-          Origin: Murmur Linux
-          Label: Murmur
-          Codename: stable
-          Architectures: amd64
-          Components: main
-          Description: Murmur voice-to-text for Linux
-          SignWith: ${{ steps.gpg.outputs.key_id }}
-          DISTEOF
+          cat > repo/conf/distributions <<'DISTEOF'
+Origin: Murmur Linux
+Label: Murmur
+Suite: stable
+Codename: stable
+Architectures: amd64
+Components: main
+Description: Murmur voice-to-text for Linux
+DISTEOF
+          echo "SignWith: ${{ steps.gpg.outputs.key_id }}" >> repo/conf/distributions
 
           for deb in ./debs/*.deb; do
             reprepro -b repo includedeb stable "$deb"
