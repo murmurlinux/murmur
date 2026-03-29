@@ -116,6 +116,11 @@ pub fn get_last_external_window() -> Option<String> {
 
 /// Sanitise transcribed text for safe injection.
 /// Strips control characters that could produce unintended keystrokes.
+///
+/// Note: newlines and tabs are intentionally allowed for paragraph dictation.
+/// In terminal emulators, a newline will trigger Enter (command execution).
+/// This is accepted behaviour since voice-to-text is primarily used in text
+/// editors, chat apps, and document fields, not terminals.
 fn sanitise_for_injection(text: &str) -> String {
     text.chars()
         .filter(|c| {
