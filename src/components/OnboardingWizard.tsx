@@ -1,6 +1,6 @@
-import { createSignal, onMount, For, Show } from "solid-js";
+import { createSignal, onMount, onCleanup, For, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { saveSetting, type ModelInfo } from "../lib/settings";
 import logoImg from "../assets/logo.png";
@@ -35,70 +35,192 @@ const btnSecondary = {
   cursor: "pointer",
 };
 
+const selectStyle = {
+  padding: "10px 14px",
+  background: "rgba(0, 0, 0, 0.3)",
+  border: "1px solid rgba(255, 255, 255, 0.08)",
+  "border-radius": "8px",
+  color: "rgba(255, 255, 255, 0.8)",
+  "font-size": "13px",
+  cursor: "pointer",
+  width: "100%",
+  appearance: "none" as any,
+};
+
+// Model filename mapping
+function getModelFilename(size: string, lang: string): string {
+  const suffix = lang === "english" ? ".en" : "";
+  return `ggml-${size}${suffix}.bin`;
+}
+
 export function OnboardingWizard() {
   const [step, setStep] = createSignal(0);
-  const [micName, setMicName] = createSignal("Checking...");
-  const [micAvailable, setMicAvailable] = createSignal(false);
+
+  // Step 0: Mic
+  const [mics, setMics] = createSignal<{ name: string; available: boolean }[]>([]);
+  const [selectedMic, setSelectedMic] = createSignal(0);
+  const [micLevel, setMicLevel] = createSignal(0);
+  const [micConfirmed, setMicConfirmed] = createSignal(false);
+  const [micTesting, setMicTesting] = createSignal(false);
+  const [showTroubleshoot, setShowTroubleshoot] = createSignal(false);
+
+  // Step 1: Model
+  const [modelSize, setModelSize] = createSignal("tiny");
+  const [modelLang, setModelLang] = createSignal("english");
   const [models, setModels] = createSignal<ModelInfo[]>([]);
-  const [downloading, setDownloading] = createSignal<string | null>(null);
+  const [downloading, setDownloading] = createSignal(false);
   const [downloadPercent, setDownloadPercent] = createSignal(0);
+  const [downloadDone, setDownloadDone] = createSignal(false);
   const [downloadError, setDownloadError] = createSignal<string | null>(null);
-  const [selectedModel, setSelectedModel] = createSignal("ggml-tiny.en.bin");
+
+  // Step 2: Hotkey + Mode
+  const [hotkey, setHotkey] = createSignal("Ctrl+Shift+Space");
+  const [capturingHotkey, setCapturingHotkey] = createSignal(false);
+  const [recordMode, setRecordMode] = createSignal<"hold" | "tap">("hold");
+
+  let unlistenAudio: UnlistenFn | undefined;
+  let unlistenProgress: UnlistenFn | undefined;
 
   onMount(async () => {
-    // Check microphone
+    // Load microphones
     try {
-      const info = await invoke<{ name: string; available: boolean }>("check_microphone");
-      setMicName(info.name);
-      setMicAvailable(info.available);
+      const list = await invoke<{ name: string; available: boolean }[]>("list_microphones");
+      if (list.length > 0) {
+        setMics(list);
+      } else {
+        setMics([{ name: "No microphone detected", available: false }]);
+      }
     } catch {
-      setMicName("Could not detect microphone");
-      setMicAvailable(false);
+      setMics([{ name: "Could not detect microphones", available: false }]);
     }
 
     // Load models
     try {
       const list = await invoke<ModelInfo[]>("list_models");
       setModels(list);
-      // If any model is already downloaded, pre-select it
-      const downloaded = list.find((m: any) => m.downloaded);
-      if (downloaded) setSelectedModel(downloaded.filename);
+      // Check if default model is already downloaded
+      const defaultFile = getModelFilename("tiny", "english");
+      const found = list.find((m) => m.filename === defaultFile && m.downloaded);
+      if (found) setDownloadDone(true);
     } catch {
       // models command may fail
     }
 
     // Listen for download progress
-    await listen<{ model: string; percent: number }>("model-download-progress", (event) => {
-      setDownloadPercent(Math.round(event.payload.percent));
-    });
+    unlistenProgress = await listen<{ model: string; percent: number }>(
+      "model-download-progress",
+      (event) => {
+        setDownloadPercent(Math.round(event.payload.percent));
+      }
+    );
   });
 
-  async function downloadModel(filename: string) {
-    setDownloading(filename);
+  onCleanup(() => {
+    unlistenAudio?.();
+    unlistenProgress?.();
+  });
+
+  // --- Mic test ---
+  async function startMicTest() {
+    setMicTesting(true);
+    setMicConfirmed(false);
+    setMicLevel(0);
+
+    // Listen for audio levels
+    unlistenAudio = await listen<{ rms: number; peak: number }>("audio-level", (event) => {
+      const level = Math.min(event.payload.rms * 20, 1); // normalize
+      setMicLevel(level);
+      if (event.payload.rms > 0.02) {
+        setMicConfirmed(true);
+        setMicTesting(false);
+      }
+    });
+
+    try {
+      await invoke("start_mic_test");
+    } catch {
+      setMicTesting(false);
+    }
+  }
+
+  // --- Model download ---
+  const currentModelFile = () => getModelFilename(modelSize(), modelLang());
+
+  const isCurrentModelDownloaded = () => {
+    const file = currentModelFile();
+    return models().some((m) => m.filename === file && m.downloaded);
+  };
+
+  async function downloadSelectedModel() {
+    const filename = currentModelFile();
+    setDownloading(true);
     setDownloadPercent(0);
+    setDownloadError(null);
+    setDownloadDone(false);
     try {
       await invoke("download_model", { modelFilename: filename });
       const list = await invoke<ModelInfo[]>("list_models");
       setModels(list);
-      setSelectedModel(filename);
       await invoke("set_active_model", { modelFilename: filename });
       await saveSetting("model", filename);
+      setDownloadDone(true);
     } catch (e) {
       setDownloadError(`Download failed: ${e}`);
     } finally {
-      setDownloading(null);
+      setDownloading(false);
     }
   }
 
-  async function finish() {
-    // Set active model
-    const model = selectedModel();
-    const modelList = models();
-    const isDownloaded = modelList.find((m: any) => m.filename === model && m.downloaded);
-    if (isDownloaded) {
-      await invoke("set_active_model", { modelFilename: model }).catch(() => {});
-      await saveSetting("model", model);
+  // Reset download state when selection changes
+  function onSizeChange(size: string) {
+    setModelSize(size);
+    setDownloadDone(isCurrentModelDownloaded());
+    setDownloadError(null);
+  }
+  function onLangChange(lang: string) {
+    setModelLang(lang);
+    setDownloadDone(isCurrentModelDownloaded());
+    setDownloadError(null);
+  }
+
+  // --- Hotkey capture ---
+  function handleHotkeyKeyDown(e: KeyboardEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === "Escape") {
+      setCapturingHotkey(false);
+      return;
     }
+    if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return;
+
+    const parts: string[] = [];
+    if (e.ctrlKey) parts.push("Ctrl");
+    if (e.shiftKey) parts.push("Shift");
+    if (e.altKey) parts.push("Alt");
+    if (e.metaKey) parts.push("Super");
+    parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
+
+    const combo = parts.join("+");
+    setHotkey(combo);
+    setCapturingHotkey(false);
+    invoke("change_hotkey", { newHotkey: combo }).catch(() => {});
+    saveSetting("hotkey", combo);
+  }
+
+  // --- Finish ---
+  async function finish() {
+    // Save model if downloaded
+    const file = currentModelFile();
+    if (isCurrentModelDownloaded() || downloadDone()) {
+      await invoke("set_active_model", { modelFilename: file }).catch(() => {});
+      await saveSetting("model", file);
+    }
+
+    // Save recording mode
+    await saveSetting("recordMode", recordMode());
+
+    // Save hotkey
+    await saveSetting("hotkey", hotkey());
 
     // Mark onboarding complete
     await saveSetting("onboardingComplete", true);
@@ -108,8 +230,6 @@ export function OnboardingWizard() {
     await emit("onboarding-complete", {});
     await getCurrentWindow().close();
   }
-
-  const hasDownloadedModel = () => models().some((m: any) => m.downloaded);
 
   return (
     <div
@@ -126,8 +246,14 @@ export function OnboardingWizard() {
       }}
     >
       {/* Header */}
-      <div style={{ "text-align": "center", "margin-bottom": "24px" }}>
-        <img src={logoImg} width={48} height={48} alt="Murmur" style={{ "border-radius": "12px" }} />
+      <div style={{ "text-align": "center", "margin-bottom": "20px" }}>
+        <img
+          src={logoImg}
+          width={48}
+          height={48}
+          alt="Murmur"
+          style={{ "border-radius": "12px" }}
+        />
         <h1
           style={{
             "font-size": "22px",
@@ -149,7 +275,7 @@ export function OnboardingWizard() {
           display: "flex",
           "justify-content": "center",
           gap: "8px",
-          "margin-bottom": "24px",
+          "margin-bottom": "20px",
         }}
       >
         <For each={[0, 1, 2]}>
@@ -169,212 +295,253 @@ export function OnboardingWizard() {
 
       {/* Step content */}
       <div style={{ flex: 1 }}>
-        {/* Step 1: Microphone */}
+        {/* ========== STEP 0: Microphone ========== */}
         <Show when={step() === 0}>
           <div style={glass}>
-            <h2
-              style={{
-                "font-size": "16px",
-                "font-weight": 600,
-                color: "rgba(255, 255, 255, 0.85)",
-                margin: "0 0 16px",
-              }}
-            >
+            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.85)", margin: "0 0 12px" }}>
               Microphone Check
             </h2>
-            <div
-              style={{
-                display: "flex",
-                "align-items": "center",
-                gap: "12px",
-                padding: "14px",
-                background: "rgba(0, 0, 0, 0.2)",
-                "border-radius": "10px",
-                border: "1px solid rgba(255, 255, 255, 0.04)",
-              }}
-            >
+
+            {/* Device selector */}
+            <Show when={mics().length > 1}>
+              <select
+                style={selectStyle}
+                value={selectedMic()}
+                onChange={(e) => {
+                  setSelectedMic(parseInt(e.currentTarget.value));
+                  setMicConfirmed(false);
+                  setMicLevel(0);
+                }}
+              >
+                <For each={mics()}>
+                  {(mic, i) => <option value={i()}>{mic.name}</option>}
+                </For>
+              </select>
+              <div style={{ height: "10px" }} />
+            </Show>
+
+            {/* Single mic display */}
+            <Show when={mics().length === 1}>
               <div
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  "border-radius": "50%",
-                  background: micAvailable()
-                    ? "rgba(20, 184, 166, 0.15)"
-                    : "rgba(239, 68, 68, 0.15)",
-                  display: "flex",
-                  "align-items": "center",
-                  "justify-content": "center",
-                  "font-size": "18px",
-                  "flex-shrink": 0,
+                  padding: "12px",
+                  background: "rgba(0, 0, 0, 0.2)",
+                  "border-radius": "8px",
+                  border: "1px solid rgba(255, 255, 255, 0.04)",
+                  "font-size": "13px",
+                  color: "rgba(255, 255, 255, 0.7)",
+                  "margin-bottom": "10px",
                 }}
               >
-                {micAvailable() ? "\u2713" : "\u2717"}
+                {mics()[0]?.name || "Unknown"}
               </div>
-              <div>
+            </Show>
+
+            {/* Level meter + test button */}
+            <Show when={mics()[selectedMic()]?.available !== false}>
+              <div style={{ display: "flex", "align-items": "center", gap: "12px", "margin-bottom": "12px" }}>
+                {/* Level bar */}
                 <div
                   style={{
-                    "font-size": "14px",
-                    color: "rgba(255, 255, 255, 0.8)",
-                    "font-weight": 500,
+                    flex: 1,
+                    height: "8px",
+                    background: "rgba(255, 255, 255, 0.06)",
+                    "border-radius": "4px",
+                    overflow: "hidden",
                   }}
                 >
-                  {micName()}
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${micLevel() * 100}%`,
+                      background: micConfirmed() ? ACCENT : "rgba(255, 255, 255, 0.3)",
+                      "border-radius": "4px",
+                      transition: "width 0.1s ease",
+                    }}
+                  />
                 </div>
-                <div
-                  style={{
-                    "font-size": "11px",
-                    color: micAvailable()
-                      ? "rgba(20, 184, 166, 0.7)"
-                      : "rgba(239, 68, 68, 0.7)",
-                    "margin-top": "2px",
-                  }}
-                >
-                  {micAvailable() ? "Ready to record" : "No microphone found"}
-                </div>
+
+                {/* Status indicator */}
+                <Show when={micConfirmed()}>
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      "border-radius": "50%",
+                      background: "rgba(20, 184, 166, 0.15)",
+                      display: "flex",
+                      "align-items": "center",
+                      "justify-content": "center",
+                      color: ACCENT,
+                      "font-size": "14px",
+                      "flex-shrink": 0,
+                    }}
+                  >
+                    {"\u2713"}
+                  </div>
+                </Show>
               </div>
-            </div>
-            <Show when={!micAvailable()}>
-              <p
-                style={{
-                  "font-size": "12px",
-                  color: "rgba(255, 255, 255, 0.35)",
-                  "margin-top": "12px",
-                }}
-              >
-                You can continue without a microphone, but recording won't work
-                until one is connected.
+
+              <Show when={!micConfirmed() && !micTesting()}>
+                <button
+                  onClick={startMicTest}
+                  style={{
+                    ...btnSecondary,
+                    width: "100%",
+                    padding: "8px",
+                    "font-size": "12px",
+                  }}
+                >
+                  Test Microphone
+                </button>
+              </Show>
+              <Show when={micTesting() && !micConfirmed()}>
+                <p style={{ "font-size": "12px", color: "rgba(255, 255, 255, 0.5)", margin: "4px 0 0", "text-align": "center" }}>
+                  Speak now... say "Hey Murmur"
+                </p>
+              </Show>
+              <Show when={micConfirmed()}>
+                <p style={{ "font-size": "12px", color: ACCENT, margin: "4px 0 0", "text-align": "center" }}>
+                  Microphone confirmed working
+                </p>
+              </Show>
+            </Show>
+
+            <Show when={mics()[selectedMic()]?.available === false}>
+              <p style={{ "font-size": "12px", color: "rgba(239, 68, 68, 0.7)", margin: "8px 0 0" }}>
+                No microphone detected. You can continue, but recording won't work until one is connected.
               </p>
             </Show>
+
+            {/* Troubleshooting */}
+            <div style={{ "margin-top": "12px", "text-align": "center" }}>
+              <button
+                onClick={() => setShowTroubleshoot(!showTroubleshoot())}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "rgba(255, 255, 255, 0.25)",
+                  "font-size": "11px",
+                  cursor: "pointer",
+                  "text-decoration": "underline",
+                }}
+              >
+                Having trouble?
+              </button>
+              <Show when={showTroubleshoot()}>
+                <div
+                  style={{
+                    "margin-top": "8px",
+                    padding: "10px",
+                    background: "rgba(0, 0, 0, 0.2)",
+                    "border-radius": "8px",
+                    "font-size": "11px",
+                    color: "rgba(255, 255, 255, 0.4)",
+                    "text-align": "left",
+                  }}
+                >
+                  <p style={{ margin: "0 0 6px" }}>Check that your microphone is:</p>
+                  <ul style={{ margin: 0, "padding-left": "16px" }}>
+                    <li>Plugged in and powered on</li>
+                    <li>Set as the default input in your system sound settings</li>
+                    <li>Not muted in PulseAudio/PipeWire volume control</li>
+                    <li>Allowed by your desktop environment's privacy settings</li>
+                  </ul>
+                </div>
+              </Show>
+            </div>
           </div>
         </Show>
 
-        {/* Step 2: Model Download */}
+        {/* ========== STEP 1: Model + Language ========== */}
         <Show when={step() === 1}>
           <div style={glass}>
-            <h2
-              style={{
-                "font-size": "16px",
-                "font-weight": 600,
-                color: "rgba(255, 255, 255, 0.85)",
-                margin: "0 0 6px",
-              }}
-            >
+            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.85)", margin: "0 0 6px" }}>
               Speech Model
             </h2>
-            <p
-              style={{
-                "font-size": "12px",
-                color: "rgba(255, 255, 255, 0.35)",
-                margin: "0 0 16px",
-              }}
-            >
-              Choose a model for voice recognition. Smaller is faster, larger is
-              more accurate.
+            <p style={{ "font-size": "12px", color: "rgba(255, 255, 255, 0.35)", margin: "0 0 16px" }}>
+              Choose your model size and language. You can change these later in Settings.
             </p>
+
+            {/* Size selector */}
+            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+              Model Size
+            </label>
+            <div style={{ display: "flex", gap: "6px", "margin-bottom": "14px" }}>
+              {(["tiny", "base", "small"] as const).map((size) => (
+                <button
+                  onClick={() => onSizeChange(size)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 8px",
+                    background: modelSize() === size ? `${ACCENT}18` : "rgba(0, 0, 0, 0.3)",
+                    border: modelSize() === size ? `1px solid ${ACCENT}44` : "1px solid rgba(255, 255, 255, 0.04)",
+                    "border-radius": "8px",
+                    color: modelSize() === size ? ACCENT : "rgba(255, 255, 255, 0.5)",
+                    cursor: "pointer",
+                    "font-size": "12px",
+                    "font-weight": modelSize() === size ? "600" : "400",
+                    "text-align": "center",
+                  }}
+                >
+                  <div>{size.charAt(0).toUpperCase() + size.slice(1)}</div>
+                  <div style={{ "font-size": "9px", "margin-top": "2px", opacity: 0.6 }}>
+                    {size === "tiny" ? "Fastest" : size === "base" ? "Balanced" : "Most accurate"}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Language selector */}
+            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+              Language
+            </label>
+            <div style={{ display: "flex", gap: "6px", "margin-bottom": "16px" }}>
+              {(["english", "multilingual"] as const).map((lang) => (
+                <button
+                  onClick={() => onLangChange(lang)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 8px",
+                    background: modelLang() === lang ? `${ACCENT}18` : "rgba(0, 0, 0, 0.3)",
+                    border: modelLang() === lang ? `1px solid ${ACCENT}44` : "1px solid rgba(255, 255, 255, 0.04)",
+                    "border-radius": "8px",
+                    color: modelLang() === lang ? ACCENT : "rgba(255, 255, 255, 0.5)",
+                    cursor: "pointer",
+                    "font-size": "12px",
+                    "font-weight": modelLang() === lang ? "600" : "400",
+                  }}
+                >
+                  {lang === "english" ? "English" : "Multilingual (99+)"}
+                </button>
+              ))}
+            </div>
+
+            {/* Selected model info */}
             <div
               style={{
+                padding: "10px 14px",
+                background: "rgba(0, 0, 0, 0.2)",
+                "border-radius": "8px",
+                border: "1px solid rgba(255, 255, 255, 0.04)",
+                "font-size": "12px",
+                color: "rgba(255, 255, 255, 0.5)",
                 display: "flex",
-                "flex-direction": "column",
-                gap: "6px",
+                "justify-content": "space-between",
+                "align-items": "center",
               }}
             >
-              <For each={models()}>
-                {(model) => (
-                  <div
-                    style={{
-                      display: "flex",
-                      "align-items": "center",
-                      gap: "10px",
-                      padding: "12px",
-                      background:
-                        selectedModel() === model.filename
-                          ? "rgba(20, 184, 166, 0.06)"
-                          : "rgba(0, 0, 0, 0.2)",
-                      border:
-                        selectedModel() === model.filename
-                          ? `1px solid ${ACCENT}33`
-                          : "1px solid rgba(255, 255, 255, 0.04)",
-                      "border-radius": "8px",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div
-                        style={{
-                          "font-size": "13px",
-                          "font-weight": 500,
-                          color: "rgba(255, 255, 255, 0.8)",
-                        }}
-                      >
-                        {model.name}
-                        <Show when={model.filename === "ggml-tiny.en.bin"}>
-                          <span
-                            style={{
-                              "font-size": "9px",
-                              color: ACCENT,
-                              "margin-left": "6px",
-                              "text-transform": "uppercase",
-                              "letter-spacing": "0.05em",
-                            }}
-                          >
-                            Recommended
-                          </span>
-                        </Show>
-                      </div>
-                      <div
-                        style={{
-                          "font-size": "10px",
-                          color: "rgba(255, 255, 255, 0.25)",
-                          "margin-top": "2px",
-                        }}
-                      >
-                        {model.description} -- {model.size_mb}MB
-                      </div>
-                    </div>
-                    {model.downloaded ? (
-                      <span
-                        style={{
-                          "font-size": "10px",
-                          color: ACCENT,
-                          "font-weight": 600,
-                        }}
-                      >
-                        Downloaded
-                      </span>
-                    ) : downloading() === model.filename ? (
-                      <span
-                        style={{
-                          "font-size": "10px",
-                          color: "rgba(255, 255, 255, 0.4)",
-                        }}
-                      >
-                        {downloadPercent()}%
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => downloadModel(model.filename)}
-                        style={{
-                          padding: "4px 12px",
-                          background: "rgba(255, 255, 255, 0.04)",
-                          border: `1px solid ${ACCENT}44`,
-                          "border-radius": "6px",
-                          color: ACCENT,
-                          cursor: "pointer",
-                          "font-size": "11px",
-                        }}
-                      >
-                        Download
-                      </button>
-                    )}
-                  </div>
-                )}
-              </For>
+              <span>{currentModelFile()}</span>
+              <Show when={isCurrentModelDownloaded() || downloadDone()}>
+                <span style={{ color: ACCENT, "font-size": "11px" }}>{"\u2713"} Downloaded</span>
+              </Show>
             </div>
-            {/* Download progress bar */}
+
+            {/* Progress bar */}
             <Show when={downloading()}>
               <div
                 style={{
-                  "margin-top": "12px",
+                  "margin-top": "10px",
                   height: "4px",
                   background: "rgba(255, 255, 255, 0.06)",
                   "border-radius": "2px",
@@ -392,61 +559,90 @@ export function OnboardingWizard() {
                 />
               </div>
             </Show>
+
+            {/* Error */}
+            <Show when={downloadError()}>
+              <p style={{ "font-size": "11px", color: "#ef4444", "margin-top": "8px" }}>
+                {downloadError()}
+              </p>
+            </Show>
           </div>
         </Show>
 
-        {/* Step 3: Hotkey */}
+        {/* ========== STEP 2: Hotkey + Recording Mode ========== */}
         <Show when={step() === 2}>
           <div style={glass}>
-            <h2
-              style={{
-                "font-size": "16px",
-                "font-weight": 600,
-                color: "rgba(255, 255, 255, 0.85)",
-                margin: "0 0 6px",
-              }}
-            >
-              Your Hotkey
+            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.85)", margin: "0 0 6px" }}>
+              Hotkey & Recording Mode
             </h2>
-            <p
-              style={{
-                "font-size": "12px",
-                color: "rgba(255, 255, 255, 0.35)",
-                margin: "0 0 16px",
-              }}
-            >
-              Press and hold this key combination anywhere to dictate. Release to
-              stop and inject text at your cursor.
+            <p style={{ "font-size": "12px", color: "rgba(255, 255, 255, 0.35)", margin: "0 0 16px" }}>
+              Set your key combination and how you want to control recording.
             </p>
-            <div
-              style={{
-                "text-align": "center",
-                padding: "24px",
-                background: "rgba(0, 0, 0, 0.25)",
-                "border-radius": "10px",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-              }}
-            >
+
+            {/* Hotkey display/capture */}
+            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+              Hotkey
+            </label>
+            <div style={{ display: "flex", gap: "8px", "align-items": "center", "margin-bottom": "16px" }}>
               <div
+                tabIndex={0}
+                onKeyDown={capturingHotkey() ? handleHotkeyKeyDown : undefined}
                 style={{
-                  "font-size": "24px",
+                  flex: 1,
+                  padding: "12px 16px",
+                  background: capturingHotkey() ? "rgba(20, 184, 166, 0.08)" : "rgba(0, 0, 0, 0.25)",
+                  "border-radius": "8px",
+                  border: capturingHotkey() ? `1px solid ${ACCENT}66` : "1px solid rgba(255, 255, 255, 0.06)",
+                  "font-family": "'JetBrains Mono', monospace",
+                  "font-size": "16px",
                   "font-weight": 600,
                   color: ACCENT,
-                  "font-family": "'JetBrains Mono', monospace",
-                  "letter-spacing": "0.05em",
+                  "text-align": "center",
+                  "letter-spacing": "0.03em",
+                  outline: "none",
                 }}
               >
-                Ctrl + Shift + Space
+                {capturingHotkey() ? "Press a key combo..." : hotkey()}
               </div>
-              <p
+              <button
+                onClick={() => setCapturingHotkey(!capturingHotkey())}
                 style={{
-                  "font-size": "11px",
-                  color: "rgba(255, 255, 255, 0.3)",
-                  "margin-top": "10px",
+                  ...btnSecondary,
+                  padding: "10px 16px",
+                  "font-size": "12px",
                 }}
               >
-                You can change this anytime in Settings
-              </p>
+                {capturingHotkey() ? "Cancel" : "Change"}
+              </button>
+            </div>
+
+            {/* Recording mode */}
+            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+              Recording Mode
+            </label>
+            <div style={{ display: "flex", gap: "6px" }}>
+              {(["hold", "tap"] as const).map((mode) => (
+                <button
+                  onClick={() => setRecordMode(mode)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 12px",
+                    background: recordMode() === mode ? `${ACCENT}18` : "rgba(0, 0, 0, 0.3)",
+                    border: recordMode() === mode ? `1px solid ${ACCENT}44` : "1px solid rgba(255, 255, 255, 0.04)",
+                    "border-radius": "8px",
+                    color: recordMode() === mode ? ACCENT : "rgba(255, 255, 255, 0.4)",
+                    cursor: "pointer",
+                    "font-size": "12px",
+                    "font-weight": recordMode() === mode ? "600" : "400",
+                    "text-align": "center",
+                  }}
+                >
+                  <div>{mode === "hold" ? "Hold to Record" : "Tap to Toggle"}</div>
+                  <div style={{ "font-size": "9px", "margin-top": "3px", opacity: 0.6 }}>
+                    {mode === "hold" ? "Press and hold, release to stop" : "Tap once to start, tap again to stop"}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         </Show>
@@ -458,7 +654,7 @@ export function OnboardingWizard() {
           display: "flex",
           "justify-content": "space-between",
           "align-items": "center",
-          "margin-top": "24px",
+          "margin-top": "20px",
         }}
       >
         <Show when={step() > 0} fallback={<div />}>
@@ -469,20 +665,37 @@ export function OnboardingWizard() {
 
         <div style={{ display: "flex", gap: "10px" }}>
           <Show when={step() < 2}>
-            <button
-              style={btnSecondary}
-              onClick={() => finish()}
-            >
+            <button style={btnSecondary} onClick={() => finish()}>
               Skip
             </button>
-            <button
-              style={btnPrimary}
-              onClick={() => setStep((s) => s + 1)}
-              disabled={step() === 1 && !hasDownloadedModel() && !downloading()}
-            >
-              Next
-            </button>
+
+            {/* Step 1: Download/Next button logic */}
+            <Show when={step() === 1}>
+              <Show when={isCurrentModelDownloaded() || downloadDone()}>
+                <button style={btnPrimary} onClick={() => setStep((s) => s + 1)}>
+                  Next
+                </button>
+              </Show>
+              <Show when={!isCurrentModelDownloaded() && !downloadDone() && !downloading()}>
+                <button style={btnPrimary} onClick={downloadSelectedModel}>
+                  Download
+                </button>
+              </Show>
+              <Show when={downloading()}>
+                <button style={{ ...btnPrimary, opacity: 0.7, cursor: "wait" }} disabled>
+                  {downloadPercent()}%
+                </button>
+              </Show>
+            </Show>
+
+            {/* Step 0: Just Next */}
+            <Show when={step() === 0}>
+              <button style={btnPrimary} onClick={() => setStep((s) => s + 1)}>
+                Next
+              </button>
+            </Show>
           </Show>
+
           <Show when={step() === 2}>
             <button style={btnPrimary} onClick={() => finish()}>
               Get Started
