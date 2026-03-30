@@ -234,7 +234,7 @@ pub fn stop_recording(app: tauri::AppHandle) -> Result<(), String> {
 /// Trim trailing silence from audio to prevent Whisper hallucinations.
 /// Walks backwards from the end, finding the last sample above the threshold,
 /// then keeps a small tail (~100ms) for natural trailing off.
-fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
+pub fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
     const RMS_THRESHOLD: f32 = 0.01;
     const CHUNK_MS: u32 = 30;
     let chunk_size = (sample_rate * CHUNK_MS / 1000) as usize;

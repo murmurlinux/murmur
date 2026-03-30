@@ -83,3 +83,19 @@ jobs:
         run: |
           cargo install cargo-audit --locked || true
           cargo audit
+
+      # --- Blind property tests (from private test repo) ---
+      - name: Checkout blind tests
+        uses: actions/checkout@v4
+        with:
+          repository: murmurlinux/tests
+          token: ${{ secrets.TEST_REPO_TOKEN }}
+          path: _tests
+
+      - name: Run Rust property tests
+        working-directory: _tests/app/rust
+        run: cargo test --release
+
+      - name: Run frontend property tests
+        working-directory: _tests/app/frontend
+        run: pnpm install --frozen-lockfile && pnpm test

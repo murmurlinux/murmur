@@ -121,7 +121,7 @@ pub fn get_last_external_window() -> Option<String> {
 /// In terminal emulators, a newline will trigger Enter (command execution).
 /// This is accepted behaviour since voice-to-text is primarily used in text
 /// editors, chat apps, and document fields, not terminals.
-fn sanitise_for_injection(text: &str) -> String {
+pub fn sanitise_for_injection(text: &str) -> String {
     text.chars()
         .filter(|c| {
             // Allow printable ASCII, newline, tab, and all Unicode above ASCII
