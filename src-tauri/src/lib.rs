@@ -5,7 +5,7 @@ mod state;
 mod stt;
 
 use tauri::{
-    menu::{Menu, MenuItem, PredefinedMenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Listener, Manager,
 };
@@ -176,11 +176,12 @@ pub fn run() {
             // --- System Tray ---
             let show_item =
                 MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
-            let aot_item = MenuItem::with_id(
+            let aot_item = CheckMenuItem::with_id(
                 app,
                 "always_on_top",
                 "Always on Top",
                 true,
+                true, // checked by default (matches tauri.conf.json alwaysOnTop: true)
                 None::<&str>,
             )?;
             let settings_item =
