@@ -2,8 +2,8 @@ import { createSignal, onMount, For, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { MurmurLogo } from "./MurmurLogo";
 import { saveSetting, type ModelInfo } from "../lib/settings";
+import logoImg from "../assets/logo.png";
 
 const ACCENT = "#14b8a6";
 
@@ -127,7 +127,7 @@ export function OnboardingWizard() {
     >
       {/* Header */}
       <div style={{ "text-align": "center", "margin-bottom": "24px" }}>
-        <MurmurLogo size={48} />
+        <img src={logoImg} width={48} height={48} alt="Murmur" style={{ "border-radius": "12px" }} />
         <h1
           style={{
             "font-size": "22px",

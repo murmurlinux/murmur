@@ -69,7 +69,7 @@ pub fn open_onboarding_internal(app: &AppHandle) {
 
     let _ = WebviewWindowBuilder::new(app, "onboarding", WebviewUrl::App("onboarding.html".into()))
         .title("Welcome to Murmur")
-        .inner_size(520.0, 480.0)
+        .inner_size(520.0, 620.0)
         .resizable(false)
         .background_color(Color(6, 13, 24, 255))
         .center()
@@ -85,7 +85,7 @@ pub fn open_settings_internal(app: &AppHandle) {
 
     let _ = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings.html".into()))
         .title("Murmur Settings")
-        .inner_size(480.0, 560.0)
+        .inner_size(480.0, 680.0)
         .min_inner_size(480.0, 400.0)
         .background_color(Color(6, 13, 24, 255)) // #060d18 -- ocean-deep, eliminates white flash
         .center()
