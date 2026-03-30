@@ -25,7 +25,7 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 | **Processing** | 100% local | 100% local | Cloud | 100% local |
 | **Engine** | whisper.cpp | whisper.cpp / VOSK | Proprietary | VOSK |
 | **GUI** | Floating widget | GTK tray | Tray icon | None (CLI) |
-| **Binary size** | ~5 MB | ~200 MB+ | ~50 MB | ~1 MB |
+| **Binary size** | ~15 MB | ~200 MB+ | ~50 MB | ~1 MB |
 | **Memory** | ~50 MB | ~300 MB | ~800 MB | ~200 MB |
 | **Stack** | Rust + Tauri | Python + GTK | Electron | Python |
 | **Cost** | Free | Free | $144/yr | Free |
@@ -37,23 +37,39 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 - **Universal Text Injection.** Types into any app via xdotool (X11) or wtype (Wayland). Terminals, IDEs, browsers, chat. If it has a cursor, Murmur types into it.
 - **Hold or Tap to Record.** Configurable global hotkey. Hold to record and release to transcribe, or tap to toggle. Voice activity detection auto-stops when you finish speaking.
 - **Multiple Models.** Tiny (75 MB, ~3s), Base (142 MB, ~8s), Small (466 MB, best accuracy). Choose your tradeoff.
-- **Tiny Footprint.** ~5 MB .deb, ~50 MB RAM. Built with Rust + Tauri 2. Starts in under a second.
+- **Tiny Footprint.** ~15 MB .deb, ~50 MB RAM. Built with Rust + Tauri 2. Starts in under a second.
 
 ## Quick Install
 
-**AppImage (any distro):**
+**APT Repository (recommended, auto-updates):**
 
 ```bash
-wget https://murmurlinux.com/latest.AppImage
-chmod +x latest.AppImage
-./latest.AppImage
+curl -fsSL https://murmurlinux.github.io/apt/gpg.key | sudo tee /etc/apt/keyrings/murmur.asc > /dev/null
+echo "deb [signed-by=/etc/apt/keyrings/murmur.asc] https://murmurlinux.github.io/apt/ stable main" | sudo tee /etc/apt/sources.list.d/murmur.list
+sudo apt update && sudo apt install murmur
 ```
 
-**Debian / Ubuntu (.deb):**
+Updates automatically via `sudo apt upgrade`.
+
+**AppImage (portable, auto-updates on launch):**
 
 ```bash
-wget https://murmurlinux.com/latest.deb
-sudo dpkg -i latest.deb
+wget https://github.com/murmurlinux/murmur/releases/download/v0.3.2/Murmur_0.3.2_amd64.AppImage
+chmod +x Murmur_0.3.2_amd64.AppImage
+./Murmur_0.3.2_amd64.AppImage
+```
+
+**.deb direct download (manual updates):**
+
+```bash
+wget https://github.com/murmurlinux/murmur/releases/download/v0.3.2/Murmur_0.3.2_amd64.deb
+sudo dpkg -i Murmur_0.3.2_amd64.deb
+```
+
+**Uninstall:**
+
+```bash
+sudo apt remove murmur
 ```
 
 > Requires: Linux (Ubuntu 22.04+, Fedora 38+, Arch), PipeWire or PulseAudio, xdotool (X11) or wtype (Wayland)
