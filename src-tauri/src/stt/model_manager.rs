@@ -8,7 +8,7 @@ pub struct ModelInfo {
     pub name: String,
     pub filename: String,
     pub url: String,
-    pub size_mb: u32,
+    pub size_mb: u64,
     pub description: String,
     pub downloaded: bool,
 }
@@ -19,7 +19,7 @@ pub struct ModelEntry {
     pub name: &'static str,
     pub filename: &'static str,
     pub url: &'static str,
-    pub size_mb: u32,
+    pub size_mb: u64,
     pub description: &'static str,
     pub sha256: &'static str,
 }

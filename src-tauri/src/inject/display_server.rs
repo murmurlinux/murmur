@@ -6,8 +6,19 @@ pub enum DisplayServer {
     Unknown,
 }
 
+impl DisplayServer {
+    /// Detect the active display server from environment variables.
+    pub fn detect() -> Self {
+        detect_impl()
+    }
+}
+
 /// Detect the active display server from environment variables.
 pub fn detect() -> DisplayServer {
+    detect_impl()
+}
+
+fn detect_impl() -> DisplayServer {
     // XDG_SESSION_TYPE is the most reliable indicator
     if let Ok(session_type) = std::env::var("XDG_SESSION_TYPE") {
         match session_type.to_lowercase().as_str() {
