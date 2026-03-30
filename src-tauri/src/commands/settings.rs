@@ -61,6 +61,50 @@ pub fn check_microphone() -> MicrophoneInfo {
     }
 }
 
+/// List all available input (microphone) devices.
+#[tauri::command]
+pub fn list_microphones() -> Vec<MicrophoneInfo> {
+    use cpal::traits::{DeviceTrait, HostTrait};
+
+    let host = cpal::default_host();
+    match host.input_devices() {
+        Ok(devices) => devices
+            .map(|d| MicrophoneInfo {
+                name: d.name().unwrap_or_else(|_| "Unknown".to_string()),
+                available: true,
+            })
+            .collect(),
+        Err(_) => vec![],
+    }
+}
+
+/// Start a short microphone test capture that emits audio-level events.
+/// Uses the same audio pipeline as recording but only for level monitoring.
+#[tauri::command]
+pub fn start_mic_test(app: tauri::AppHandle) -> Result<(), String> {
+    use crate::audio::capture;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::{Arc, Mutex};
+
+    let stop_flag = Arc::new(AtomicBool::new(false));
+    let audio_buffer = Arc::new(Mutex::new(Vec::new()));
+
+    // Store stop flag for later cancellation
+    let stop_clone = Arc::clone(&stop_flag);
+    let _app_clone = app.clone();
+
+    // Auto-stop after 10 seconds
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(10));
+        stop_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+    });
+
+    capture::start_capture(app, audio_buffer, stop_flag, false)
+        .map_err(|e| format!("Mic test failed: {}", e))?;
+
+    Ok(())
+}
+
 pub fn open_onboarding_internal(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("onboarding") {
         let _ = window.set_focus();

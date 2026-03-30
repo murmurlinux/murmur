@@ -30,6 +30,8 @@ pub fn run() {
             commands::models::set_active_model,
             commands::settings::set_start_on_login,
             commands::settings::check_microphone,
+            commands::settings::list_microphones,
+            commands::settings::start_mic_test,
         ])
         .setup(|app| {
             // --- Updater plugin (registers inside setup, not on builder) ---
