@@ -234,7 +234,7 @@ pub fn stop_recording(app: tauri::AppHandle) -> Result<(), String> {
 /// Trim trailing silence from audio to prevent Whisper hallucinations.
 /// Walks backwards from the end, finding the last sample above the threshold,
 /// then keeps a small tail (~100ms) for natural trailing off.
-fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
+pub fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
     const RMS_THRESHOLD: f32 = 0.01;
     const CHUNK_MS: u32 = 30;
     let chunk_size = (sample_rate * CHUNK_MS / 1000) as usize;
@@ -244,20 +244,32 @@ fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
         return audio;
     }
 
-    let mut last_speech = audio.len();
+    let mut last_speech: Option<usize> = None;
     let mut i = audio.len();
     while i >= chunk_size {
         let start = i - chunk_size;
         let chunk = &audio[start..i];
         let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len() as f32).sqrt();
         if rms >= RMS_THRESHOLD {
-            last_speech = i;
+            last_speech = Some(i);
             break;
         }
         i -= chunk_size;
     }
 
-    let end = (last_speech + tail_padding).min(audio.len());
+    // Check the leading partial chunk that the main loop couldn't reach
+    if last_speech.is_none() && i > 0 {
+        let chunk = &audio[..i];
+        let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len() as f32).sqrt();
+        if rms >= RMS_THRESHOLD {
+            last_speech = Some(i);
+        }
+    }
+
+    let end = match last_speech {
+        Some(pos) => (pos + tail_padding).min(audio.len()),
+        None => 0, // No speech found at all -- return empty
+    };
     let trimmed_duration = audio.len() - end;
     if trimmed_duration > 0 {
         log::debug!(

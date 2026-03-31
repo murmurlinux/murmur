@@ -4,6 +4,13 @@ mod inject;
 mod state;
 mod stt;
 
+// Public API for external test crates
+pub use commands::audio::trim_trailing_silence;
+pub use inject::display_server::{self as display_server, DisplayServer};
+pub use inject::paste::sanitise_for_injection;
+pub use stt::model_manager::{ModelEntry, MODELS};
+pub use stt::whisper::resample;
+
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
