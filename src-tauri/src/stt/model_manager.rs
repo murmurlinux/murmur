@@ -8,61 +8,72 @@ pub struct ModelInfo {
     pub name: String,
     pub filename: String,
     pub url: String,
-    pub size_mb: u32,
+    pub size_mb: u64,
     pub description: String,
     pub downloaded: bool,
 }
 
-/// Model registry: (name, filename, url, size_mb, description, sha256)
-const MODELS: &[(&str, &str, &str, u32, &str, &str)] = &[
-    (
-        "Tiny (English)",
-        "ggml-tiny.en.bin",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin",
-        75,
-        "Fastest, lowest accuracy (~3-4s)",
-        "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f",
-    ),
-    (
-        "Base (English)",
-        "ggml-base.en.bin",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin",
-        142,
-        "Good balance of speed and accuracy (~8-10s)",
-        "a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c034d5",
-    ),
-    (
-        "Small (English)",
-        "ggml-small.en.bin",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin",
-        466,
-        "Best accuracy, slowest (~20-30s)",
-        "6083e2549b2a66e4ba9a85b1a46833d7a8e43e4e065daca3b19e0d4e2b3304f2",
-    ),
-    (
-        "Tiny (Multilingual)",
-        "ggml-tiny.bin",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
-        75,
-        "Fastest, 99+ languages (~3-4s)",
-        "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
-    ),
-    (
-        "Base (Multilingual)",
-        "ggml-base.bin",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
-        142,
-        "Good balance, 99+ languages (~8-10s)",
-        "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
-    ),
-    (
-        "Small (Multilingual)",
-        "ggml-small.bin",
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
-        466,
-        "Best accuracy, 99+ languages (~20-30s)",
-        "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
-    ),
+/// A Whisper model available for download.
+#[derive(Debug)]
+pub struct ModelEntry {
+    pub name: &'static str,
+    pub filename: &'static str,
+    pub url: &'static str,
+    pub size_mb: u64,
+    pub description: &'static str,
+    pub sha256: &'static str,
+}
+
+/// Model registry with download URLs and checksums.
+pub const MODELS: &[ModelEntry] = &[
+    ModelEntry {
+        name: "Tiny (English)",
+        filename: "ggml-tiny.en.bin",
+        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin",
+        size_mb: 75,
+        description: "Fastest, lowest accuracy (~3-4s)",
+        sha256: "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f",
+    },
+    ModelEntry {
+        name: "Base (English)",
+        filename: "ggml-base.en.bin",
+        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin",
+        size_mb: 142,
+        description: "Good balance of speed and accuracy (~8-10s)",
+        sha256: "a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c034d5",
+    },
+    ModelEntry {
+        name: "Small (English)",
+        filename: "ggml-small.en.bin",
+        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin",
+        size_mb: 466,
+        description: "Best accuracy, slowest (~20-30s)",
+        sha256: "6083e2549b2a66e4ba9a85b1a46833d7a8e43e4e065daca3b19e0d4e2b3304f2",
+    },
+    ModelEntry {
+        name: "Tiny (Multilingual)",
+        filename: "ggml-tiny.bin",
+        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
+        size_mb: 75,
+        description: "Fastest, 99+ languages (~3-4s)",
+        sha256: "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+    },
+    ModelEntry {
+        name: "Base (Multilingual)",
+        filename: "ggml-base.bin",
+        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
+        size_mb: 142,
+        description: "Good balance, 99+ languages (~8-10s)",
+        sha256: "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+    },
+    ModelEntry {
+        name: "Small (Multilingual)",
+        filename: "ggml-small.bin",
+        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+        size_mb: 466,
+        description: "Best accuracy, 99+ languages (~20-30s)",
+        sha256: "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+    },
 ];
 
 #[derive(Clone, Serialize)]
@@ -101,14 +112,14 @@ fn validate_filename(filename: &str) -> Result<(), anyhow::Error> {
 pub fn list_available_models() -> Vec<ModelInfo> {
     MODELS
         .iter()
-        .map(|(name, filename, url, size_mb, desc, _sha)| {
-            let path = models_dir().join(filename);
+        .map(|m| {
+            let path = models_dir().join(m.filename);
             ModelInfo {
-                name: name.to_string(),
-                filename: filename.to_string(),
-                url: url.to_string(),
-                size_mb: *size_mb,
-                description: desc.to_string(),
+                name: m.name.to_string(),
+                filename: m.filename.to_string(),
+                url: m.url.to_string(),
+                size_mb: m.size_mb,
+                description: m.description.to_string(),
                 downloaded: path.exists(),
             }
         })
@@ -132,8 +143,8 @@ pub fn get_model_path(filename: &str) -> Option<PathBuf> {
 fn get_model_meta(filename: &str) -> Option<(&'static str, &'static str)> {
     MODELS
         .iter()
-        .find(|(_, f, _, _, _, _)| *f == filename)
-        .map(|(_, _, url, _, _, sha)| (*url, *sha))
+        .find(|m| m.filename == filename)
+        .map(|m| (m.url, m.sha256))
 }
 
 /// Verify SHA256 checksum of a file

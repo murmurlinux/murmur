@@ -2310,8 +2310,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "murmur"
-version = "0.3.1"
+name = "murmur_lib"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "arboard",

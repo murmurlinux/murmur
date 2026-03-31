@@ -31,6 +31,7 @@ export function hexToHue(hex: string): number {
 
 /** Convert hue (0-360) to vivid hex colour (HSL with S=100%, L=50%) */
 export function hueToHex(h: number): string {
+  h = ((h % 360) + 360) % 360;
   const s = 1, l = 0.5;
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
