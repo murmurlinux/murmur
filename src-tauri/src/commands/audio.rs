@@ -257,6 +257,15 @@ pub fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
         i -= chunk_size;
     }
 
+    // Check the leading partial chunk that the main loop couldn't reach
+    if last_speech.is_none() && i > 0 {
+        let chunk = &audio[..i];
+        let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len() as f32).sqrt();
+        if rms >= RMS_THRESHOLD {
+            last_speech = Some(i);
+        }
+    }
+
     let end = match last_speech {
         Some(pos) => (pos + tail_padding).min(audio.len()),
         None => 0, // No speech found at all -- return empty

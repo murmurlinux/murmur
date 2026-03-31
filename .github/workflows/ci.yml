@@ -85,7 +85,9 @@ jobs:
           cargo audit
 
       # --- Blind property tests (from private test repo) ---
+      # Skipped on fork PRs where secrets are unavailable
       - name: Checkout blind tests
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
         uses: actions/checkout@v4
         with:
           repository: murmurlinux/tests
@@ -93,9 +95,11 @@ jobs:
           path: _tests
 
       - name: Run Rust property tests
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
         working-directory: _tests/app/rust
         run: cargo test --release
 
       - name: Run frontend property tests
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
         working-directory: _tests/app/frontend
         run: pnpm install --frozen-lockfile && pnpm test
