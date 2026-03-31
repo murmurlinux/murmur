@@ -244,7 +244,7 @@ pub fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
         return audio;
     }
 
-    let mut last_speech = audio.len();
+    let mut last_speech = 0;
     let mut i = audio.len();
     while i >= chunk_size {
         let start = i - chunk_size;
