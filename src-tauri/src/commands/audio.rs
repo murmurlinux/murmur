@@ -244,20 +244,23 @@ pub fn trim_trailing_silence(audio: &[f32], sample_rate: u32) -> &[f32] {
         return audio;
     }
 
-    let mut last_speech = 0;
+    let mut last_speech: Option<usize> = None;
     let mut i = audio.len();
     while i >= chunk_size {
         let start = i - chunk_size;
         let chunk = &audio[start..i];
         let rms = (chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len() as f32).sqrt();
         if rms >= RMS_THRESHOLD {
-            last_speech = i;
+            last_speech = Some(i);
             break;
         }
         i -= chunk_size;
     }
 
-    let end = (last_speech + tail_padding).min(audio.len());
+    let end = match last_speech {
+        Some(pos) => (pos + tail_padding).min(audio.len()),
+        None => 0, // No speech found at all -- return empty
+    };
     let trimmed_duration = audio.len() - end;
     if trimmed_duration > 0 {
         log::debug!(
