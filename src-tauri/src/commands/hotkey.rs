@@ -84,7 +84,12 @@ pub fn register_settings_shortcut(app: &AppHandle) -> Result<(), String> {
             settings::open_settings_internal(app);
         }
     })
-    .map_err(|e| format!("Failed to register settings shortcut '{}': {}", SETTINGS_SHORTCUT, e))?;
+    .map_err(|e| {
+        format!(
+            "Failed to register settings shortcut '{}': {}",
+            SETTINGS_SHORTCUT, e
+        )
+    })?;
 
     log::info!("Settings shortcut registered: {}", SETTINGS_SHORTCUT);
     Ok(())
