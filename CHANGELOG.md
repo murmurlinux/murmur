@@ -2,6 +2,39 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.3] - 2026-04-03
+
+### Added
+
+- Keyboard shortcut to open settings (Ctrl+Shift+,)
+- Dynamic system tray tooltip shows recording state (Recording, Processing, Idle)
+- Blind property test suite: 32 Rust + 26 TypeScript tests in CI
+- CLAUDE.md test blindness policy
+
+### Changed
+
+- Upgraded reqwest from 0.12 to 0.13 (eliminates duplicate dependency, switches TLS to rustls)
+- Renamed Cargo package from `murmur` to `murmur_lib` for test crate compatibility
+- MODELS registry converted from tuple array to ModelEntry struct with named fields
+- Exposed public API for external test crates: resample, sanitise_for_injection, trim_trailing_silence, DisplayServer, MODELS
+
+### Fixed
+
+- All-silence audio no longer returned unchanged by trim_trailing_silence (caused Whisper hallucinations)
+- Leading partial audio chunk now scanned for speech (short utterances no longer silently dropped)
+- hueToHex normalises hue input to [0, 360) so hueToHex(360.1) matches hueToHex(0.1)
+- Blind test CI steps skip on fork PRs where secrets are unavailable
+
+---
+
+## [0.3.2] - 2026-03-30
+
+### Fixed
+
+- Install instructions and binary size claims updated
+
+---
+
 ## [0.3.1] - 2026-03-30
 
 ### Fixed
