@@ -142,11 +142,15 @@ Models auto-download from Hugging Face on first use. SHA256 verified.
 - [x] Start on login (v0.3.0)
 - [x] Auto-update system (v0.3.0)
 - [x] Multi-language support + translation (v0.3.0)
-- [ ] Transcript history (Pro tier)
-- [ ] Additional skins (Pro tier)
-- [ ] Cloud STT option (Pro tier)
-- [ ] LLM post-processing (Pro tier)
-- [ ] CLI mode (Pro tier)
+- [x] Settings keyboard shortcut (v0.3.3)
+- [x] Dynamic tray tooltip (v0.3.3)
+- [ ] Transcript history (Pro)
+- [ ] Voice commands (Pro)
+- [ ] Cloud STT: Groq Whisper + Deepgram Nova-3 (Pro)
+- [ ] LLM text cleanup (Pro)
+- [ ] Custom dictionaries / hot words (Pro)
+- [ ] CLI mode: murmur-cli (Pro)
+- [ ] Premium skins (Pro)
 
 See the full [roadmap](https://murmurlinux.com/about) on our website.
 
