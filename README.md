@@ -24,9 +24,7 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 | **Platform** | Linux | Linux | Mac, Win, iOS | Linux |
 | **Processing** | 100% local | 100% local | Cloud | 100% local |
 | **Engine** | whisper.cpp | whisper.cpp / VOSK | Proprietary | VOSK |
-| **GUI** | Floating widget | GTK tray | Tray icon | None (CLI) |
-| **Binary size** | ~15 MB | ~200 MB+ | ~50 MB | ~1 MB |
-| **Memory** | ~50 MB | ~300 MB | ~800 MB | ~200 MB |
+| **GUI** | Floating widget | GTK themed | Tray icon | None (CLI) |
 | **Stack** | Rust + Tauri | Python + GTK | Electron | Python |
 | **Cost** | Free | Free | $144/yr | Free |
 
