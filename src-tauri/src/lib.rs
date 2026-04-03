@@ -19,6 +19,7 @@ use tauri::{
 use tauri_plugin_store::StoreExt;
 
 const DEFAULT_HOTKEY: &str = "Ctrl+Shift+Space";
+const TRAY_ID: &str = "murmur-tray";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -205,7 +206,7 @@ pub fn run() {
                 &[&show_item, &aot_item, &sep, &settings_item, &sep2, &quit_item],
             )?;
 
-            let _tray = TrayIconBuilder::new()
+            let _tray = TrayIconBuilder::with_id(TRAY_ID)
                 .icon(app.default_window_icon().expect("No default window icon configured in tauri.conf.json").clone())
                 .tooltip("Murmur -- Voice to Text")
                 .menu(&menu)
@@ -264,6 +265,24 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // --- Update tray tooltip when recording state changes ---
+            let handle_for_tray = app.handle().clone();
+            app.listen("recording-state", move |event| {
+                let tooltip = serde_json::from_str::<serde_json::Value>(event.payload())
+                    .ok()
+                    .and_then(|v| v.get("state").and_then(|s| s.as_str().map(String::from)))
+                    .map(|state| match state.as_str() {
+                        "recording" => "Murmur -- Recording...",
+                        "processing" => "Murmur -- Processing...",
+                        _ => "Murmur -- Voice to Text",
+                    })
+                    .unwrap_or("Murmur -- Voice to Text");
+
+                if let Some(tray) = handle_for_tray.tray_by_id(TRAY_ID) {
+                    let _ = tray.set_tooltip(Some(tooltip));
+                }
+            });
 
             Ok(())
         })
