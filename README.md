@@ -17,17 +17,6 @@
 
 No cloud. No account. No telemetry. Your voice never leaves your machine.
 
-## How Murmur compares
-
-| | Murmur | Vocalinux | Wispr Flow | Nerd Dictation |
-|---|:---:|:---:|:---:|:---:|
-| **Platform** | Linux | Linux | Mac, Win, iOS | Linux |
-| **Processing** | 100% local | 100% local | Cloud | 100% local |
-| **Engine** | whisper.cpp | whisper.cpp / VOSK | Proprietary | VOSK |
-| **GUI** | Floating widget | GTK themed | Tray icon | None (CLI) |
-| **Stack** | Rust + Tauri | Python + GTK | Electron | Python |
-| **Cost** | Free | Free | $144/yr | Free |
-
 ## Features
 
 - **100% Offline.** whisper.cpp runs locally on your CPU. Zero network requests after model download.
