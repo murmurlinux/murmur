@@ -4,12 +4,16 @@ mod inject;
 mod state;
 mod stt;
 
-// Public API for external test crates
+// Public API for external crates (test crate + murmur-pro CLI)
+pub use audio::capture::{start_capture, AudioLevel, AudioLevelCallback, AutoStopCallback};
 pub use commands::audio::trim_trailing_silence;
 pub use inject::display_server::{self as display_server, DisplayServer};
 pub use inject::paste::sanitise_for_injection;
-pub use stt::model_manager::{ModelEntry, MODELS};
-pub use stt::whisper::resample;
+pub use stt::model_manager::{
+    download_model_by_name, get_model_path, list_available_models, models_dir,
+    ModelDownloadProgress, ModelEntry, ModelInfo, ProgressCallback, MODELS,
+};
+pub use stt::whisper::{clear_cache, resample, transcribe};
 
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},

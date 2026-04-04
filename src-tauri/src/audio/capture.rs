@@ -2,7 +2,6 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use tauri::Emitter;
 
 #[derive(Clone, Serialize)]
 pub struct AudioLevel {
@@ -11,14 +10,25 @@ pub struct AudioLevel {
     pub samples: Vec<f32>,
 }
 
+/// Callback type for real-time audio level updates: (rms, peak, waveform_bars)
+pub type AudioLevelCallback = Box<dyn Fn(f32, f32, Vec<f32>) + Send + 'static>;
+
+/// Callback type for capture auto-stop notifications (VAD or max duration)
+pub type AutoStopCallback = Box<dyn Fn() + Send + 'static>;
+
 /// Starts audio capture on a background thread.
 /// The cpal stream is created INSIDE the thread (Stream is !Send).
 /// Returns the actual device sample rate.
+///
+/// Callbacks are optional:
+/// - `on_audio_level`: called ~60fps with (rms, peak, waveform_bars)
+/// - `on_auto_stopped`: called when capture ends due to VAD or max duration
 pub fn start_capture(
-    app: tauri::AppHandle,
     audio_buffer: Arc<Mutex<Vec<f32>>>,
     stop_flag: Arc<AtomicBool>,
     auto_stop_silence: bool,
+    on_audio_level: Option<AudioLevelCallback>,
+    on_auto_stopped: Option<AutoStopCallback>,
 ) -> Result<u32, anyhow::Error> {
     // Verify we can access an input device and get actual sample rate
     let host = cpal::default_host();
@@ -31,7 +41,6 @@ pub fn start_capture(
         .unwrap_or(44100);
 
     let stop = Arc::clone(&stop_flag);
-    let app_handle = app.clone();
 
     std::thread::spawn(move || {
         // Create the cpal stream inside this thread (Stream is !Send)
@@ -166,15 +175,10 @@ pub fn start_capture(
                 samples.iter().map(|s| (s.abs() * gain).min(1.0)).collect()
             };
 
-            // Emit to frontend
-            let _ = app_handle.emit(
-                "audio-level",
-                AudioLevel {
-                    rms,
-                    peak,
-                    samples: waveform,
-                },
-            );
+            // Notify listener (UI or CLI)
+            if let Some(ref cb) = on_audio_level {
+                cb(rms, peak, waveform);
+            }
 
             // Auto-stop on silence (VAD) -- only when enabled
             if auto_stop_silence {
@@ -230,7 +234,9 @@ pub fn start_capture(
 
         // If capture ended due to VAD or max duration (not user-initiated stop),
         // notify the system to run the full stop flow (transcribe, inject, hide popup)
-        let _ = app_handle.emit("capture-auto-stopped", ());
+        if let Some(ref cb) = on_auto_stopped {
+            cb();
+        }
     });
 
     Ok(actual_sample_rate)
