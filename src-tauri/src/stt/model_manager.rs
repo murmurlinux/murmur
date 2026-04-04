@@ -1,7 +1,6 @@
 use directories::ProjectDirs;
 use serde::Serialize;
 use std::path::PathBuf;
-use tauri::Emitter;
 
 #[derive(Clone, Serialize)]
 pub struct ModelInfo {
@@ -83,6 +82,9 @@ pub struct ModelDownloadProgress {
     pub bytes_downloaded: u64,
     pub total_bytes: u64,
 }
+
+/// Callback type for download progress: (percent, bytes_downloaded, total_bytes)
+pub type ProgressCallback = Box<dyn Fn(f32, u64, u64) + Send + Sync>;
 
 /// Get the models directory (~/.local/share/murmur/models/)
 pub fn models_dir() -> PathBuf {
@@ -190,10 +192,12 @@ impl Sha256Hasher {
     }
 }
 
-/// Download a model by filename with progress events, atomic writes, and checksum verification
+/// Download a model by filename with progress callback, atomic writes, and checksum verification.
+///
+/// `on_progress` receives (percent, bytes_downloaded, total_bytes) during download.
 pub async fn download_model_by_name(
-    app: tauri::AppHandle,
     filename: &str,
+    on_progress: Option<ProgressCallback>,
 ) -> Result<PathBuf, anyhow::Error> {
     validate_filename(filename)?;
 
@@ -236,15 +240,9 @@ pub async fn download_model_by_name(
                 0.0
             };
 
-            let _ = app.emit(
-                "model-download-progress",
-                ModelDownloadProgress {
-                    model: filename.to_string(),
-                    percent,
-                    bytes_downloaded: downloaded,
-                    total_bytes: total,
-                },
-            );
+            if let Some(ref cb) = on_progress {
+                cb(percent, downloaded, total);
+            }
         }
         Ok(())
     }

@@ -99,7 +99,13 @@ pub fn start_mic_test(app: tauri::AppHandle) -> Result<(), String> {
         stop_clone.store(true, std::sync::atomic::Ordering::Relaxed);
     });
 
-    capture::start_capture(app, audio_buffer, stop_flag, false)
+    // Pass Tauri event emission as closure for mic test level monitoring
+    use tauri::Emitter;
+    let on_level = Box::new(move |rms: f32, peak: f32, samples: Vec<f32>| {
+        let _ = app.emit("audio-level", capture::AudioLevel { rms, peak, samples });
+    });
+
+    capture::start_capture(audio_buffer, stop_flag, false, Some(on_level), None)
         .map_err(|e| format!("Mic test failed: {}", e))?;
 
     Ok(())

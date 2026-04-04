@@ -84,8 +84,25 @@ fn start_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
         })
         .unwrap_or(false);
 
-    let actual_rate = capture::start_capture(app.clone(), audio_buffer, stop_flag, auto_stop)
-        .map_err(|e| format!("Failed to start audio capture: {}", e))?;
+    // Pass Tauri event emission as closures to the decoupled capture function
+    let app_for_level = app.clone();
+    let on_level = Box::new(move |rms: f32, peak: f32, samples: Vec<f32>| {
+        let _ = app_for_level.emit("audio-level", capture::AudioLevel { rms, peak, samples });
+    });
+
+    let app_for_stop = app.clone();
+    let on_stopped = Box::new(move || {
+        let _ = app_for_stop.emit("capture-auto-stopped", ());
+    });
+
+    let actual_rate = capture::start_capture(
+        audio_buffer,
+        stop_flag,
+        auto_stop,
+        Some(on_level),
+        Some(on_stopped),
+    )
+    .map_err(|e| format!("Failed to start audio capture: {}", e))?;
 
     // Update sample rate from actual device config
     if let Ok(mut inner) = state.lock() {
@@ -173,8 +190,8 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
             None => {
                 log::info!("Model '{}' not found, downloading...", active_model);
                 match tauri::async_runtime::block_on(model_manager::download_model_by_name(
-                    app_handle.clone(),
                     &active_model,
+                    None,
                 )) {
                     Ok(p) => p,
                     Err(e) => {
