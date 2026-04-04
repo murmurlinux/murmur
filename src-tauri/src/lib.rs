@@ -9,6 +9,8 @@ pub use audio::capture::{start_capture, AudioLevel, AudioLevelCallback, AutoStop
 pub use commands::audio::trim_trailing_silence;
 pub use inject::display_server::{self as display_server, DisplayServer};
 pub use inject::paste::sanitise_for_injection;
+pub use stt::engine::{SttConfig, SttEngine};
+pub use stt::local_whisper::LocalWhisperEngine;
 pub use stt::model_manager::{
     download_model_by_name, get_model_path, list_available_models, models_dir,
     ModelDownloadProgress, ModelEntry, ModelInfo, ProgressCallback, MODELS,
