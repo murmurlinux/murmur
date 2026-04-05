@@ -2,6 +2,7 @@ import { createSignal, onMount, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
+import { initAuth, signIn, signOut, user, profile, isPro, authLoading } from "../lib/auth";
 import { hexToHue, hueToHex, hexToRgba } from "../lib/color";
 import logoImg from "../assets/logo.png";
 
@@ -86,6 +87,74 @@ function SettingRow(props: { label: string; children: JSX.Element }) {
   );
 }
 
+function AccountSignIn() {
+  const [email, setEmail] = createSignal("");
+  const [password, setPassword] = createSignal("");
+  const [error, setError] = createSignal("");
+  const [loading, setLoading] = createSignal(false);
+
+  async function handleSignIn(e: Event) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const result = await signIn(email(), password());
+      if (result.error) setError(result.error);
+    } catch {
+      setError("Connection failed. Check your internet and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSignIn}>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email()}
+        onInput={(e) => setEmail(e.currentTarget.value)}
+        required
+        style={{ ...inputBase, "margin-bottom": "8px" }}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password()}
+        onInput={(e) => setPassword(e.currentTarget.value)}
+        required
+        style={{ ...inputBase, "margin-bottom": "8px" }}
+      />
+      {error() && (
+        <p style={{ color: "#f87171", "font-size": "12px", "margin-bottom": "8px" }}>
+          {error()}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={loading()}
+        style={{
+          width: "100%",
+          padding: "8px",
+          background: "#14b8a6",
+          border: "none",
+          "border-radius": "8px",
+          color: "#fff",
+          "font-size": "13px",
+          "font-weight": "500",
+          cursor: loading() ? "wait" : "pointer",
+          opacity: loading() ? "0.5" : "1",
+        }}
+      >
+        {loading() ? "Signing in..." : "Sign in"}
+      </button>
+      <p style={{ color: "#666", "font-size": "11px", "margin-top": "8px", "text-align": "center" }}>
+        Create an account at murmurlinux.com
+      </p>
+    </form>
+  );
+}
+
 // --- Component ---
 
 export function SettingsPanel() {
@@ -105,6 +174,8 @@ export function SettingsPanel() {
   };
 
   onMount(async () => {
+    await initAuth();
+
     // Read version from Tauri config (not hardcoded)
     try {
       const { getVersion } = await import("@tauri-apps/api/app");
@@ -249,6 +320,46 @@ export function SettingsPanel() {
 
         {settings() && (
           <>
+            {/* Account */}
+            <div style={glass}>
+              <span style={label}>Account</span>
+              {authLoading() ? (
+                <p style={{ color: "#999", "font-size": "13px" }}>Loading...</p>
+              ) : user() ? (
+                <div>
+                  <p style={{ color: "#e0e0e0", "font-size": "13px", "margin-bottom": "8px" }}>
+                    {profile()?.email ?? user()?.email}
+                  </p>
+                  <p style={{
+                    color: isPro() ? "#14b8a6" : "#999",
+                    "font-size": "11px",
+                    "font-weight": "600",
+                    "text-transform": "uppercase",
+                    "letter-spacing": "0.05em",
+                    "margin-bottom": "12px",
+                  }}>
+                    {isPro() ? "Pro" : "Free"}
+                  </p>
+                  <button
+                    onClick={() => signOut()}
+                    style={{
+                      padding: "6px 16px",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      "border-radius": "6px",
+                      color: "#e0e0e0",
+                      "font-size": "12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <AccountSignIn />
+              )}
+            </div>
+
             {/* Skin */}
             <div style={glass}>
               <label style={label}>Skin</label>
