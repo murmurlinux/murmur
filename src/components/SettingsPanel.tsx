@@ -97,9 +97,14 @@ function AccountSignIn() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const result = await signIn(email(), password());
-    setLoading(false);
-    if (result.error) setError(result.error);
+    try {
+      const result = await signIn(email(), password());
+      if (result.error) setError(result.error);
+    } catch {
+      setError("Connection failed. Check your internet and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
