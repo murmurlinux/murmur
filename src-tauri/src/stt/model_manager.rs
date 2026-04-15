@@ -217,7 +217,6 @@ pub async fn download_model_by_name(
     let tmp_dest = models_dir().join(format!("{}.tmp", filename));
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(3600))
         .connect_timeout(std::time::Duration::from_secs(30))
         .user_agent("murmur/0.3.3")
         .build()?;
