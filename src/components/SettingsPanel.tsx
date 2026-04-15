@@ -1,4 +1,4 @@
-import { createSignal, onMount, For, JSX } from "solid-js";
+import { createSignal, onMount, onCleanup, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
@@ -41,31 +41,32 @@ const inputBase: JSX.CSSProperties = {
   outline: "none",
 };
 
-function Toggle(props: { value: boolean; onChange: () => void }) {
+function Toggle(props: { value: boolean; onChange: () => void; disabled?: boolean }) {
   return (
     <button
-      onClick={props.onChange}
+      onClick={() => !props.disabled && props.onChange()}
       style={{
         width: "40px",
         height: "22px",
-        "border-radius": "0",
+        "border-radius": "11px",
         border: "none",
-        cursor: "pointer",
-        background: props.value ? "#c9482b" : "#d4c9b5",
+        cursor: props.disabled ? "not-allowed" : "pointer",
+        background: props.disabled ? "#e0d9cc" : props.value ? "#c9482b" : "#d4c9b5",
         position: "relative",
         transition: "background 0.2s ease",
         "flex-shrink": "0",
+        opacity: props.disabled ? "0.5" : "1",
       }}
     >
       <div
         style={{
           width: "16px",
           height: "16px",
-          "border-radius": "0",
+          "border-radius": "50%",
           background: "#f5f0e6",
           position: "absolute",
           top: "3px",
-          left: props.value ? "21px" : "3px",
+          left: props.value && !props.disabled ? "21px" : "3px",
           transition: "left 0.2s ease",
         }}
       />
@@ -84,6 +85,109 @@ function SettingRow(props: { label: string; children: JSX.Element }) {
     >
       <span style={{ "font-size": "13px", color: "#6b655a" }}>{props.label}</span>
       {props.children}
+    </div>
+  );
+}
+
+const LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "auto", label: "Auto-detect" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "it", label: "Italian" },
+  { value: "pt", label: "Portuguese" },
+  { value: "ru", label: "Russian" },
+  { value: "ja", label: "Japanese" },
+  { value: "zh", label: "Chinese" },
+  { value: "ko", label: "Korean" },
+  { value: "ar", label: "Arabic" },
+  { value: "hi", label: "Hindi" },
+  { value: "nl", label: "Dutch" },
+  { value: "pl", label: "Polish" },
+  { value: "tr", label: "Turkish" },
+  { value: "sv", label: "Swedish" },
+  { value: "id", label: "Indonesian" },
+  { value: "uk", label: "Ukrainian" },
+];
+
+function CustomSelect(props: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  const [open, setOpen] = createSignal(false);
+  let containerRef: HTMLDivElement | undefined;
+
+  const selected = () => props.options.find((o) => o.value === props.value)?.label || props.value;
+
+  const handleClickOutside = (e: MouseEvent) => {
+    if (containerRef && !containerRef.contains(e.target as Node)) {
+      setOpen(false);
+    }
+  };
+
+  onMount(() => document.addEventListener("mousedown", handleClickOutside));
+  onCleanup(() => document.removeEventListener("mousedown", handleClickOutside));
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(!open())}
+        style={{
+          width: "100%",
+          padding: "8px 12px",
+          background: "#f5f0e6",
+          border: "1px solid #1a1a1a",
+          "border-radius": "0",
+          color: "#1a1a1a",
+          "font-size": "13px",
+          "font-family": monoFont,
+          cursor: "pointer",
+          "text-align": "left",
+          display: "flex",
+          "justify-content": "space-between",
+          "align-items": "center",
+        }}
+      >
+        {selected()}
+        <span style={{ color: "#6b655a", "font-size": "10px" }}>{open() ? "\u25B2" : "\u25BC"}</span>
+      </button>
+      {open() && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: "0",
+            right: "0",
+            background: "#f5f0e6",
+            border: "1px solid #1a1a1a",
+            "border-top": "none",
+            "max-height": "200px",
+            "overflow-y": "auto",
+            "z-index": "10",
+          }}
+        >
+          {props.options.map((opt) => (
+            <div
+              onClick={() => { props.onChange(opt.value); setOpen(false); }}
+              style={{
+                padding: "6px 12px",
+                cursor: "pointer",
+                "font-size": "13px",
+                "font-family": monoFont,
+                color: opt.value === props.value ? "#c9482b" : "#1a1a1a",
+                "font-weight": opt.value === props.value ? "700" : "400",
+                background: opt.value === props.value ? "#ece4d0" : "transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (opt.value !== props.value) e.currentTarget.style.background = "#ece4d0";
+              }}
+              onMouseLeave={(e) => {
+                if (opt.value !== props.value) e.currentTarget.style.background = "transparent";
+              }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -166,11 +270,15 @@ function AccountSignIn() {
         }}
         onMouseEnter={(e) => {
           if (!loading()) {
+            e.currentTarget.style.background = "#1a1a1a";
+            e.currentTarget.style.borderColor = "#1a1a1a";
             e.currentTarget.style.transform = "translate(-2px, -2px)";
             e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
           }
         }}
         onMouseLeave={(e) => {
+          e.currentTarget.style.background = "#c9482b";
+          e.currentTarget.style.borderColor = "#c9482b";
           e.currentTarget.style.transform = "none";
           e.currentTarget.style.boxShadow = "none";
         }}
@@ -298,19 +406,27 @@ export function SettingsPanel() {
           style={{
             display: "flex",
             "align-items": "center",
-            gap: "10px",
+            "justify-content": "space-between",
             "margin-bottom": "20px",
           }}
         >
-          <img src={logoImg} alt="Murmur" width={28} height={28} style={{ "border-radius": "0" }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ "font-size": "16px", "font-weight": 600, color: "#1a1a1a" }}>
-              Murmur
-            </div>
+          <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+            <img src={logoImg} alt="Murmur" width={48} height={48} style={{ "border-radius": "0" }} />
+            <pre
+              style={{
+                color: "#c9482b",
+                "font-size": "10px",
+                "line-height": "1.0",
+                margin: "-10px 0 0 0",
+                "white-space": "pre",
+                "font-weight": "700",
+                "font-family": monoFont,
+              }}
+            >{` __  __\n|  \\/  |_   _ _ __ _ __ ___  _   _ _ __\n| |\\/| | | | | '__| '_ \` _ \\| | | | '__|\n| |  | | |_| | |  | | | | | | |_| | |\n|_|  |_|\\__,_|_|  |_| |_| |_|\\__,_|_|`}</pre>
+            <span style={{ "font-size": "10px", color: "#6b655a", "font-family": monoFont, "align-self": "flex-end", "margin-bottom": "2px" }}>
+              v{version()}
+            </span>
           </div>
-          <span style={{ "font-size": "10px", color: "#6b655a", "font-family": monoFont }}>
-            v{version()}
-          </span>
         </div>
 
         {error() && (
@@ -482,14 +598,16 @@ export function SettingsPanel() {
                         </div>
                         {model.downloaded ? (
                           settings()!.model === model.filename ? (
-                            <span style={{ "font-size": "10px", color: "#c9482b", "font-weight": 600, "text-transform": "uppercase", "letter-spacing": "0.05em" }}>
-                              Active
+                            <span style={{ "font-size": "10px", color: "#c9482b", "font-weight": 700, "text-transform": "uppercase", "letter-spacing": "0.05em", "width": "100px", "text-align": "center", display: "inline-block" }}>
+                              active
                             </span>
                           ) : (
                             <button
                               onClick={() => selectModel(model.filename)}
                               style={{
                                 padding: "4px 10px",
+                                "width": "100px",
+                                "text-align": "center",
                                 background: "#ece4d0",
                                 border: "1px solid #1a1a1a",
                                 "border-radius": "0",
@@ -521,6 +639,8 @@ export function SettingsPanel() {
                             disabled={downloadingModel() === model.filename}
                             style={{
                               padding: "4px 10px",
+                              "width": "100px",
+                              "text-align": "center",
                               background: downloadingModel() === model.filename
                                 ? "#d4c9b5"
                                 : "#ece4d0",
@@ -602,10 +722,13 @@ export function SettingsPanel() {
                   <Toggle
                     value={settings()!.autoStopSilence}
                     onChange={() => updateSetting("autoStopSilence", !settings()!.autoStopSilence)}
+                    disabled={settings()!.recordMode === "hold"}
                   />
                 </SettingRow>
                 <div style={{ "font-size": "10px", color: "#6b655a", "margin-top": "4px" }}>
-                  Stops recording after ~2s of silence in tap mode
+                  {settings()!.recordMode === "hold"
+                    ? "Not applicable in hold mode (release to stop)"
+                    : "Stops recording after ~2s of silence in tap mode"}
                 </div>
               </div>
             </div>
@@ -614,42 +737,11 @@ export function SettingsPanel() {
             <div style={glass}>
               <label style={label}>Language</label>
               <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                <select
+                <CustomSelect
                   value={settings()!.language}
-                  onChange={(e) => updateSetting("language", e.currentTarget.value)}
-                  style={{
-                    padding: "8px 12px",
-                    background: "#f5f0e6",
-                    border: "1px solid #1a1a1a",
-                    "border-radius": "0",
-                    color: "#1a1a1a",
-                    "font-size": "13px",
-                    "font-family": monoFont,
-                    cursor: "pointer",
-                    appearance: "none" as any,
-                    "-webkit-appearance": "none",
-                  }}
-                >
-                  <option value="en">English</option>
-                  <option value="auto">Auto-detect</option>
-                  <option value="es">Spanish</option>
-                  <option value="fr">French</option>
-                  <option value="de">German</option>
-                  <option value="it">Italian</option>
-                  <option value="pt">Portuguese</option>
-                  <option value="ru">Russian</option>
-                  <option value="ja">Japanese</option>
-                  <option value="zh">Chinese</option>
-                  <option value="ko">Korean</option>
-                  <option value="ar">Arabic</option>
-                  <option value="hi">Hindi</option>
-                  <option value="nl">Dutch</option>
-                  <option value="pl">Polish</option>
-                  <option value="tr">Turkish</option>
-                  <option value="sv">Swedish</option>
-                  <option value="id">Indonesian</option>
-                  <option value="uk">Ukrainian</option>
-                </select>
+                  onChange={(v) => updateSetting("language", v)}
+                  options={LANGUAGES}
+                />
                 {settings()!.language !== "en" && (
                   <SettingRow label="Translate to English">
                     <Toggle
