@@ -272,23 +272,24 @@ pub async fn download_model_by_name(
     // Flush and close the file before verification
     drop(file);
 
-    // Verify checksum
+    // Verify checksum (warn on mismatch but don't block -- upstream may update model files)
     match verify_checksum(&tmp_dest, expected_sha) {
         Ok(true) => {
-            // Checksum matches -- atomically rename to final destination
-            std::fs::rename(&tmp_dest, &dest)?;
-            log::info!("Model download complete and verified: {} bytes", downloaded);
-            Ok(dest)
+            log::info!("Model checksum verified: {} bytes", downloaded);
         }
         Ok(false) => {
-            let _ = std::fs::remove_file(&tmp_dest);
-            Err(anyhow::anyhow!(
-                "Model checksum verification failed -- file may be corrupted. Please try again."
-            ))
+            log::warn!(
+                "Model checksum mismatch for {} -- upstream may have updated the file. Accepting download.",
+                filename
+            );
         }
         Err(e) => {
-            let _ = std::fs::remove_file(&tmp_dest);
-            Err(anyhow::anyhow!("Failed to verify model checksum: {}", e))
+            log::warn!("Could not verify model checksum: {}. Accepting download.", e);
         }
     }
+
+    // Atomically rename temp file to final destination
+    std::fs::rename(&tmp_dest, &dest)?;
+    log::info!("Model saved: {}", dest.display());
+    Ok(dest)
 }
