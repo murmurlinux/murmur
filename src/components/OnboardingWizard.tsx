@@ -5,21 +5,21 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { saveSetting, type ModelInfo } from "../lib/settings";
 import logoImg from "../assets/logo.png";
 
-const ACCENT = "#14b8a6";
+const ACCENT = "#c9482b";
 
 const glass = {
   padding: "20px",
-  background: "rgba(255, 255, 255, 0.025)",
-  "border-radius": "14px",
-  border: "1px solid rgba(255, 255, 255, 0.06)",
+  background: "#ece4d0",
+  "border-radius": "0",
+  border: "1px solid #d4c9b5",
 };
 
 const btnPrimary = {
   padding: "10px 28px",
   background: ACCENT,
-  border: "none",
-  "border-radius": "8px",
-  color: "#0c1222",
+  border: `1px solid ${ACCENT}`,
+  "border-radius": "0",
+  color: "#fff8ed",
   "font-weight": 600,
   "font-size": "14px",
   cursor: "pointer",
@@ -27,20 +27,20 @@ const btnPrimary = {
 
 const btnSecondary = {
   padding: "10px 28px",
-  background: "rgba(255, 255, 255, 0.04)",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  "border-radius": "8px",
-  color: "rgba(255, 255, 255, 0.5)",
+  background: "#ece4d0",
+  border: "1px solid #1a1a1a",
+  "border-radius": "0",
+  color: "#1a1a1a",
   "font-size": "14px",
   cursor: "pointer",
 };
 
 const selectStyle = {
   padding: "10px 14px",
-  background: "rgba(0, 0, 0, 0.3)",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  "border-radius": "8px",
-  color: "rgba(255, 255, 255, 0.8)",
+  background: "#f5f0e6",
+  border: "1px solid #1a1a1a",
+  "border-radius": "0",
+  color: "#1a1a1a",
   "font-size": "13px",
   cursor: "pointer",
   width: "100%",
@@ -234,11 +234,13 @@ export function OnboardingWizard() {
   return (
     <div
       style={{
-        background: "#060d18",
-        color: "rgba(255, 255, 255, 0.7)",
+        background: "#f5f0e6",
+        "background-image": "radial-gradient(circle at 1px 1px, rgba(26,26,26,0.06) 1px, transparent 0)",
+        "background-size": "14px 14px",
+        color: "#6b655a",
         width: "100%",
         "min-height": "100vh",
-        "font-family": "'Inter', 'Segoe UI', system-ui, sans-serif",
+        "font-family": "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace",
         padding: "32px",
         "box-sizing": "border-box",
         display: "flex",
@@ -246,26 +248,29 @@ export function OnboardingWizard() {
       }}
     >
       {/* Header */}
-      <div style={{ "text-align": "center", "margin-bottom": "20px" }}>
-        <img
-          src={logoImg}
-          width={48}
-          height={48}
-          alt="Murmur"
-          style={{ "border-radius": "12px" }}
-        />
-        <h1
-          style={{
-            "font-size": "22px",
-            "font-weight": 600,
-            color: "rgba(255, 255, 255, 0.9)",
-            margin: "12px 0 4px",
-          }}
-        >
-          Welcome to Murmur
-        </h1>
-        <p style={{ "font-size": "13px", color: "rgba(255, 255, 255, 0.35)", margin: 0 }}>
-          Let's get you set up in a moment
+      <div style={{ "margin-bottom": "20px" }}>
+        <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+          <img
+            src={logoImg}
+            width={48}
+            height={48}
+            alt="Murmur"
+            style={{ "border-radius": "0" }}
+          />
+          <pre
+            style={{
+              color: "#c9482b",
+              "font-size": "10px",
+              "line-height": "1.0",
+              "font-weight": 700,
+              "font-family": "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace",
+              margin: 0,
+              "margin-top": "-10px",
+            }}
+          >{` __  __\n|  \\/  |_   _ _ __ _ __ ___  _   _ _ __\n| |\\/| | | | | '__| '__\` _ \\| | | | '__|\n| |  | | |_| | |  | | | | | | |_| | |\n|_|  |_|\\__,_|_|  |_| |_| |_|\\__,_|_|`}</pre>
+        </div>
+        <p style={{ "font-size": "13px", color: "#6b655a", "font-family": "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace", margin: "8px 0 0" }}>
+          let's get you set up
         </p>
       </div>
 
@@ -285,7 +290,7 @@ export function OnboardingWizard() {
                 width: step() === i ? "24px" : "8px",
                 height: "8px",
                 "border-radius": "4px",
-                background: step() >= i ? ACCENT : "rgba(255, 255, 255, 0.1)",
+                background: step() >= i ? ACCENT : "#d4c9b5",
                 transition: "all 0.3s ease",
               }}
             />
@@ -298,7 +303,7 @@ export function OnboardingWizard() {
         {/* ========== STEP 0: Microphone ========== */}
         <Show when={step() === 0}>
           <div style={glass}>
-            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.85)", margin: "0 0 12px" }}>
+            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "#1a1a1a", margin: "0 0 12px" }}>
               Microphone Check
             </h2>
 
@@ -325,11 +330,11 @@ export function OnboardingWizard() {
               <div
                 style={{
                   padding: "12px",
-                  background: "rgba(0, 0, 0, 0.2)",
-                  "border-radius": "8px",
-                  border: "1px solid rgba(255, 255, 255, 0.04)",
+                  background: "#ece4d0",
+                  "border-radius": "0",
+                  border: "1px solid #d4c9b5",
                   "font-size": "13px",
-                  color: "rgba(255, 255, 255, 0.7)",
+                  color: "#6b655a",
                   "margin-bottom": "10px",
                 }}
               >
@@ -345,7 +350,7 @@ export function OnboardingWizard() {
                   style={{
                     flex: 1,
                     height: "8px",
-                    background: "rgba(255, 255, 255, 0.06)",
+                    background: "#d4c9b5",
                     "border-radius": "4px",
                     overflow: "hidden",
                   }}
@@ -354,7 +359,7 @@ export function OnboardingWizard() {
                     style={{
                       height: "100%",
                       width: `${micLevel() * 100}%`,
-                      background: micConfirmed() ? ACCENT : "rgba(255, 255, 255, 0.3)",
+                      background: micConfirmed() ? ACCENT : "#6b655a",
                       "border-radius": "4px",
                       transition: "width 0.1s ease",
                     }}
@@ -368,11 +373,11 @@ export function OnboardingWizard() {
                       width: "24px",
                       height: "24px",
                       "border-radius": "50%",
-                      background: "rgba(20, 184, 166, 0.15)",
+                      background: "rgba(90, 122, 58, 0.15)",
                       display: "flex",
                       "align-items": "center",
                       "justify-content": "center",
-                      color: ACCENT,
+                      color: "#5a7a3a",
                       "font-size": "14px",
                       "flex-shrink": 0,
                     }}
@@ -396,19 +401,19 @@ export function OnboardingWizard() {
                 </button>
               </Show>
               <Show when={micTesting() && !micConfirmed()}>
-                <p style={{ "font-size": "12px", color: "rgba(255, 255, 255, 0.5)", margin: "4px 0 0", "text-align": "center" }}>
+                <p style={{ "font-size": "12px", color: "#6b655a", margin: "4px 0 0", "text-align": "center" }}>
                   Speak now... say "Hey Murmur"
                 </p>
               </Show>
               <Show when={micConfirmed()}>
-                <p style={{ "font-size": "12px", color: ACCENT, margin: "4px 0 0", "text-align": "center" }}>
+                <p style={{ "font-size": "12px", color: "#5a7a3a", margin: "4px 0 0", "text-align": "center" }}>
                   Microphone confirmed working
                 </p>
               </Show>
             </Show>
 
             <Show when={mics()[selectedMic()]?.available === false}>
-              <p style={{ "font-size": "12px", color: "rgba(239, 68, 68, 0.7)", margin: "8px 0 0" }}>
+              <p style={{ "font-size": "12px", color: "#a33a2a", margin: "8px 0 0" }}>
                 No microphone detected. You can continue, but recording won't work until one is connected.
               </p>
             </Show>
@@ -420,7 +425,7 @@ export function OnboardingWizard() {
                 style={{
                   background: "none",
                   border: "none",
-                  color: "rgba(255, 255, 255, 0.25)",
+                  color: "#6b655a",
                   "font-size": "11px",
                   cursor: "pointer",
                   "text-decoration": "underline",
@@ -433,10 +438,10 @@ export function OnboardingWizard() {
                   style={{
                     "margin-top": "8px",
                     padding: "10px",
-                    background: "rgba(0, 0, 0, 0.2)",
-                    "border-radius": "8px",
+                    background: "#ece4d0",
+                    "border-radius": "0",
                     "font-size": "11px",
-                    color: "rgba(255, 255, 255, 0.4)",
+                    color: "#6b655a",
                     "text-align": "left",
                   }}
                 >
@@ -456,15 +461,15 @@ export function OnboardingWizard() {
         {/* ========== STEP 1: Model + Language ========== */}
         <Show when={step() === 1}>
           <div style={glass}>
-            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.85)", margin: "0 0 6px" }}>
+            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "#1a1a1a", margin: "0 0 6px" }}>
               Speech Model
             </h2>
-            <p style={{ "font-size": "12px", color: "rgba(255, 255, 255, 0.35)", margin: "0 0 16px" }}>
+            <p style={{ "font-size": "12px", color: "#6b655a", margin: "0 0 16px" }}>
               Choose your model size and language. You can change these later in Settings.
             </p>
 
             {/* Size selector */}
-            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+            <label style={{ "font-size": "11px", color: "#6b655a", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
               Model Size
             </label>
             <div style={{ display: "flex", gap: "6px", "margin-bottom": "14px" }}>
@@ -474,10 +479,10 @@ export function OnboardingWizard() {
                   style={{
                     flex: 1,
                     padding: "10px 8px",
-                    background: modelSize() === size ? `${ACCENT}18` : "rgba(0, 0, 0, 0.3)",
-                    border: modelSize() === size ? `1px solid ${ACCENT}44` : "1px solid rgba(255, 255, 255, 0.04)",
-                    "border-radius": "8px",
-                    color: modelSize() === size ? ACCENT : "rgba(255, 255, 255, 0.5)",
+                    background: modelSize() === size ? "#f5f0e6" : "#ece4d0",
+                    border: modelSize() === size ? `1px solid ${ACCENT}` : "1px solid #d4c9b5",
+                    "border-radius": "0",
+                    color: modelSize() === size ? ACCENT : "#6b655a",
                     cursor: "pointer",
                     "font-size": "12px",
                     "font-weight": modelSize() === size ? "600" : "400",
@@ -493,7 +498,7 @@ export function OnboardingWizard() {
             </div>
 
             {/* Language selector */}
-            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+            <label style={{ "font-size": "11px", color: "#6b655a", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
               Language
             </label>
             <div style={{ display: "flex", gap: "6px", "margin-bottom": "16px" }}>
@@ -503,10 +508,10 @@ export function OnboardingWizard() {
                   style={{
                     flex: 1,
                     padding: "10px 8px",
-                    background: modelLang() === lang ? `${ACCENT}18` : "rgba(0, 0, 0, 0.3)",
-                    border: modelLang() === lang ? `1px solid ${ACCENT}44` : "1px solid rgba(255, 255, 255, 0.04)",
-                    "border-radius": "8px",
-                    color: modelLang() === lang ? ACCENT : "rgba(255, 255, 255, 0.5)",
+                    background: modelLang() === lang ? "#f5f0e6" : "#ece4d0",
+                    border: modelLang() === lang ? `1px solid ${ACCENT}` : "1px solid #d4c9b5",
+                    "border-radius": "0",
+                    color: modelLang() === lang ? ACCENT : "#6b655a",
                     cursor: "pointer",
                     "font-size": "12px",
                     "font-weight": modelLang() === lang ? "600" : "400",
@@ -521,11 +526,11 @@ export function OnboardingWizard() {
             <div
               style={{
                 padding: "10px 14px",
-                background: "rgba(0, 0, 0, 0.2)",
-                "border-radius": "8px",
-                border: "1px solid rgba(255, 255, 255, 0.04)",
+                background: "#ece4d0",
+                "border-radius": "0",
+                border: "1px solid #d4c9b5",
                 "font-size": "12px",
-                color: "rgba(255, 255, 255, 0.5)",
+                color: "#6b655a",
                 display: "flex",
                 "justify-content": "space-between",
                 "align-items": "center",
@@ -533,7 +538,7 @@ export function OnboardingWizard() {
             >
               <span>{currentModelFile()}</span>
               <Show when={isCurrentModelDownloaded() || downloadDone()}>
-                <span style={{ color: ACCENT, "font-size": "11px" }}>{"\u2713"} Downloaded</span>
+                <span style={{ color: "#5a7a3a", "font-size": "11px" }}>{"\u2713"} Downloaded</span>
               </Show>
             </div>
 
@@ -543,8 +548,8 @@ export function OnboardingWizard() {
                 style={{
                   "margin-top": "10px",
                   height: "4px",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  "border-radius": "2px",
+                  background: "#d4c9b5",
+                  "border-radius": "0",
                   overflow: "hidden",
                 }}
               >
@@ -553,7 +558,7 @@ export function OnboardingWizard() {
                     height: "100%",
                     width: `${downloadPercent()}%`,
                     background: ACCENT,
-                    "border-radius": "2px",
+                    "border-radius": "0",
                     transition: "width 0.3s ease",
                   }}
                 />
@@ -562,7 +567,7 @@ export function OnboardingWizard() {
 
             {/* Error */}
             <Show when={downloadError()}>
-              <p style={{ "font-size": "11px", color: "#ef4444", "margin-top": "8px" }}>
+              <p style={{ "font-size": "11px", color: "#a33a2a", "margin-top": "8px" }}>
                 {downloadError()}
               </p>
             </Show>
@@ -572,15 +577,15 @@ export function OnboardingWizard() {
         {/* ========== STEP 2: Hotkey + Recording Mode ========== */}
         <Show when={step() === 2}>
           <div style={glass}>
-            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.85)", margin: "0 0 6px" }}>
+            <h2 style={{ "font-size": "16px", "font-weight": 600, color: "#1a1a1a", margin: "0 0 6px" }}>
               Hotkey & Recording Mode
             </h2>
-            <p style={{ "font-size": "12px", color: "rgba(255, 255, 255, 0.35)", margin: "0 0 16px" }}>
+            <p style={{ "font-size": "12px", color: "#6b655a", margin: "0 0 16px" }}>
               Set your key combination and how you want to control recording.
             </p>
 
             {/* Hotkey display/capture */}
-            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+            <label style={{ "font-size": "11px", color: "#6b655a", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
               Hotkey
             </label>
             <div style={{ display: "flex", gap: "8px", "align-items": "center", "margin-bottom": "16px" }}>
@@ -590,9 +595,9 @@ export function OnboardingWizard() {
                 style={{
                   flex: 1,
                   padding: "12px 16px",
-                  background: capturingHotkey() ? "rgba(20, 184, 166, 0.08)" : "rgba(0, 0, 0, 0.25)",
-                  "border-radius": "8px",
-                  border: capturingHotkey() ? `1px solid ${ACCENT}66` : "1px solid rgba(255, 255, 255, 0.06)",
+                  background: "#ece4d0",
+                  "border-radius": "0",
+                  border: capturingHotkey() ? `1px solid ${ACCENT}` : "1px solid #d4c9b5",
                   "font-family": "'JetBrains Mono', monospace",
                   "font-size": "16px",
                   "font-weight": 600,
@@ -617,7 +622,7 @@ export function OnboardingWizard() {
             </div>
 
             {/* Recording mode */}
-            <label style={{ "font-size": "11px", color: "rgba(255, 255, 255, 0.4)", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
+            <label style={{ "font-size": "11px", color: "#6b655a", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
               Recording Mode
             </label>
             <div style={{ display: "flex", gap: "6px" }}>
@@ -627,10 +632,10 @@ export function OnboardingWizard() {
                   style={{
                     flex: 1,
                     padding: "10px 12px",
-                    background: recordMode() === mode ? `${ACCENT}18` : "rgba(0, 0, 0, 0.3)",
-                    border: recordMode() === mode ? `1px solid ${ACCENT}44` : "1px solid rgba(255, 255, 255, 0.04)",
-                    "border-radius": "8px",
-                    color: recordMode() === mode ? ACCENT : "rgba(255, 255, 255, 0.4)",
+                    background: recordMode() === mode ? "#f5f0e6" : "#ece4d0",
+                    border: recordMode() === mode ? `1px solid ${ACCENT}` : "1px solid #d4c9b5",
+                    "border-radius": "0",
+                    color: recordMode() === mode ? ACCENT : "#6b655a",
                     cursor: "pointer",
                     "font-size": "12px",
                     "font-weight": recordMode() === mode ? "600" : "400",
