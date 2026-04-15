@@ -184,6 +184,21 @@ export function OnboardingWizard() {
   }
 
   // --- Hotkey capture ---
+  const [hotkeyError, setHotkeyError] = createSignal<string | null>(null);
+  let hotkeyRef: HTMLDivElement | undefined;
+
+  function formatKey(key: string): string {
+    if (key === " ") return "Space";
+    if (key.length === 1) return key.toUpperCase();
+    return key;
+  }
+
+  function startCapture() {
+    setCapturingHotkey(true);
+    setHotkeyError(null);
+    setTimeout(() => hotkeyRef?.focus(), 50);
+  }
+
   function handleHotkeyKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -198,10 +213,18 @@ export function OnboardingWizard() {
     if (e.shiftKey) parts.push("Shift");
     if (e.altKey) parts.push("Alt");
     if (e.metaKey) parts.push("Super");
-    parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
+    parts.push(formatKey(e.key));
+
+    // Require at least one modifier + a key
+    const modCount = [e.ctrlKey, e.shiftKey, e.altKey, e.metaKey].filter(Boolean).length;
+    if (modCount === 0) {
+      setHotkeyError("Use a modifier (Ctrl, Shift, Alt) + a key");
+      return;
+    }
 
     const combo = parts.join("+");
     setHotkey(combo);
+    setHotkeyError(null);
     setCapturingHotkey(false);
     invoke("change_hotkey", { newHotkey: combo }).catch(() => {});
     saveSetting("hotkey", combo);
@@ -588,17 +611,19 @@ export function OnboardingWizard() {
             <label style={{ "font-size": "11px", color: "#6b655a", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
               Hotkey
             </label>
-            <div style={{ display: "flex", gap: "8px", "align-items": "center", "margin-bottom": "16px" }}>
+            <div style={{ display: "flex", gap: "8px", "align-items": "center", "margin-bottom": "6px" }}>
               <div
+                ref={hotkeyRef}
                 tabIndex={0}
                 onKeyDown={capturingHotkey() ? handleHotkeyKeyDown : undefined}
                 style={{
                   flex: 1,
                   padding: "12px 16px",
+                  "min-height": "46px",
                   background: "#ece4d0",
                   "border-radius": "0",
                   border: capturingHotkey() ? `1px solid ${ACCENT}` : "1px solid #d4c9b5",
-                  "font-family": "'JetBrains Mono', monospace",
+                  "font-family": monoFont,
                   "font-size": "16px",
                   "font-weight": 600,
                   color: ACCENT,
@@ -610,7 +635,7 @@ export function OnboardingWizard() {
                 {capturingHotkey() ? "Press a key combo..." : hotkey()}
               </div>
               <button
-                onClick={() => setCapturingHotkey(!capturingHotkey())}
+                onClick={() => capturingHotkey() ? setCapturingHotkey(false) : startCapture()}
                 style={{
                   ...btnSecondary,
                   padding: "10px 16px",
@@ -620,6 +645,12 @@ export function OnboardingWizard() {
                 {capturingHotkey() ? "Cancel" : "Change"}
               </button>
             </div>
+            {hotkeyError() && (
+              <p style={{ "font-size": "11px", color: "#a33a2a", margin: "0 0 8px" }}>{hotkeyError()}</p>
+            )}
+            <p style={{ "font-size": "11px", color: "#6b655a", margin: "0 0 16px" }}>
+              Use a modifier key (Ctrl, Shift, Alt) plus another key. Default: Ctrl+Shift+Space
+            </p>
 
             {/* Recording mode */}
             <label style={{ "font-size": "11px", color: "#6b655a", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
