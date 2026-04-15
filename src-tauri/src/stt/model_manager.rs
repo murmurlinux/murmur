@@ -216,51 +216,77 @@ pub async fn download_model_by_name(
     // Download to a temporary file first (atomic write pattern)
     let tmp_dest = models_dir().join(format!("{}.tmp", filename));
 
-    let client = reqwest::Client::new();
-    let response = client.get(url).send().await?;
-
-    let total = response.content_length().unwrap_or(0);
-    let mut downloaded: u64 = 0;
-
-    let mut file = std::fs::File::create(&tmp_dest)?;
-    let mut stream = response.bytes_stream();
-
     use futures_util::StreamExt;
     use std::io::Write;
 
-    let result: Result<(), anyhow::Error> = async {
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
-            file.write_all(&chunk)?;
-            downloaded += chunk.len() as u64;
+    let client = reqwest::Client::new();
+    let max_attempts = 3;
+    let mut last_error = None;
 
-            let percent = if total > 0 {
-                (downloaded as f32 / total as f32) * 100.0
-            } else {
-                0.0
-            };
+    for attempt in 1..=max_attempts {
+        if attempt > 1 {
+            log::warn!("Download attempt {}/{} for {}", attempt, max_attempts, filename);
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
 
-            if let Some(ref cb) = on_progress {
-                cb(percent, downloaded, total);
+        let response = match client.get(url).send().await {
+            Ok(r) => r,
+            Err(e) => {
+                last_error = Some(format!("{}", e));
+                continue;
+            }
+        };
+
+        let total = response.content_length().unwrap_or(0);
+        let mut downloaded: u64 = 0;
+        let mut file = match std::fs::File::create(&tmp_dest) {
+            Ok(f) => f,
+            Err(e) => return Err(anyhow::anyhow!("Failed to create temp file: {}", e)),
+        };
+        let mut stream = response.bytes_stream();
+
+        let result: Result<(), anyhow::Error> = async {
+            while let Some(chunk) = stream.next().await {
+                let chunk = chunk?;
+                file.write_all(&chunk)?;
+                downloaded += chunk.len() as u64;
+
+                let percent = if total > 0 {
+                    (downloaded as f32 / total as f32) * 100.0
+                } else {
+                    0.0
+                };
+
+                if let Some(ref cb) = on_progress {
+                    cb(percent, downloaded, total);
+                }
+            }
+            Ok(())
+        }
+        .await;
+
+        match result {
+            Ok(()) => {
+                last_error = None;
+                break;
+            }
+            Err(e) => {
+                log::warn!("Download attempt {} failed: {}", attempt, e);
+                last_error = Some(format!("{}", e));
+                let _ = std::fs::remove_file(&tmp_dest);
             }
         }
-        Ok(())
     }
-    .await;
 
-    // If download failed, clean up the temp file
-    if let Err(e) = result {
+    if let Some(e) = last_error {
         let _ = std::fs::remove_file(&tmp_dest);
-        return Err(e);
+        return Err(anyhow::anyhow!("Download failed after {} attempts: {}", max_attempts, e));
     }
-
-    // Flush and close the file before verification
-    drop(file);
 
     // Verify checksum (warn on mismatch but don't block -- upstream may update model files)
     match verify_checksum(&tmp_dest, expected_sha) {
         Ok(true) => {
-            log::info!("Model checksum verified: {} bytes", downloaded);
+            log::info!("Model checksum verified");
         }
         Ok(false) => {
             log::warn!(

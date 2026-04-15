@@ -165,7 +165,7 @@ export function OnboardingWizard() {
       await saveSetting("model", filename);
       setDownloadDone(true);
     } catch (e) {
-      setDownloadError(`Download failed: ${e}`);
+      setDownloadError(`Download failed after multiple attempts. Check your connection and try again.`);
     } finally {
       setDownloading(false);
     }
