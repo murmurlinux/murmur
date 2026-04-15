@@ -29,7 +29,7 @@ pub async fn download_model(app: AppHandle, model_filename: String) -> Result<()
 }
 
 #[tauri::command]
-pub fn set_active_model(app: AppHandle, model_filename: String) -> Result<(), String> {
+pub async fn set_active_model(app: AppHandle, model_filename: String) -> Result<(), String> {
     use tauri_plugin_store::StoreExt;
 
     // Verify the model exists
