@@ -3,54 +3,55 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
 import { initAuth, signIn, signOut, user, profile, isPro, authLoading } from "../lib/auth";
-import { hexToHue, hueToHex, hexToRgba } from "../lib/color";
 import logoImg from "../assets/logo.png";
 
-// --- Ocean Terminal Theme ---
+// --- Terminal Cream Theme ---
+
+const monoFont = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
 
 const glass: JSX.CSSProperties = {
   "margin-bottom": "16px",
   padding: "18px",
-  background: "rgba(255, 255, 255, 0.025)",
-  "border-radius": "14px",
-  border: "1px solid rgba(255, 255, 255, 0.06)",
+  background: "#ece4d0",
+  "border-radius": "0",
+  border: "1px solid #d4c9b5",
   transition: "border-color 0.2s ease",
 };
 
 const label: JSX.CSSProperties = {
   display: "block",
-  "font-size": "10px",
-  "font-weight": "600",
+  "font-size": "11px",
+  "font-weight": "700",
   "text-transform": "uppercase",
   "letter-spacing": "0.08em",
-  color: "#14b8a6",
+  color: "#c9482b",
   "margin-bottom": "10px",
 };
 
 const inputBase: JSX.CSSProperties = {
   width: "100%",
   padding: "8px 12px",
-  background: "rgba(0, 0, 0, 0.3)",
-  border: "1px solid rgba(255, 255, 255, 0.06)",
-  "border-radius": "8px",
-  color: "#e0e0e0",
+  background: "#f5f0e6",
+  border: "1px solid #1a1a1a",
+  "border-radius": "0",
+  color: "#1a1a1a",
   "font-size": "13px",
-  "font-family": "-apple-system, system-ui, sans-serif",
+  "font-family": monoFont,
   "box-sizing": "border-box",
   outline: "none",
 };
 
-function Toggle(props: { value: boolean; onChange: () => void; accent: string }) {
+function Toggle(props: { value: boolean; onChange: () => void }) {
   return (
     <button
       onClick={props.onChange}
       style={{
         width: "40px",
         height: "22px",
-        "border-radius": "11px",
+        "border-radius": "0",
         border: "none",
         cursor: "pointer",
-        background: props.value ? hexToRgba(props.accent, 0.55) : "rgba(255, 255, 255, 0.08)",
+        background: props.value ? "#c9482b" : "#d4c9b5",
         position: "relative",
         transition: "background 0.2s ease",
         "flex-shrink": "0",
@@ -60,8 +61,8 @@ function Toggle(props: { value: boolean; onChange: () => void; accent: string })
         style={{
           width: "16px",
           height: "16px",
-          "border-radius": "50%",
-          background: "rgba(255, 255, 255, 0.9)",
+          "border-radius": "0",
+          background: "#f5f0e6",
           position: "absolute",
           top: "3px",
           left: props.value ? "21px" : "3px",
@@ -81,7 +82,7 @@ function SettingRow(props: { label: string; children: JSX.Element }) {
         "justify-content": "space-between",
       }}
     >
-      <span style={{ "font-size": "13px", color: "rgba(255, 255, 255, 0.7)" }}>{props.label}</span>
+      <span style={{ "font-size": "13px", color: "#6b655a" }}>{props.label}</span>
       {props.children}
     </div>
   );
@@ -116,6 +117,14 @@ function AccountSignIn() {
         onInput={(e) => setEmail(e.currentTarget.value)}
         required
         style={{ ...inputBase, "margin-bottom": "8px" }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "#c9482b";
+          e.currentTarget.style.boxShadow = "3px 3px 0 #c9482b";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "#1a1a1a";
+          e.currentTarget.style.boxShadow = "none";
+        }}
       />
       <input
         type="password"
@@ -124,9 +133,17 @@ function AccountSignIn() {
         onInput={(e) => setPassword(e.currentTarget.value)}
         required
         style={{ ...inputBase, "margin-bottom": "8px" }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "#c9482b";
+          e.currentTarget.style.boxShadow = "3px 3px 0 #c9482b";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "#1a1a1a";
+          e.currentTarget.style.boxShadow = "none";
+        }}
       />
       {error() && (
-        <p style={{ color: "#f87171", "font-size": "12px", "margin-bottom": "8px" }}>
+        <p style={{ color: "#a33a2a", "font-size": "12px", "margin-bottom": "8px" }}>
           {error()}
         </p>
       )}
@@ -136,19 +153,31 @@ function AccountSignIn() {
         style={{
           width: "100%",
           padding: "8px",
-          background: "#14b8a6",
-          border: "none",
-          "border-radius": "8px",
-          color: "#fff",
+          background: "#c9482b",
+          border: "1px solid #c9482b",
+          "border-radius": "0",
+          color: "#fff8ed",
           "font-size": "13px",
           "font-weight": "500",
+          "font-family": monoFont,
           cursor: loading() ? "wait" : "pointer",
           opacity: loading() ? "0.5" : "1",
+          transition: "all 0.15s ease",
+        }}
+        onMouseEnter={(e) => {
+          if (!loading()) {
+            e.currentTarget.style.transform = "translate(-2px, -2px)";
+            e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "none";
+          e.currentTarget.style.boxShadow = "none";
         }}
       >
         {loading() ? "Signing in..." : "Sign in"}
       </button>
-      <p style={{ color: "#666", "font-size": "11px", "margin-top": "8px", "text-align": "center" }}>
+      <p style={{ color: "#6b655a", "font-size": "11px", "margin-top": "8px", "text-align": "center" }}>
         Create an account at murmurlinux.com
       </p>
     </form>
@@ -159,14 +188,11 @@ function AccountSignIn() {
 
 export function SettingsPanel() {
   const [settings, setSettings] = createSignal<MurmurSettings | null>(null);
-  const [hue, setHue] = createSignal(160);
   const [capturingHotkey, setCapturingHotkey] = createSignal(false);
   const [models, setModels] = createSignal<ModelInfo[]>([]);
   const [downloadingModel, setDownloadingModel] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
   const [version, setVersion] = createSignal("...");
-
-  const accent = () => hueToHex(hue());
 
   const showError = (msg: string) => {
     setError(msg);
@@ -184,7 +210,6 @@ export function SettingsPanel() {
 
     const s = await loadSettings();
     setSettings(s);
-    setHue(hexToHue(s.accentColor));
 
     try {
       const list = await invoke<ModelInfo[]>("list_models");
@@ -255,30 +280,18 @@ export function SettingsPanel() {
   return (
     <div
       style={{
-        background: "#060d18",
-        color: "rgba(255, 255, 255, 0.6)",
+        background: "#f5f0e6",
+        "background-image": "radial-gradient(circle at 1px 1px, rgba(26,26,26,0.06) 1px, transparent 0)",
+        "background-size": "14px 14px",
+        color: "#1a1a1a",
         width: "100%",
         "min-height": "100vh",
         padding: "20px",
         "box-sizing": "border-box",
-        "font-family": "-apple-system, system-ui, sans-serif",
+        "font-family": monoFont,
         position: "relative",
       }}
     >
-      {/* Subtle gradient overlay */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "radial-gradient(ellipse at 50% 0%, rgba(20, 184, 166, 0.04) 0%, transparent 60%)",
-          "pointer-events": "none",
-          "z-index": 0,
-        }}
-      />
-
       <div style={{ position: "relative", "z-index": 1 }}>
         {/* Header */}
         <div
@@ -289,13 +302,13 @@ export function SettingsPanel() {
             "margin-bottom": "20px",
           }}
         >
-          <img src={logoImg} alt="Murmur" width={28} height={28} style={{ "border-radius": "6px" }} />
+          <img src={logoImg} alt="Murmur" width={28} height={28} style={{ "border-radius": "0" }} />
           <div style={{ flex: 1 }}>
-            <div style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.9)" }}>
+            <div style={{ "font-size": "16px", "font-weight": 600, color: "#1a1a1a" }}>
               Murmur
             </div>
           </div>
-          <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace" }}>
+          <span style={{ "font-size": "10px", color: "#6b655a", "font-family": monoFont }}>
             v{version()}
           </span>
         </div>
@@ -304,10 +317,10 @@ export function SettingsPanel() {
           <div
             style={{
               padding: "10px 14px",
-              background: "rgba(220, 50, 50, 0.1)",
-              border: "1px solid rgba(220, 50, 50, 0.2)",
-              "border-radius": "10px",
-              color: "#ff8888",
+              background: "#ece4d0",
+              border: "1px solid #a33a2a",
+              "border-radius": "0",
+              color: "#a33a2a",
               "font-size": "12px",
               "margin-bottom": "16px",
               cursor: "pointer",
@@ -324,14 +337,14 @@ export function SettingsPanel() {
             <div style={glass}>
               <span style={label}>Account</span>
               {authLoading() ? (
-                <p style={{ color: "#999", "font-size": "13px" }}>Loading...</p>
+                <p style={{ color: "#6b655a", "font-size": "13px" }}>Loading...</p>
               ) : user() ? (
                 <div>
-                  <p style={{ color: "#e0e0e0", "font-size": "13px", "margin-bottom": "8px" }}>
+                  <p style={{ color: "#1a1a1a", "font-size": "13px", "margin-bottom": "8px" }}>
                     {profile()?.email ?? user()?.email}
                   </p>
                   <p style={{
-                    color: isPro() ? "#14b8a6" : "#999",
+                    color: isPro() ? "#5a7a3a" : "#6b655a",
                     "font-size": "11px",
                     "font-weight": "600",
                     "text-transform": "uppercase",
@@ -344,12 +357,26 @@ export function SettingsPanel() {
                     onClick={() => signOut()}
                     style={{
                       padding: "6px 16px",
-                      background: "rgba(255, 255, 255, 0.05)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      "border-radius": "6px",
-                      color: "#e0e0e0",
+                      background: "#ece4d0",
+                      border: "1px solid #1a1a1a",
+                      "border-radius": "0",
+                      color: "#1a1a1a",
                       "font-size": "12px",
+                      "font-family": monoFont,
                       cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#1a1a1a";
+                      e.currentTarget.style.color = "#f5f0e6";
+                      e.currentTarget.style.transform = "translate(-2px, -2px)";
+                      e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#ece4d0";
+                      e.currentTarget.style.color = "#1a1a1a";
+                      e.currentTarget.style.transform = "none";
+                      e.currentTarget.style.boxShadow = "none";
                     }}
                   >
                     Sign out
@@ -358,63 +385,6 @@ export function SettingsPanel() {
               ) : (
                 <AccountSignIn />
               )}
-            </div>
-
-            {/* Skin */}
-            <div style={glass}>
-              <label style={label}>Skin</label>
-              <div
-                style={{
-                  padding: "8px 12px",
-                  background: "rgba(0, 0, 0, 0.3)",
-                  "border-radius": "8px",
-                  border: "1px solid rgba(255, 255, 255, 0.06)",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  "font-size": "13px",
-                }}
-              >
-                Comm Badge
-                <span style={{ color: "rgba(255, 255, 255, 0.2)", "margin-left": "8px", "font-size": "11px" }}>
-                  default
-                </span>
-              </div>
-            </div>
-
-            {/* Accent Colour */}
-            <div style={glass}>
-              <label style={label}>Accent Colour</label>
-              <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
-                <input
-                  type="range"
-                  min="0"
-                  max="360"
-                  value={hue()}
-                  onInput={(e) => {
-                    const h = parseInt(e.currentTarget.value);
-                    setHue(h);
-                    updateSetting("accentColor", hueToHex(h));
-                  }}
-                  style={{
-                    flex: 1,
-                    height: "4px",
-                    "border-radius": "2px",
-                    appearance: "auto",
-                    cursor: "pointer",
-                    background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
-                  }}
-                />
-                <div
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    "border-radius": "50%",
-                    background: hexToRgba(accent(), 0.6),
-                    border: "2px solid rgba(255, 255, 255, 0.08)",
-                    "flex-shrink": "0",
-                    "box-shadow": `0 0 8px ${accent()}22`,
-                  }}
-                />
-              </div>
             </div>
 
             {/* Hotkey */}
@@ -430,14 +400,14 @@ export function SettingsPanel() {
                     ...inputBase,
                     flex: "1",
                     cursor: "pointer",
-                    "border-color": capturingHotkey() ? accent() : "rgba(255, 255, 255, 0.06)",
+                    "border-color": capturingHotkey() ? "#c9482b" : "#1a1a1a",
+                    "box-shadow": capturingHotkey() ? "3px 3px 0 #c9482b" : "none",
                     "text-align": "center",
                     "user-select": "none",
-                    "font-family": "monospace",
                   }}
                 >
                   {capturingHotkey() ? (
-                    <span style={{ color: "rgba(255, 255, 255, 0.3)", "font-style": "italic", "font-family": "-apple-system, system-ui, sans-serif" }}>
+                    <span style={{ color: "#6b655a", "font-style": "italic", "font-family": monoFont }}>
                       Press a key combo...
                     </span>
                   ) : (
@@ -451,14 +421,27 @@ export function SettingsPanel() {
                   }}
                   style={{
                     padding: "8px 12px",
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    "border-radius": "8px",
-                    color: "rgba(255, 255, 255, 0.4)",
+                    background: "#ece4d0",
+                    border: "1px solid #1a1a1a",
+                    "border-radius": "0",
+                    color: "#1a1a1a",
                     cursor: "pointer",
                     "font-size": "11px",
+                    "font-family": monoFont,
                     "white-space": "nowrap",
-                    transition: "background 0.2s ease",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#1a1a1a";
+                    e.currentTarget.style.color = "#f5f0e6";
+                    e.currentTarget.style.transform = "translate(-2px, -2px)";
+                    e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ece4d0";
+                    e.currentTarget.style.color = "#1a1a1a";
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   Reset
@@ -480,26 +463,26 @@ export function SettingsPanel() {
                           gap: "10px",
                           padding: "10px 12px",
                           background: settings()!.model === model.filename
-                            ? "rgba(20, 184, 166, 0.06)"
-                            : "rgba(0, 0, 0, 0.2)",
+                            ? "#f5f0e6"
+                            : "#ece4d0",
                           border: settings()!.model === model.filename
-                            ? `1px solid ${accent()}33`
-                            : "1px solid rgba(255, 255, 255, 0.04)",
-                          "border-radius": "8px",
+                            ? "1px solid #c9482b"
+                            : "1px solid #d4c9b5",
+                          "border-radius": "0",
                           transition: "all 0.2s ease",
                         }}
                       >
                         <div style={{ flex: 1 }}>
-                          <div style={{ "font-size": "13px", "font-weight": 500, color: "rgba(255, 255, 255, 0.8)" }}>
+                          <div style={{ "font-size": "13px", "font-weight": 500, color: "#1a1a1a" }}>
                             {model.name}
                           </div>
-                          <div style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.25)", "margin-top": "2px" }}>
+                          <div style={{ "font-size": "10px", color: "#6b655a", "margin-top": "2px" }}>
                             {model.description} -- {model.size_mb}MB
                           </div>
                         </div>
                         {model.downloaded ? (
                           settings()!.model === model.filename ? (
-                            <span style={{ "font-size": "10px", color: accent(), "font-weight": 600, "text-transform": "uppercase", "letter-spacing": "0.05em" }}>
+                            <span style={{ "font-size": "10px", color: "#c9482b", "font-weight": 600, "text-transform": "uppercase", "letter-spacing": "0.05em" }}>
                               Active
                             </span>
                           ) : (
@@ -507,12 +490,26 @@ export function SettingsPanel() {
                               onClick={() => selectModel(model.filename)}
                               style={{
                                 padding: "4px 10px",
-                                background: "rgba(255, 255, 255, 0.04)",
-                                border: "1px solid rgba(255, 255, 255, 0.06)",
-                                "border-radius": "6px",
-                                color: "rgba(255, 255, 255, 0.5)",
+                                background: "#ece4d0",
+                                border: "1px solid #1a1a1a",
+                                "border-radius": "0",
+                                color: "#1a1a1a",
                                 cursor: "pointer",
                                 "font-size": "10px",
+                                "font-family": monoFont,
+                                transition: "all 0.15s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#1a1a1a";
+                                e.currentTarget.style.color = "#f5f0e6";
+                                e.currentTarget.style.transform = "translate(-2px, -2px)";
+                                e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "#ece4d0";
+                                e.currentTarget.style.color = "#1a1a1a";
+                                e.currentTarget.style.transform = "none";
+                                e.currentTarget.style.boxShadow = "none";
                               }}
                             >
                               Select
@@ -525,15 +522,33 @@ export function SettingsPanel() {
                             style={{
                               padding: "4px 10px",
                               background: downloadingModel() === model.filename
-                                ? "rgba(0, 0, 0, 0.2)"
-                                : "rgba(255, 255, 255, 0.04)",
-                              border: "1px solid rgba(255, 255, 255, 0.06)",
-                              "border-radius": "6px",
+                                ? "#d4c9b5"
+                                : "#ece4d0",
+                              border: "1px solid #1a1a1a",
+                              "border-radius": "0",
                               color: downloadingModel() === model.filename
-                                ? "rgba(255, 255, 255, 0.2)"
-                                : accent(),
+                                ? "#6b655a"
+                                : "#c9482b",
                               cursor: downloadingModel() === model.filename ? "wait" : "pointer",
                               "font-size": "10px",
+                              "font-family": monoFont,
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (downloadingModel() !== model.filename) {
+                                e.currentTarget.style.background = "#1a1a1a";
+                                e.currentTarget.style.color = "#f5f0e6";
+                                e.currentTarget.style.transform = "translate(-2px, -2px)";
+                                e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (downloadingModel() !== model.filename) {
+                                e.currentTarget.style.background = "#ece4d0";
+                                e.currentTarget.style.color = "#c9482b";
+                                e.currentTarget.style.transform = "none";
+                                e.currentTarget.style.boxShadow = "none";
+                              }
                             }}
                           >
                             {downloadingModel() === model.filename ? "Downloading..." : "Download"}
@@ -543,7 +558,7 @@ export function SettingsPanel() {
                     )}
                   </For>
                 ) : (
-                  <div style={{ color: "rgba(255, 255, 255, 0.25)", "font-size": "12px" }}>
+                  <div style={{ color: "#6b655a", "font-size": "12px" }}>
                     Model: {settings()!.model}
                   </div>
                 )}
@@ -561,17 +576,18 @@ export function SettingsPanel() {
                       flex: 1,
                       padding: "8px 12px",
                       background: settings()!.recordMode === mode
-                        ? `${accent()}18`
-                        : "rgba(0, 0, 0, 0.3)",
+                        ? "#f5f0e6"
+                        : "#ece4d0",
                       border: settings()!.recordMode === mode
-                        ? `1px solid ${accent()}44`
-                        : "1px solid rgba(255, 255, 255, 0.04)",
-                      "border-radius": "8px",
+                        ? "1px solid #c9482b"
+                        : "1px solid #d4c9b5",
+                      "border-radius": "0",
                       color: settings()!.recordMode === mode
-                        ? accent()
-                        : "rgba(255, 255, 255, 0.4)",
+                        ? "#c9482b"
+                        : "#6b655a",
                       cursor: "pointer",
                       "font-size": "12px",
+                      "font-family": monoFont,
                       "font-weight": settings()!.recordMode === mode ? "600" : "400",
                       transition: "all 0.2s ease",
                     }}
@@ -586,10 +602,9 @@ export function SettingsPanel() {
                   <Toggle
                     value={settings()!.autoStopSilence}
                     onChange={() => updateSetting("autoStopSilence", !settings()!.autoStopSilence)}
-                    accent={accent()}
                   />
                 </SettingRow>
-                <div style={{ "font-size": "10px", color: "rgba(255,255,255,0.2)", "margin-top": "4px" }}>
+                <div style={{ "font-size": "10px", color: "#6b655a", "margin-top": "4px" }}>
                   Stops recording after ~2s of silence in tap mode
                 </div>
               </div>
@@ -604,11 +619,12 @@ export function SettingsPanel() {
                   onChange={(e) => updateSetting("language", e.currentTarget.value)}
                   style={{
                     padding: "8px 12px",
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    "border-radius": "8px",
-                    color: "rgba(255, 255, 255, 0.7)",
+                    background: "#f5f0e6",
+                    border: "1px solid #1a1a1a",
+                    "border-radius": "0",
+                    color: "#1a1a1a",
                     "font-size": "13px",
+                    "font-family": monoFont,
                     cursor: "pointer",
                     appearance: "none" as any,
                     "-webkit-appearance": "none",
@@ -639,18 +655,17 @@ export function SettingsPanel() {
                     <Toggle
                       value={settings()!.translateToEnglish}
                       onChange={() => updateSetting("translateToEnglish", !settings()!.translateToEnglish)}
-                      accent={accent()}
                     />
                   </SettingRow>
                 )}
                 {settings()!.language !== "en" && settings()!.model.includes(".en.") && (
                   <div style={{
                     "font-size": "11px",
-                    color: "#f59e0b",
+                    color: "#c9482b",
                     padding: "8px 10px",
-                    background: "rgba(245, 158, 11, 0.08)",
-                    "border-radius": "6px",
-                    border: "1px solid rgba(245, 158, 11, 0.15)",
+                    background: "#f5f0e6",
+                    "border-radius": "0",
+                    border: "1px solid #c9482b",
                   }}>
                     Your current model is English-only. Download a multilingual model above for best results.
                   </div>
@@ -662,20 +677,6 @@ export function SettingsPanel() {
             <div style={glass}>
               <label style={label}>General</label>
               <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-                <SettingRow label="Show Skin on Startup">
-                  <Toggle
-                    value={settings()!.showSkin}
-                    onChange={() => updateSetting("showSkin", !settings()!.showSkin)}
-                    accent={accent()}
-                  />
-                </SettingRow>
-                <SettingRow label="Always on Top">
-                  <Toggle
-                    value={settings()!.alwaysOnTop}
-                    onChange={() => updateSetting("alwaysOnTop", !settings()!.alwaysOnTop)}
-                    accent={accent()}
-                  />
-                </SettingRow>
                 <SettingRow label="Start on Login">
                   <Toggle
                     value={settings()!.startOnLogin}
@@ -684,7 +685,6 @@ export function SettingsPanel() {
                       await invoke("set_start_on_login", { enabled: next });
                       updateSetting("startOnLogin", next);
                     }}
-                    accent={accent()}
                   />
                 </SettingRow>
               </div>
