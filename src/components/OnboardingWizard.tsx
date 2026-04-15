@@ -565,26 +565,44 @@ export function OnboardingWizard() {
               </Show>
             </div>
 
-            {/* Progress bar */}
+            {/* Progress bar + status */}
             <Show when={downloading()}>
-              <div
-                style={{
-                  "margin-top": "10px",
-                  height: "4px",
-                  background: "#d4c9b5",
-                  "border-radius": "0",
-                  overflow: "hidden",
-                }}
-              >
+              <div style={{ "margin-top": "10px" }}>
                 <div
                   style={{
-                    height: "100%",
-                    width: `${downloadPercent()}%`,
-                    background: ACCENT,
-                    "border-radius": "0",
-                    transition: "width 0.3s ease",
+                    height: "4px",
+                    background: "#d4c9b5",
+                    overflow: "hidden",
+                    position: "relative",
                   }}
-                />
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${downloadPercent()}%`,
+                      background: ACCENT,
+                      transition: "width 0.3s ease",
+                    }}
+                  />
+                  {downloadPercent() >= 99 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: "100%",
+                        background: `linear-gradient(90deg, transparent, ${ACCENT}44, transparent)`,
+                        animation: "shimmer 1.5s infinite",
+                      }}
+                    />
+                  )}
+                </div>
+                <p style={{ "font-size": "11px", color: "#6b655a", "margin-top": "6px", "text-align": "center" }}>
+                  {downloadPercent() < 99
+                    ? `downloading model... ${downloadPercent()}%`
+                    : "verifying checksum..."}
+                </p>
               </div>
             </Show>
 
