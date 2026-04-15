@@ -101,7 +101,6 @@ export function RecordingPopup() {
                 height: `${Math.max(4, h * 20)}px`,
                 background: ACCENT,
                 "border-radius": "1.5px",
-                opacity: `${0.3 + h * 0.7}`,
                 transition: "height 0.05s ease, opacity 0.05s ease",
               }}
             />
