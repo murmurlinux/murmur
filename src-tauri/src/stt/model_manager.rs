@@ -223,6 +223,7 @@ pub async fn download_model_by_name(
     let response = client
         .get(url)
         .header("Accept", "application/octet-stream")
+        .header("Accept-Encoding", "identity")
         .send()
         .await?;
 
