@@ -216,23 +216,8 @@ pub async fn download_model_by_name(
     // Download to a temporary file first (atomic write pattern)
     let tmp_dest = models_dir().join(format!("{}.tmp", filename));
 
-    let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_secs(30))
-        .user_agent("murmur/0.3.3")
-        .build()?;
-    let response = client
-        .get(url)
-        .header("Accept", "application/octet-stream")
-        .header("Accept-Encoding", "identity")
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        return Err(anyhow::anyhow!(
-            "Download failed: HTTP {}",
-            response.status()
-        ));
-    }
+    let client = reqwest::Client::new();
+    let response = client.get(url).send().await?;
 
     let total = response.content_length().unwrap_or(0);
     let mut downloaded: u64 = 0;
