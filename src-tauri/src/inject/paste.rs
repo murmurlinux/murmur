@@ -170,7 +170,10 @@ fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 
     match status {
         Ok(s) if s.success() => {
-            log::debug!("xdotool typed: {:?}", &text[..text.len().min(50)]);
+            log::debug!(
+                "xdotool typed: {:?}",
+                text.chars().take(50).collect::<String>()
+            );
             Ok(())
         }
         Ok(s) => {
@@ -196,7 +199,10 @@ fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
 
         match status {
             Ok(s) if s.success() => {
-                log::debug!("wtype typed: {:?}", &text[..text.len().min(50)]);
+                log::debug!(
+                    "wtype typed: {:?}",
+                    text.chars().take(50).collect::<String>()
+                );
                 return Ok(());
             }
             Ok(s) => {
