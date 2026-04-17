@@ -641,7 +641,7 @@ export function OnboardingWizard() {
                   background: "#ece4d0",
                   "border-radius": "0",
                   border: capturingHotkey() ? `1px solid ${ACCENT}` : "1px solid #d4c9b5",
-                  "font-family": monoFont,
+                  "font-family": "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace",
                   "font-size": "16px",
                   "font-weight": 600,
                   color: ACCENT,
