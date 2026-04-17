@@ -292,22 +292,32 @@ pub async fn download_model_by_name(
         ));
     }
 
-    // Verify checksum (warn on mismatch but don't block -- upstream may update model files)
+    // Verify checksum. A mismatch means the downloaded bytes differ from the
+    // hash we pinned in the MODELS registry -- this could be an upstream change,
+    // a CDN glitch, or a malicious substitution. The whisper.cpp parser runs on
+    // untrusted binary input, so we hard-fail rather than accept unknown bytes.
+    //
+    // If upstream legitimately updates a model, the pinned hash in MODELS needs
+    // to be updated via a PR and a new release.
     match verify_checksum(&tmp_dest, expected_sha) {
         Ok(true) => {
             log::info!("Model checksum verified");
         }
         Ok(false) => {
-            log::warn!(
-                "Model checksum mismatch for {} -- upstream may have updated the file. Accepting download.",
+            let _ = std::fs::remove_file(&tmp_dest);
+            return Err(anyhow::anyhow!(
+                "Model checksum mismatch for {}. Refusing to install a binary that does not match the pinned SHA256. \
+                 This may indicate an upstream model update (pinned hash needs a PR) or a compromised download.",
                 filename
-            );
+            ));
         }
         Err(e) => {
-            log::warn!(
-                "Could not verify model checksum: {}. Accepting download.",
+            let _ = std::fs::remove_file(&tmp_dest);
+            return Err(anyhow::anyhow!(
+                "Could not verify model checksum for {}: {}. Refusing to install.",
+                filename,
                 e
-            );
+            ));
         }
     }
 
