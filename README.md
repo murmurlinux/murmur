@@ -5,10 +5,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/murmurlinux/murmur/releases"><img src="https://img.shields.io/github/v/release/murmurlinux/murmur?style=flat-square&color=14b8a6&label=version" alt="Version"></a>
-  <a href="https://github.com/murmurlinux/murmur/blob/main/LICENSE"><img src="https://img.shields.io/github/license/murmurlinux/murmur?style=flat-square&color=14b8a6" alt="License"></a>
-  <a href="https://github.com/murmurlinux/murmur/stargazers"><img src="https://img.shields.io/github/stars/murmurlinux/murmur?style=flat-square&color=f59e0b" alt="Stars"></a>
-  <a href="https://github.com/murmurlinux/murmur/issues"><img src="https://img.shields.io/github/issues/murmurlinux/murmur?style=flat-square&color=14b8a6" alt="Issues"></a>
+  <a href="https://github.com/murmurlinux/murmur/releases"><img src="https://img.shields.io/github/v/release/murmurlinux/murmur?style=flat-square&color=c9482b&label=version" alt="Version"></a>
+  <a href="https://github.com/murmurlinux/murmur/blob/main/LICENSE"><img src="https://img.shields.io/github/license/murmurlinux/murmur?style=flat-square&color=c9482b" alt="License"></a>
+  <a href="https://github.com/murmurlinux/murmur/stargazers"><img src="https://img.shields.io/github/stars/murmurlinux/murmur?style=flat-square&color=c9482b" alt="Stars"></a>
+  <a href="https://github.com/murmurlinux/murmur/issues"><img src="https://img.shields.io/github/issues/murmurlinux/murmur?style=flat-square&color=c9482b" alt="Issues"></a>
 </p>
 
 ---
@@ -19,8 +19,8 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 
 ## Features
 
-- **100% Offline.** whisper.cpp runs locally on your CPU. Zero network requests after model download.
-- **Floating Comm Badge.** A desktop gadget with customisable skins and accent colours. Always visible, always ready.
+- **100% Offline.** whisper.cpp runs locally on your CPU or GPU. Zero network requests after model download.
+- **Lives in the Tray.** No floating widget, no extra chrome. Click the tray icon to open settings; the app is out of the way until you press the hotkey.
 - **Universal Text Injection.** Types into any app via xdotool (X11) or wtype (Wayland). Terminals, IDEs, browsers, chat. If it has a cursor, Murmur types into it.
 - **Hold or Tap to Record.** Configurable global hotkey. Hold to record and release to transcribe, or tap to toggle. Voice activity detection auto-stops when you finish speaking.
 - **Multiple Models.** Tiny (75 MB, ~3s), Base (142 MB, ~8s), Small (466 MB, best accuracy). Choose your tradeoff.
@@ -78,20 +78,19 @@ The built binary will be in `src-tauri/target/release/murmur`.
 
 ## Usage
 
-1. Launch Murmur. The Comm Badge widget appears on your desktop.
+1. Launch Murmur. The tray icon appears in your system tray.
 2. Press your hotkey (default: `Ctrl+Shift+Space`) and hold.
 3. Speak naturally.
 4. Release. Text appears at your cursor.
 
 ### Configuration
 
-Open settings via the gear icon on the Comm Badge:
+Left-click the tray icon to open settings:
 
 - **Hotkey.** Change the global shortcut.
 - **Model.** Select Tiny, Base, or Small (auto-downloads on first use).
-- **Accent colour.** Customise the Comm Badge glow.
 - **Recording mode.** Hold-to-record or tap-to-toggle with silence auto-stop.
-- **Show/hide skin.** Minimise to tray. A recording indicator popup appears when dictating with the skin hidden.
+- **Start on login.** Toggle XDG autostart entry.
 
 Settings are stored in `~/.local/share/com.murmurlinux.murmur/settings.json`.
 
@@ -131,13 +130,12 @@ Models auto-download from Hugging Face on first use. SHA256 verified.
 - [x] Multi-language support + translation (v0.3.0)
 - [x] Settings keyboard shortcut (v0.3.3)
 - [x] Dynamic tray tooltip (v0.3.3)
-- [ ] Transcript history (Pro)
-- [ ] Voice commands (Pro)
-- [ ] Cloud STT: Groq Whisper + Deepgram Nova-3 (Pro)
-- [ ] LLM text cleanup (Pro)
-- [ ] Custom dictionaries / hot words (Pro)
-- [ ] CLI mode: murmur-cli (Pro)
-- [ ] Premium skins (Pro)
+- [ ] Cloud STT (Groq Whisper, Deepgram Nova-3) &mdash; Pro
+- [ ] LLM text cleanup (punctuation, filler removal) &mdash; Pro
+- [ ] Transcript history &mdash; Pro
+- [ ] Voice commands &mdash; Pro
+- [ ] Custom dictionaries / hot words &mdash; Pro
+- [ ] CLI mode &mdash; Pro
 
 See the full [roadmap](https://murmurlinux.com/about) on our website.
 

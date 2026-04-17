@@ -35,19 +35,17 @@ pnpm tauri build   # production build
 
 ```
 murmur/
-├── src/                    # SolidJS frontend
-│   ├── components/         # UI components (SkinRenderer, Waveform, etc.)
-│   ├── lib/                # Utilities (settings, skin loader, colour)
-│   └── assets/skins/       # Skin images + config
+├── src/                    # SolidJS frontend (settings panel, onboarding, popup)
+│   ├── components/         # UI components
+│   └── lib/                # Frontend utilities (settings, auth)
 ├── src-tauri/              # Rust backend
 │   └── src/
 │       ├── audio/          # Audio capture (cpal)
 │       ├── commands/       # Tauri IPC commands
-│       ├── inject/         # Text injection (xdotool)
+│       ├── inject/         # Text injection (xdotool, wtype)
 │       ├── stt/            # Speech-to-text (whisper.cpp)
 │       └── lib.rs          # App setup + state
-├── design/                 # Design mockups + assets (not tracked)
-└── .github/                # Community templates
+└── .github/                # Community templates + CI
 ```
 
 ## Making Changes
@@ -70,18 +68,9 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
 ## Code Style
 
-- **Rust**:follow `rustfmt` defaults. Run `cargo fmt` before committing.
-- **TypeScript**:follow existing patterns. No semicolons, single quotes.
-- **CSS**:Tailwind utility classes in components, custom CSS in `styles.css`.
-
-## Creating Skins
-
-Skins are defined by two files in `src/assets/skins/<skin-name>/`:
-
-- `body.png`:the skin image (transparent background, ~1380x752)
-- `skin.json`:interactive zones, LED positions, accent colour config
-
-See the existing `comm-badge` skin for reference. Skin development docs coming soon.
+- **Rust**: follow `rustfmt` defaults. Run `cargo fmt` before committing.
+- **TypeScript**: follow existing patterns. Double quotes, 2-space indent.
+- **CSS**: inline styles in SolidJS components; the app is small enough that a styling framework adds more noise than value.
 
 ## Reporting Issues
 
