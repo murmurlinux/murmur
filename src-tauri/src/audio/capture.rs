@@ -1,7 +1,10 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{FromSample, Sample, SampleFormat};
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[derive(Clone, Serialize)]
 pub struct AudioLevel {
@@ -16,9 +19,31 @@ pub type AudioLevelCallback = Box<dyn Fn(f32, f32, Vec<f32>) + Send + 'static>;
 /// Callback type for capture auto-stop notifications (VAD or max duration)
 pub type AutoStopCallback = Box<dyn Fn() + Send + 'static>;
 
+/// Downmix a multi-channel slice of any cpal sample type into mono f32.
+fn convert_to_mono_f32<T>(data: &[T], channels: usize) -> Vec<f32>
+where
+    T: Sample + Copy,
+    f32: FromSample<T>,
+{
+    if channels > 1 {
+        data.chunks(channels)
+            .map(|frame| {
+                let sum: f32 = frame.iter().map(|&s| f32::from_sample(s)).sum();
+                sum / channels as f32
+            })
+            .collect()
+    } else {
+        data.iter().map(|&s| f32::from_sample(s)).collect()
+    }
+}
+
 /// Starts audio capture on a background thread.
 /// The cpal stream is created INSIDE the thread (Stream is !Send).
-/// Returns the actual device sample rate.
+/// Returns the actual device sample rate once the stream is confirmed running.
+///
+/// Supports F32, I16, and U16 device sample formats; other formats produce
+/// an error. Failures during stream build or play are now propagated back
+/// to the caller via a sync channel instead of being silently logged.
 ///
 /// Callbacks are optional:
 /// - `on_audio_level`: called ~60fps with (rms, peak, waveform_bars)
@@ -30,7 +55,7 @@ pub fn start_capture(
     on_audio_level: Option<AudioLevelCallback>,
     on_auto_stopped: Option<AutoStopCallback>,
 ) -> Result<u32, anyhow::Error> {
-    // Verify we can access an input device and get actual sample rate
+    // Verify we can access an input device and get actual sample rate.
     let host = cpal::default_host();
     let device = host
         .default_input_device()
@@ -42,66 +67,110 @@ pub fn start_capture(
 
     let stop = Arc::clone(&stop_flag);
 
+    // Signal back to this function whether the stream successfully started.
+    // The stream itself lives on the spawned thread because cpal::Stream is !Send.
+    let (init_tx, init_rx) = mpsc::channel::<Result<(), String>>();
+
     std::thread::spawn(move || {
         // Create the cpal stream inside this thread (Stream is !Send)
         let host = cpal::default_host();
         let device = match host.default_input_device() {
             Some(d) => d,
             None => {
-                log::error!("No input device available");
+                let _ = init_tx.send(Err("No input device available".to_string()));
                 return;
             }
         };
 
-        let default_config = match device.default_input_config() {
+        let supported_config = match device.default_input_config() {
             Ok(c) => c,
             Err(e) => {
-                log::error!("Failed to get input config: {}", e);
+                let _ = init_tx.send(Err(format!("Failed to get input config: {}", e)));
                 return;
             }
         };
 
-        let channels = default_config.channels() as usize;
+        let sample_format = supported_config.sample_format();
+        let channels = supported_config.channels() as usize;
+        let stream_config = supported_config.config();
+
         log::info!(
-            "Audio: {} ({}Hz, {}ch)",
+            "Audio: {} ({}Hz, {}ch, {:?})",
             device.name().unwrap_or_default(),
-            default_config.sample_rate().0,
-            channels
+            stream_config.sample_rate.0,
+            channels,
+            sample_format,
         );
 
         // Shared buffer: cpal callback → this thread's processing loop
         let capture_buffer: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
-        let capture_buf_clone = Arc::clone(&capture_buffer);
 
-        let stream = match device.build_input_stream(
-            &default_config.into(),
-            move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                // Convert multi-channel to mono
-                let mono: Vec<f32> = if channels > 1 {
-                    data.chunks(channels)
-                        .map(|frame| frame.iter().sum::<f32>() / channels as f32)
-                        .collect()
-                } else {
-                    data.to_vec()
-                };
-                if let Ok(mut buf) = capture_buf_clone.lock() {
-                    buf.extend_from_slice(&mono);
-                }
-            },
-            |err| log::error!("Audio stream error: {}", err),
-            None,
-        ) {
+        let err_cb = |e| log::error!("Audio stream error: {}", e);
+
+        let build_res = match sample_format {
+            SampleFormat::F32 => {
+                let buf = Arc::clone(&capture_buffer);
+                device.build_input_stream(
+                    &stream_config,
+                    move |data: &[f32], _: &cpal::InputCallbackInfo| {
+                        let mono = convert_to_mono_f32(data, channels);
+                        if let Ok(mut b) = buf.lock() {
+                            b.extend_from_slice(&mono);
+                        }
+                    },
+                    err_cb,
+                    None,
+                )
+            }
+            SampleFormat::I16 => {
+                let buf = Arc::clone(&capture_buffer);
+                device.build_input_stream(
+                    &stream_config,
+                    move |data: &[i16], _: &cpal::InputCallbackInfo| {
+                        let mono = convert_to_mono_f32(data, channels);
+                        if let Ok(mut b) = buf.lock() {
+                            b.extend_from_slice(&mono);
+                        }
+                    },
+                    err_cb,
+                    None,
+                )
+            }
+            SampleFormat::U16 => {
+                let buf = Arc::clone(&capture_buffer);
+                device.build_input_stream(
+                    &stream_config,
+                    move |data: &[u16], _: &cpal::InputCallbackInfo| {
+                        let mono = convert_to_mono_f32(data, channels);
+                        if let Ok(mut b) = buf.lock() {
+                            b.extend_from_slice(&mono);
+                        }
+                    },
+                    err_cb,
+                    None,
+                )
+            }
+            format => {
+                let _ = init_tx.send(Err(format!("Unsupported sample format: {:?}", format)));
+                return;
+            }
+        };
+
+        let stream = match build_res {
             Ok(s) => s,
             Err(e) => {
-                log::error!("Failed to build input stream: {}", e);
+                let _ = init_tx.send(Err(format!("Failed to build input stream: {}", e)));
                 return;
             }
         };
 
         if let Err(e) = stream.play() {
-            log::error!("Failed to play stream: {}", e);
+            let _ = init_tx.send(Err(format!("Failed to play input stream: {}", e)));
             return;
         }
+
+        // Stream is live. Signal success to the outer function.
+        let _ = init_tx.send(Ok(()));
 
         // Processing loop -- runs on this thread alongside the stream
         const WAVEFORM_BARS: usize = 48;
@@ -239,5 +308,10 @@ pub fn start_capture(
         }
     });
 
-    Ok(actual_sample_rate)
+    // Wait for the spawned thread to report init success or a build/play error.
+    match init_rx.recv_timeout(Duration::from_secs(3)) {
+        Ok(Ok(())) => Ok(actual_sample_rate),
+        Ok(Err(e)) => Err(anyhow::anyhow!(e)),
+        Err(_) => Err(anyhow::anyhow!("Audio stream init timed out after 3s")),
+    }
 }
