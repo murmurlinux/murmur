@@ -225,7 +225,12 @@ pub async fn download_model_by_name(
 
     for attempt in 1..=max_attempts {
         if attempt > 1 {
-            log::warn!("Download attempt {}/{} for {}", attempt, max_attempts, filename);
+            log::warn!(
+                "Download attempt {}/{} for {}",
+                attempt,
+                max_attempts,
+                filename
+            );
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
 
@@ -280,7 +285,11 @@ pub async fn download_model_by_name(
 
     if let Some(e) = last_error {
         let _ = std::fs::remove_file(&tmp_dest);
-        return Err(anyhow::anyhow!("Download failed after {} attempts: {}", max_attempts, e));
+        return Err(anyhow::anyhow!(
+            "Download failed after {} attempts: {}",
+            max_attempts,
+            e
+        ));
     }
 
     // Verify checksum (warn on mismatch but don't block -- upstream may update model files)
@@ -295,7 +304,10 @@ pub async fn download_model_by_name(
             );
         }
         Err(e) => {
-            log::warn!("Could not verify model checksum: {}. Accepting download.", e);
+            log::warn!(
+                "Could not verify model checksum: {}. Accepting download.",
+                e
+            );
         }
     }
 
