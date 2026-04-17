@@ -29,7 +29,5 @@ AUDIT.md
 *~
 .DS_Store
 
-# Brainstorm/plan/spec docs MUST live in the private murmur-pro repo only,
-# never in this public GPL-3.0 repo. Pro strategy, pricing decisions, and
-# cross-repo architecture plans are proprietary and must not leak.
+# Design docs and implementation plans belong elsewhere, not in source.
 docs/superpowers/
