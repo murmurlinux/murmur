@@ -381,7 +381,9 @@ export function SettingsPanel() {
   }
 
   async function selectModel(filename: string) {
-    await invoke("set_active_model", { modelFilename: filename }).catch(() => {});
+    await invoke("set_active_model", { modelFilename: filename }).catch((err) => {
+      console.error("set_active_model failed:", err);
+    });
     updateSetting("model", filename);
   }
 
@@ -533,7 +535,9 @@ export function SettingsPanel() {
                 <button
                   onClick={() => {
                     updateSetting("hotkey", "Ctrl+Shift+Space");
-                    invoke("change_hotkey", { newHotkey: "Ctrl+Shift+Space" }).catch(() => {});
+                    invoke("change_hotkey", { newHotkey: "Ctrl+Shift+Space" }).catch((err) => {
+                      console.error("change_hotkey reset failed:", err);
+                    });
                   }}
                   style={{
                     padding: "8px 12px",

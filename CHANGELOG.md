@@ -2,6 +2,27 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Switched to a tray-only architecture. The floating desktop gadget has been replaced with a system tray icon; left-click opens Settings, right-click shows the menu.
+- Rebrand: rust-on-cream palette with JetBrains Mono throughout. Settings panel, onboarding wizard, and recording popup all retheme to match.
+- Audio capture now supports i16 and u16 sample formats (previously f32-only); stream init errors are propagated to the caller instead of being logged silently.
+- Onboarding and settings windows use a cream background to eliminate the white / dark flash on open.
+
+### Fixed
+
+- Onboarding wizard no longer freezes when clicking Next on the model step.
+- Model downloads retry on transient failures; small-model download error ("error decoding response body") resolved.
+- Dependencies bumped to clear RUSTSEC advisories (rustls-webpki, rand).
+
+### Removed
+
+- Skin system (floating widget, custom skin images, accent-colour picker). Replaced by the tray-only model.
+
+---
+
 ## [0.3.3] - 2026-04-03
 
 ### Added

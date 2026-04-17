@@ -4,7 +4,8 @@ mod inject;
 mod state;
 mod stt;
 
-// Public API for external crates (test crate + murmur-pro CLI)
+// Public library surface. Consumed by this crate's binary and by external
+// consumers (integration tests, downstream CLI tools).
 pub use audio::capture::{start_capture, AudioLevel, AudioLevelCallback, AutoStopCallback};
 pub use commands::audio::trim_trailing_silence;
 pub use inject::display_server::{self as display_server, DisplayServer};
@@ -185,8 +186,12 @@ pub fn run() {
                 &[&settings_item, &sep, &quit_item],
             )?;
 
+            let Some(icon) = app.default_window_icon().cloned() else {
+                return Err("No default window icon configured in tauri.conf.json".into());
+            };
+
             let _tray = TrayIconBuilder::with_id(TRAY_ID)
-                .icon(app.default_window_icon().expect("No default window icon configured in tauri.conf.json").clone())
+                .icon(icon)
                 .tooltip("Murmur -- Voice to Text")
                 .menu(&menu)
                 .show_menu_on_left_click(false)

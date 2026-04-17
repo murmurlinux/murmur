@@ -126,6 +126,12 @@ export function OnboardingWizard() {
     setMicConfirmed(false);
     setMicLevel(0);
 
+    // Tear down any previous listener before registering a new one.
+    // Without this, repeated Test Microphone clicks stack listeners and each
+    // audio-level event triggers every accumulated handler.
+    unlistenAudio?.();
+    unlistenAudio = undefined;
+
     // Listen for audio levels
     unlistenAudio = await listen<{ rms: number; peak: number }>("audio-level", (event) => {
       const level = Math.min(event.payload.rms * 20, 1); // normalize
@@ -140,6 +146,8 @@ export function OnboardingWizard() {
       await invoke("start_mic_test");
     } catch {
       setMicTesting(false);
+      unlistenAudio?.();
+      unlistenAudio = undefined;
     }
   }
 
@@ -226,7 +234,10 @@ export function OnboardingWizard() {
     setHotkey(combo);
     setHotkeyError(null);
     setCapturingHotkey(false);
-    invoke("change_hotkey", { newHotkey: combo }).catch(() => {});
+    invoke("change_hotkey", { newHotkey: combo }).catch((err) => {
+      console.error("change_hotkey failed:", err);
+      setHotkeyError("Could not register that hotkey. Try another combination.");
+    });
     saveSetting("hotkey", combo);
   }
 
@@ -235,7 +246,9 @@ export function OnboardingWizard() {
     // Save model if downloaded
     const file = currentModelFile();
     if (isCurrentModelDownloaded() || downloadDone()) {
-      await invoke("set_active_model", { modelFilename: file }).catch(() => {});
+      await invoke("set_active_model", { modelFilename: file }).catch((err) => {
+        console.error("set_active_model failed on finish:", err);
+      });
       await saveSetting("model", file);
     }
 
