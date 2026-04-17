@@ -18,7 +18,7 @@ pub use stt::model_manager::{
 pub use stt::whisper::{clear_cache, resample, transcribe};
 
 use tauri::{
-    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Listener, Manager,
 };
@@ -134,20 +134,9 @@ pub fn run() {
                 }
             }
 
-            // --- Hide skin on startup if showSkin is false ---
-            let show_skin = {
-                let handle = app.handle().clone();
-                match handle.store("settings.json") {
-                    Ok(store) => store.get("showSkin")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(true),
-                    Err(_) => true,
-                }
-            };
-            if !show_skin {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.hide();
-                }
+            // --- Tray-only: always hide main window on startup ---
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.hide();
             }
 
             // --- First-run onboarding wizard ---
@@ -162,7 +151,7 @@ pub fn run() {
                 }
             };
             if !onboarding_complete {
-                // Hide main skin, show onboarding wizard
+                // Hide main window, show onboarding wizard
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
                 }
@@ -173,13 +162,8 @@ pub fn run() {
             commands::popup::setup_popup_position(app.handle());
 
             // --- Listen for onboarding completion ---
-            let handle_for_onboarding = app.handle().clone();
             app.listen("onboarding-complete", move |_| {
-                log::info!("Onboarding complete -- showing main window");
-                if let Some(window) = handle_for_onboarding.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+                log::info!("Onboarding complete -- tray-only, main window stays hidden");
             });
 
             // --- Listen for auto-stop from capture thread (VAD / max duration) ---
@@ -190,26 +174,15 @@ pub fn run() {
             });
 
             // --- System Tray ---
-            let show_item =
-                MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
-            let aot_item = CheckMenuItem::with_id(
-                app,
-                "always_on_top",
-                "Always on Top",
-                true,
-                true, // checked by default (matches tauri.conf.json alwaysOnTop: true)
-                None::<&str>,
-            )?;
             let settings_item =
                 MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let sep = PredefinedMenuItem::separator(app)?;
-            let sep2 = PredefinedMenuItem::separator(app)?;
             let quit_item =
                 MenuItem::with_id(app, "quit", "Quit Murmur", true, None::<&str>)?;
 
             let menu = Menu::with_items(
                 app,
-                &[&show_item, &aot_item, &sep, &settings_item, &sep2, &quit_item],
+                &[&settings_item, &sep, &quit_item],
             )?;
 
             let _tray = TrayIconBuilder::with_id(TRAY_ID)
@@ -218,29 +191,6 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "show_hide" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let was_visible = window.is_visible().unwrap_or(false);
-                            if was_visible {
-                                let _ = window.hide();
-                            } else {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                            // Persist to store and emit event
-                            if let Ok(store) = app.store("settings.json") {
-                                store.set("showSkin", serde_json::json!(!was_visible));
-                                let _ = store.save();
-                            }
-                            let _ = app.emit("skin-visibility-changed", serde_json::json!({ "visible": !was_visible }));
-                        }
-                    }
-                    "always_on_top" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let is_on_top = window.is_always_on_top().unwrap_or(false);
-                            let _ = window.set_always_on_top(!is_on_top);
-                        }
-                    }
                     "settings" => {
                         commands::settings::open_settings_internal(app);
                     }
@@ -257,17 +207,7 @@ pub fn run() {
                     } = event
                     {
                         let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.unminimize();
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                            // Persist visibility
-                            if let Ok(store) = app.store("settings.json") {
-                                store.set("showSkin", serde_json::json!(true));
-                                let _ = store.save();
-                            }
-                            let _ = app.emit("skin-visibility-changed", serde_json::json!({ "visible": true }));
-                        }
+                        commands::settings::open_settings_internal(app);
                     }
                 })
                 .build(app)?;

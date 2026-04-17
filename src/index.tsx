@@ -1,7 +1,8 @@
 /* @refresh reload */
 import { render } from "solid-js/web";
-import { GadgetWindow } from "./components/GadgetWindow";
 import "./styles.css";
 
+// Tray-only app: main window stays hidden.
+// Settings and recording popup are separate windows.
 const root = document.getElementById("root");
-render(() => <GadgetWindow />, root!);
+render(() => <div />, root!);

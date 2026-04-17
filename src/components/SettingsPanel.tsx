@@ -1,58 +1,61 @@
-import { createSignal, onMount, For, JSX } from "solid-js";
+import { createSignal, onMount, onCleanup, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
-import { hexToHue, hueToHex, hexToRgba } from "../lib/color";
+import { initAuth, signIn, signOut, user, profile, isPro, authLoading } from "../lib/auth";
 import logoImg from "../assets/logo.png";
 
-// --- Ocean Terminal Theme ---
+// --- Terminal Cream Theme ---
+
+const monoFont = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
 
 const glass: JSX.CSSProperties = {
   "margin-bottom": "16px",
   padding: "18px",
-  background: "rgba(255, 255, 255, 0.025)",
-  "border-radius": "14px",
-  border: "1px solid rgba(255, 255, 255, 0.06)",
+  background: "#ece4d0",
+  "border-radius": "0",
+  border: "1px solid #d4c9b5",
   transition: "border-color 0.2s ease",
 };
 
 const label: JSX.CSSProperties = {
   display: "block",
-  "font-size": "10px",
-  "font-weight": "600",
+  "font-size": "11px",
+  "font-weight": "700",
   "text-transform": "uppercase",
   "letter-spacing": "0.08em",
-  color: "#14b8a6",
+  color: "#c9482b",
   "margin-bottom": "10px",
 };
 
 const inputBase: JSX.CSSProperties = {
   width: "100%",
   padding: "8px 12px",
-  background: "rgba(0, 0, 0, 0.3)",
-  border: "1px solid rgba(255, 255, 255, 0.06)",
-  "border-radius": "8px",
-  color: "#e0e0e0",
+  background: "#f5f0e6",
+  border: "1px solid #1a1a1a",
+  "border-radius": "0",
+  color: "#1a1a1a",
   "font-size": "13px",
-  "font-family": "-apple-system, system-ui, sans-serif",
+  "font-family": monoFont,
   "box-sizing": "border-box",
   outline: "none",
 };
 
-function Toggle(props: { value: boolean; onChange: () => void; accent: string }) {
+function Toggle(props: { value: boolean; onChange: () => void; disabled?: boolean }) {
   return (
     <button
-      onClick={props.onChange}
+      onClick={() => !props.disabled && props.onChange()}
       style={{
         width: "40px",
         height: "22px",
         "border-radius": "11px",
         border: "none",
-        cursor: "pointer",
-        background: props.value ? hexToRgba(props.accent, 0.55) : "rgba(255, 255, 255, 0.08)",
+        cursor: props.disabled ? "not-allowed" : "pointer",
+        background: props.disabled ? "#e0d9cc" : props.value ? "#c9482b" : "#d4c9b5",
         position: "relative",
         transition: "background 0.2s ease",
         "flex-shrink": "0",
+        opacity: props.disabled ? "0.5" : "1",
       }}
     >
       <div
@@ -60,10 +63,10 @@ function Toggle(props: { value: boolean; onChange: () => void; accent: string })
           width: "16px",
           height: "16px",
           "border-radius": "50%",
-          background: "rgba(255, 255, 255, 0.9)",
+          background: "#f5f0e6",
           position: "absolute",
           top: "3px",
-          left: props.value ? "21px" : "3px",
+          left: props.value && !props.disabled ? "21px" : "3px",
           transition: "left 0.2s ease",
         }}
       />
@@ -80,9 +83,212 @@ function SettingRow(props: { label: string; children: JSX.Element }) {
         "justify-content": "space-between",
       }}
     >
-      <span style={{ "font-size": "13px", color: "rgba(255, 255, 255, 0.7)" }}>{props.label}</span>
+      <span style={{ "font-size": "13px", color: "#6b655a" }}>{props.label}</span>
       {props.children}
     </div>
+  );
+}
+
+const LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "auto", label: "Auto-detect" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "it", label: "Italian" },
+  { value: "pt", label: "Portuguese" },
+  { value: "ru", label: "Russian" },
+  { value: "ja", label: "Japanese" },
+  { value: "zh", label: "Chinese" },
+  { value: "ko", label: "Korean" },
+  { value: "ar", label: "Arabic" },
+  { value: "hi", label: "Hindi" },
+  { value: "nl", label: "Dutch" },
+  { value: "pl", label: "Polish" },
+  { value: "tr", label: "Turkish" },
+  { value: "sv", label: "Swedish" },
+  { value: "id", label: "Indonesian" },
+  { value: "uk", label: "Ukrainian" },
+];
+
+function CustomSelect(props: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  const [open, setOpen] = createSignal(false);
+  let containerRef: HTMLDivElement | undefined;
+
+  const selected = () => props.options.find((o) => o.value === props.value)?.label || props.value;
+
+  const handleClickOutside = (e: MouseEvent) => {
+    if (containerRef && !containerRef.contains(e.target as Node)) {
+      setOpen(false);
+    }
+  };
+
+  onMount(() => document.addEventListener("mousedown", handleClickOutside));
+  onCleanup(() => document.removeEventListener("mousedown", handleClickOutside));
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(!open())}
+        style={{
+          width: "100%",
+          padding: "8px 12px",
+          background: "#f5f0e6",
+          border: "1px solid #1a1a1a",
+          "border-radius": "0",
+          color: "#1a1a1a",
+          "font-size": "13px",
+          "font-family": monoFont,
+          cursor: "pointer",
+          "text-align": "left",
+          display: "flex",
+          "justify-content": "space-between",
+          "align-items": "center",
+        }}
+      >
+        {selected()}
+        <span style={{ color: "#6b655a", "font-size": "10px" }}>{open() ? "\u25B2" : "\u25BC"}</span>
+      </button>
+      {open() && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: "0",
+            right: "0",
+            background: "#f5f0e6",
+            border: "1px solid #1a1a1a",
+            "border-top": "none",
+            "max-height": "200px",
+            "overflow-y": "auto",
+            "z-index": "10",
+          }}
+        >
+          {props.options.map((opt) => (
+            <div
+              onClick={() => { props.onChange(opt.value); setOpen(false); }}
+              style={{
+                padding: "6px 12px",
+                cursor: "pointer",
+                "font-size": "13px",
+                "font-family": monoFont,
+                color: opt.value === props.value ? "#c9482b" : "#1a1a1a",
+                "font-weight": opt.value === props.value ? "700" : "400",
+                background: opt.value === props.value ? "#ece4d0" : "transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (opt.value !== props.value) e.currentTarget.style.background = "#ece4d0";
+              }}
+              onMouseLeave={(e) => {
+                if (opt.value !== props.value) e.currentTarget.style.background = "transparent";
+              }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AccountSignIn() {
+  const [email, setEmail] = createSignal("");
+  const [password, setPassword] = createSignal("");
+  const [error, setError] = createSignal("");
+  const [loading, setLoading] = createSignal(false);
+
+  async function handleSignIn(e: Event) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const result = await signIn(email(), password());
+      if (result.error) setError(result.error);
+    } catch {
+      setError("Connection failed. Check your internet and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSignIn}>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email()}
+        onInput={(e) => setEmail(e.currentTarget.value)}
+        required
+        style={{ ...inputBase, "margin-bottom": "8px" }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "#c9482b";
+          e.currentTarget.style.boxShadow = "3px 3px 0 #c9482b";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "#1a1a1a";
+          e.currentTarget.style.boxShadow = "none";
+        }}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password()}
+        onInput={(e) => setPassword(e.currentTarget.value)}
+        required
+        style={{ ...inputBase, "margin-bottom": "8px" }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "#c9482b";
+          e.currentTarget.style.boxShadow = "3px 3px 0 #c9482b";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "#1a1a1a";
+          e.currentTarget.style.boxShadow = "none";
+        }}
+      />
+      {error() && (
+        <p style={{ color: "#a33a2a", "font-size": "12px", "margin-bottom": "8px" }}>
+          {error()}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={loading()}
+        style={{
+          width: "100%",
+          padding: "8px",
+          background: "#c9482b",
+          border: "1px solid #c9482b",
+          "border-radius": "0",
+          color: "#fff8ed",
+          "font-size": "13px",
+          "font-weight": "500",
+          "font-family": monoFont,
+          cursor: loading() ? "wait" : "pointer",
+          opacity: loading() ? "0.5" : "1",
+          transition: "all 0.15s ease",
+        }}
+        onMouseEnter={(e) => {
+          if (!loading()) {
+            e.currentTarget.style.background = "#1a1a1a";
+            e.currentTarget.style.borderColor = "#1a1a1a";
+            e.currentTarget.style.transform = "translate(-2px, -2px)";
+            e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "#c9482b";
+          e.currentTarget.style.borderColor = "#c9482b";
+          e.currentTarget.style.transform = "none";
+          e.currentTarget.style.boxShadow = "none";
+        }}
+      >
+        {loading() ? "Signing in..." : "Sign in"}
+      </button>
+      <p style={{ color: "#6b655a", "font-size": "11px", "margin-top": "8px", "text-align": "center" }}>
+        Create an account at murmurlinux.com
+      </p>
+    </form>
   );
 }
 
@@ -90,14 +296,11 @@ function SettingRow(props: { label: string; children: JSX.Element }) {
 
 export function SettingsPanel() {
   const [settings, setSettings] = createSignal<MurmurSettings | null>(null);
-  const [hue, setHue] = createSignal(160);
   const [capturingHotkey, setCapturingHotkey] = createSignal(false);
   const [models, setModels] = createSignal<ModelInfo[]>([]);
   const [downloadingModel, setDownloadingModel] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
   const [version, setVersion] = createSignal("...");
-
-  const accent = () => hueToHex(hue());
 
   const showError = (msg: string) => {
     setError(msg);
@@ -105,6 +308,8 @@ export function SettingsPanel() {
   };
 
   onMount(async () => {
+    await initAuth();
+
     // Read version from Tauri config (not hardcoded)
     try {
       const { getVersion } = await import("@tauri-apps/api/app");
@@ -113,7 +318,6 @@ export function SettingsPanel() {
 
     const s = await loadSettings();
     setSettings(s);
-    setHue(hexToHue(s.accentColor));
 
     try {
       const list = await invoke<ModelInfo[]>("list_models");
@@ -184,59 +388,55 @@ export function SettingsPanel() {
   return (
     <div
       style={{
-        background: "#060d18",
-        color: "rgba(255, 255, 255, 0.6)",
+        background: "#f5f0e6",
+        "background-image": "radial-gradient(circle at 1px 1px, rgba(26,26,26,0.06) 1px, transparent 0)",
+        "background-size": "14px 14px",
+        color: "#1a1a1a",
         width: "100%",
         "min-height": "100vh",
         padding: "20px",
         "box-sizing": "border-box",
-        "font-family": "-apple-system, system-ui, sans-serif",
+        "font-family": monoFont,
         position: "relative",
       }}
     >
-      {/* Subtle gradient overlay */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "radial-gradient(ellipse at 50% 0%, rgba(20, 184, 166, 0.04) 0%, transparent 60%)",
-          "pointer-events": "none",
-          "z-index": 0,
-        }}
-      />
-
       <div style={{ position: "relative", "z-index": 1 }}>
         {/* Header */}
         <div
           style={{
             display: "flex",
             "align-items": "center",
-            gap: "10px",
+            "justify-content": "space-between",
             "margin-bottom": "20px",
           }}
         >
-          <img src={logoImg} alt="Murmur" width={28} height={28} style={{ "border-radius": "6px" }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ "font-size": "16px", "font-weight": 600, color: "rgba(255, 255, 255, 0.9)" }}>
-              Murmur
-            </div>
+          <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+            <img src={logoImg} alt="Murmur" width={48} height={48} style={{ "border-radius": "0" }} />
+            <pre
+              style={{
+                color: "#c9482b",
+                "font-size": "10px",
+                "line-height": "1.0",
+                margin: "-10px 0 0 0",
+                "white-space": "pre",
+                "font-weight": "700",
+                "font-family": monoFont,
+              }}
+            >{` __  __\n|  \\/  |_   _ _ __ _ __ ___  _   _ _ __\n| |\\/| | | | | '__| '_ \` _ \\| | | | '__|\n| |  | | |_| | |  | | | | | | |_| | |\n|_|  |_|\\__,_|_|  |_| |_| |_|\\__,_|_|`}</pre>
+            <span style={{ "font-size": "10px", color: "#6b655a", "font-family": monoFont, "align-self": "flex-end", "margin-bottom": "2px" }}>
+              v{version()}
+            </span>
           </div>
-          <span style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.2)", "font-family": "monospace" }}>
-            v{version()}
-          </span>
         </div>
 
         {error() && (
           <div
             style={{
               padding: "10px 14px",
-              background: "rgba(220, 50, 50, 0.1)",
-              border: "1px solid rgba(220, 50, 50, 0.2)",
-              "border-radius": "10px",
-              color: "#ff8888",
+              background: "#ece4d0",
+              border: "1px solid #a33a2a",
+              "border-radius": "0",
+              color: "#a33a2a",
               "font-size": "12px",
               "margin-bottom": "16px",
               cursor: "pointer",
@@ -249,61 +449,58 @@ export function SettingsPanel() {
 
         {settings() && (
           <>
-            {/* Skin */}
+            {/* Account */}
             <div style={glass}>
-              <label style={label}>Skin</label>
-              <div
-                style={{
-                  padding: "8px 12px",
-                  background: "rgba(0, 0, 0, 0.3)",
-                  "border-radius": "8px",
-                  border: "1px solid rgba(255, 255, 255, 0.06)",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  "font-size": "13px",
-                }}
-              >
-                Comm Badge
-                <span style={{ color: "rgba(255, 255, 255, 0.2)", "margin-left": "8px", "font-size": "11px" }}>
-                  default
-                </span>
-              </div>
-            </div>
-
-            {/* Accent Colour */}
-            <div style={glass}>
-              <label style={label}>Accent Colour</label>
-              <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
-                <input
-                  type="range"
-                  min="0"
-                  max="360"
-                  value={hue()}
-                  onInput={(e) => {
-                    const h = parseInt(e.currentTarget.value);
-                    setHue(h);
-                    updateSetting("accentColor", hueToHex(h));
-                  }}
-                  style={{
-                    flex: 1,
-                    height: "4px",
-                    "border-radius": "2px",
-                    appearance: "auto",
-                    cursor: "pointer",
-                    background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
-                  }}
-                />
-                <div
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    "border-radius": "50%",
-                    background: hexToRgba(accent(), 0.6),
-                    border: "2px solid rgba(255, 255, 255, 0.08)",
-                    "flex-shrink": "0",
-                    "box-shadow": `0 0 8px ${accent()}22`,
-                  }}
-                />
-              </div>
+              <span style={label}>Account</span>
+              {authLoading() ? (
+                <p style={{ color: "#6b655a", "font-size": "13px" }}>Loading...</p>
+              ) : user() ? (
+                <div>
+                  <p style={{ color: "#1a1a1a", "font-size": "13px", "margin-bottom": "8px" }}>
+                    {profile()?.email ?? user()?.email}
+                  </p>
+                  <p style={{
+                    color: isPro() ? "#5a7a3a" : "#6b655a",
+                    "font-size": "11px",
+                    "font-weight": "600",
+                    "text-transform": "uppercase",
+                    "letter-spacing": "0.05em",
+                    "margin-bottom": "12px",
+                  }}>
+                    {isPro() ? "Pro" : "Free"}
+                  </p>
+                  <button
+                    onClick={() => signOut()}
+                    style={{
+                      padding: "6px 16px",
+                      background: "#ece4d0",
+                      border: "1px solid #1a1a1a",
+                      "border-radius": "0",
+                      color: "#1a1a1a",
+                      "font-size": "12px",
+                      "font-family": monoFont,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#1a1a1a";
+                      e.currentTarget.style.color = "#f5f0e6";
+                      e.currentTarget.style.transform = "translate(-2px, -2px)";
+                      e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#ece4d0";
+                      e.currentTarget.style.color = "#1a1a1a";
+                      e.currentTarget.style.transform = "none";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <AccountSignIn />
+              )}
             </div>
 
             {/* Hotkey */}
@@ -319,14 +516,14 @@ export function SettingsPanel() {
                     ...inputBase,
                     flex: "1",
                     cursor: "pointer",
-                    "border-color": capturingHotkey() ? accent() : "rgba(255, 255, 255, 0.06)",
+                    "border-color": capturingHotkey() ? "#c9482b" : "#1a1a1a",
+                    "box-shadow": capturingHotkey() ? "3px 3px 0 #c9482b" : "none",
                     "text-align": "center",
                     "user-select": "none",
-                    "font-family": "monospace",
                   }}
                 >
                   {capturingHotkey() ? (
-                    <span style={{ color: "rgba(255, 255, 255, 0.3)", "font-style": "italic", "font-family": "-apple-system, system-ui, sans-serif" }}>
+                    <span style={{ color: "#6b655a", "font-style": "italic", "font-family": monoFont }}>
                       Press a key combo...
                     </span>
                   ) : (
@@ -340,14 +537,27 @@ export function SettingsPanel() {
                   }}
                   style={{
                     padding: "8px 12px",
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    "border-radius": "8px",
-                    color: "rgba(255, 255, 255, 0.4)",
+                    background: "#ece4d0",
+                    border: "1px solid #1a1a1a",
+                    "border-radius": "0",
+                    color: "#1a1a1a",
                     cursor: "pointer",
                     "font-size": "11px",
+                    "font-family": monoFont,
                     "white-space": "nowrap",
-                    transition: "background 0.2s ease",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#1a1a1a";
+                    e.currentTarget.style.color = "#f5f0e6";
+                    e.currentTarget.style.transform = "translate(-2px, -2px)";
+                    e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ece4d0";
+                    e.currentTarget.style.color = "#1a1a1a";
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   Reset
@@ -369,39 +579,55 @@ export function SettingsPanel() {
                           gap: "10px",
                           padding: "10px 12px",
                           background: settings()!.model === model.filename
-                            ? "rgba(20, 184, 166, 0.06)"
-                            : "rgba(0, 0, 0, 0.2)",
+                            ? "#f5f0e6"
+                            : "#ece4d0",
                           border: settings()!.model === model.filename
-                            ? `1px solid ${accent()}33`
-                            : "1px solid rgba(255, 255, 255, 0.04)",
-                          "border-radius": "8px",
+                            ? "1px solid #c9482b"
+                            : "1px solid #d4c9b5",
+                          "border-radius": "0",
                           transition: "all 0.2s ease",
                         }}
                       >
                         <div style={{ flex: 1 }}>
-                          <div style={{ "font-size": "13px", "font-weight": 500, color: "rgba(255, 255, 255, 0.8)" }}>
+                          <div style={{ "font-size": "13px", "font-weight": 500, color: "#1a1a1a" }}>
                             {model.name}
                           </div>
-                          <div style={{ "font-size": "10px", color: "rgba(255, 255, 255, 0.25)", "margin-top": "2px" }}>
+                          <div style={{ "font-size": "10px", color: "#6b655a", "margin-top": "2px" }}>
                             {model.description} -- {model.size_mb}MB
                           </div>
                         </div>
                         {model.downloaded ? (
                           settings()!.model === model.filename ? (
-                            <span style={{ "font-size": "10px", color: accent(), "font-weight": 600, "text-transform": "uppercase", "letter-spacing": "0.05em" }}>
-                              Active
+                            <span style={{ "font-size": "10px", color: "#c9482b", "font-weight": 700, "text-transform": "uppercase", "letter-spacing": "0.05em", "width": "100px", "text-align": "center", display: "inline-block" }}>
+                              active
                             </span>
                           ) : (
                             <button
                               onClick={() => selectModel(model.filename)}
                               style={{
                                 padding: "4px 10px",
-                                background: "rgba(255, 255, 255, 0.04)",
-                                border: "1px solid rgba(255, 255, 255, 0.06)",
-                                "border-radius": "6px",
-                                color: "rgba(255, 255, 255, 0.5)",
+                                "width": "100px",
+                                "text-align": "center",
+                                background: "#ece4d0",
+                                border: "1px solid #1a1a1a",
+                                "border-radius": "0",
+                                color: "#1a1a1a",
                                 cursor: "pointer",
                                 "font-size": "10px",
+                                "font-family": monoFont,
+                                transition: "all 0.15s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#1a1a1a";
+                                e.currentTarget.style.color = "#f5f0e6";
+                                e.currentTarget.style.transform = "translate(-2px, -2px)";
+                                e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "#ece4d0";
+                                e.currentTarget.style.color = "#1a1a1a";
+                                e.currentTarget.style.transform = "none";
+                                e.currentTarget.style.boxShadow = "none";
                               }}
                             >
                               Select
@@ -413,16 +639,36 @@ export function SettingsPanel() {
                             disabled={downloadingModel() === model.filename}
                             style={{
                               padding: "4px 10px",
+                              "width": "100px",
+                              "text-align": "center",
                               background: downloadingModel() === model.filename
-                                ? "rgba(0, 0, 0, 0.2)"
-                                : "rgba(255, 255, 255, 0.04)",
-                              border: "1px solid rgba(255, 255, 255, 0.06)",
-                              "border-radius": "6px",
+                                ? "#d4c9b5"
+                                : "#ece4d0",
+                              border: "1px solid #1a1a1a",
+                              "border-radius": "0",
                               color: downloadingModel() === model.filename
-                                ? "rgba(255, 255, 255, 0.2)"
-                                : accent(),
+                                ? "#6b655a"
+                                : "#c9482b",
                               cursor: downloadingModel() === model.filename ? "wait" : "pointer",
                               "font-size": "10px",
+                              "font-family": monoFont,
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (downloadingModel() !== model.filename) {
+                                e.currentTarget.style.background = "#1a1a1a";
+                                e.currentTarget.style.color = "#f5f0e6";
+                                e.currentTarget.style.transform = "translate(-2px, -2px)";
+                                e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (downloadingModel() !== model.filename) {
+                                e.currentTarget.style.background = "#ece4d0";
+                                e.currentTarget.style.color = "#c9482b";
+                                e.currentTarget.style.transform = "none";
+                                e.currentTarget.style.boxShadow = "none";
+                              }
                             }}
                           >
                             {downloadingModel() === model.filename ? "Downloading..." : "Download"}
@@ -432,7 +678,7 @@ export function SettingsPanel() {
                     )}
                   </For>
                 ) : (
-                  <div style={{ color: "rgba(255, 255, 255, 0.25)", "font-size": "12px" }}>
+                  <div style={{ color: "#6b655a", "font-size": "12px" }}>
                     Model: {settings()!.model}
                   </div>
                 )}
@@ -450,17 +696,18 @@ export function SettingsPanel() {
                       flex: 1,
                       padding: "8px 12px",
                       background: settings()!.recordMode === mode
-                        ? `${accent()}18`
-                        : "rgba(0, 0, 0, 0.3)",
+                        ? "#f5f0e6"
+                        : "#ece4d0",
                       border: settings()!.recordMode === mode
-                        ? `1px solid ${accent()}44`
-                        : "1px solid rgba(255, 255, 255, 0.04)",
-                      "border-radius": "8px",
+                        ? "1px solid #c9482b"
+                        : "1px solid #d4c9b5",
+                      "border-radius": "0",
                       color: settings()!.recordMode === mode
-                        ? accent()
-                        : "rgba(255, 255, 255, 0.4)",
+                        ? "#c9482b"
+                        : "#6b655a",
                       cursor: "pointer",
                       "font-size": "12px",
+                      "font-family": monoFont,
                       "font-weight": settings()!.recordMode === mode ? "600" : "400",
                       transition: "all 0.2s ease",
                     }}
@@ -475,11 +722,13 @@ export function SettingsPanel() {
                   <Toggle
                     value={settings()!.autoStopSilence}
                     onChange={() => updateSetting("autoStopSilence", !settings()!.autoStopSilence)}
-                    accent={accent()}
+                    disabled={settings()!.recordMode === "hold"}
                   />
                 </SettingRow>
-                <div style={{ "font-size": "10px", color: "rgba(255,255,255,0.2)", "margin-top": "4px" }}>
-                  Stops recording after ~2s of silence in tap mode
+                <div style={{ "font-size": "10px", color: "#6b655a", "margin-top": "4px" }}>
+                  {settings()!.recordMode === "hold"
+                    ? "Not applicable in hold mode (release to stop)"
+                    : "Stops recording after ~2s of silence in tap mode"}
                 </div>
               </div>
             </div>
@@ -488,58 +737,27 @@ export function SettingsPanel() {
             <div style={glass}>
               <label style={label}>Language</label>
               <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                <select
+                <CustomSelect
                   value={settings()!.language}
-                  onChange={(e) => updateSetting("language", e.currentTarget.value)}
-                  style={{
-                    padding: "8px 12px",
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    "border-radius": "8px",
-                    color: "rgba(255, 255, 255, 0.7)",
-                    "font-size": "13px",
-                    cursor: "pointer",
-                    appearance: "none" as any,
-                    "-webkit-appearance": "none",
-                  }}
-                >
-                  <option value="en">English</option>
-                  <option value="auto">Auto-detect</option>
-                  <option value="es">Spanish</option>
-                  <option value="fr">French</option>
-                  <option value="de">German</option>
-                  <option value="it">Italian</option>
-                  <option value="pt">Portuguese</option>
-                  <option value="ru">Russian</option>
-                  <option value="ja">Japanese</option>
-                  <option value="zh">Chinese</option>
-                  <option value="ko">Korean</option>
-                  <option value="ar">Arabic</option>
-                  <option value="hi">Hindi</option>
-                  <option value="nl">Dutch</option>
-                  <option value="pl">Polish</option>
-                  <option value="tr">Turkish</option>
-                  <option value="sv">Swedish</option>
-                  <option value="id">Indonesian</option>
-                  <option value="uk">Ukrainian</option>
-                </select>
+                  onChange={(v) => updateSetting("language", v)}
+                  options={LANGUAGES}
+                />
                 {settings()!.language !== "en" && (
                   <SettingRow label="Translate to English">
                     <Toggle
                       value={settings()!.translateToEnglish}
                       onChange={() => updateSetting("translateToEnglish", !settings()!.translateToEnglish)}
-                      accent={accent()}
                     />
                   </SettingRow>
                 )}
                 {settings()!.language !== "en" && settings()!.model.includes(".en.") && (
                   <div style={{
                     "font-size": "11px",
-                    color: "#f59e0b",
+                    color: "#c9482b",
                     padding: "8px 10px",
-                    background: "rgba(245, 158, 11, 0.08)",
-                    "border-radius": "6px",
-                    border: "1px solid rgba(245, 158, 11, 0.15)",
+                    background: "#f5f0e6",
+                    "border-radius": "0",
+                    border: "1px solid #c9482b",
                   }}>
                     Your current model is English-only. Download a multilingual model above for best results.
                   </div>
@@ -551,20 +769,6 @@ export function SettingsPanel() {
             <div style={glass}>
               <label style={label}>General</label>
               <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-                <SettingRow label="Show Skin on Startup">
-                  <Toggle
-                    value={settings()!.showSkin}
-                    onChange={() => updateSetting("showSkin", !settings()!.showSkin)}
-                    accent={accent()}
-                  />
-                </SettingRow>
-                <SettingRow label="Always on Top">
-                  <Toggle
-                    value={settings()!.alwaysOnTop}
-                    onChange={() => updateSetting("alwaysOnTop", !settings()!.alwaysOnTop)}
-                    accent={accent()}
-                  />
-                </SettingRow>
                 <SettingRow label="Start on Login">
                   <Toggle
                     value={settings()!.startOnLogin}
@@ -573,7 +777,6 @@ export function SettingsPanel() {
                       await invoke("set_start_on_login", { enabled: next });
                       updateSetting("startOnLogin", next);
                     }}
-                    accent={accent()}
                   />
                 </SettingRow>
               </div>

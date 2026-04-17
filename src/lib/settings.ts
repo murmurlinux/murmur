@@ -1,13 +1,10 @@
 import { Store } from "@tauri-apps/plugin-store";
 
 export interface MurmurSettings {
-  skin: string;
   accentColor: string;
   hotkey: string;
   model: string;
-  alwaysOnTop: boolean;
   recordMode: "hold" | "tap";
-  showSkin: boolean;
   autoStopSilence: boolean;
   startOnLogin: boolean;
   onboardingComplete: boolean;
@@ -16,13 +13,10 @@ export interface MurmurSettings {
 }
 
 const DEFAULTS: MurmurSettings = {
-  skin: "comm-badge",
   accentColor: "#10b981",
   hotkey: "Ctrl+Shift+Space",
   model: "ggml-tiny.en.bin",
-  alwaysOnTop: true,
   recordMode: "hold",
-  showSkin: true,
   autoStopSilence: true,
   startOnLogin: false,
   onboardingComplete: false,
