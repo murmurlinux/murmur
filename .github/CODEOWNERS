@@ -1,5 +1,17 @@
-# Every file in this repo is owned by the repo owner by default.
-# When the team grows, narrow ownership here.
-# Docs: https://docs.github.com/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+# CODEOWNERS grants review authority on paths. Combined with branch
+# protection's "require review from code owners", this is the review gate
+# for sensitive areas. Docs: https://docs.github.com/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Default: repo owner on everything. When the team grows, narrow the
+# specific rules below.
 
 * @SyncroTrade
+
+# Security, CI, and hygiene infrastructure require extra scrutiny.
+# Any PR touching these paths triggers a code-owner review request.
+/.github/                           @SyncroTrade
+/.github/workflows/                 @SyncroTrade
+/.github/scripts/                   @SyncroTrade
+/.repo-structure.yml                @SyncroTrade
+/.pre-commit-config.yaml            @SyncroTrade
+/SECURITY.md                        @SyncroTrade

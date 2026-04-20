@@ -65,7 +65,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Tauri app (signed)
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -82,6 +82,7 @@ jobs:
     name: Update APT Repository
     needs: build-and-release
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: write
 
@@ -119,7 +120,7 @@ jobs:
           gpg --armor --export dev@murmurlinux.com > repo/gpg.key
 
       - name: Deploy to apt repo
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
         with:
           personal_token: ${{ secrets.APT_DEPLOY_TOKEN }}
           external_repository: murmurlinux/apt
