@@ -1,0 +1,41 @@
+# Local mirror of the CI hygiene checks. Runs before every commit on the
+# developer's machine, so failures never reach GitHub.
+#
+# One-time setup per clone:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Docs: https://pre-commit.com/
+
+repos:
+  - repo: local
+    hooks:
+      - id: repo-structure
+        name: Repo structure allowlist
+        entry: python3 .github/scripts/check-repo-structure.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: public-hygiene-denylist
+        name: Public hygiene denylist
+        entry: bash
+        args:
+          - -c
+          - |
+            set -euo pipefail
+            forbidden='^design/|^\.firecrawl/|^\.claude/|^\.unreleased|(^|/)AUDIT[-_]?.*\.md$|(^|/)COMPETITOR|mockup|concept-[0-9]|^planning/|^internal/|(^|/)scratch/|\.env\.[^/]*$'
+            hits=$(git ls-files | grep -E "$forbidden" || true)
+            if [ -n "$hits" ]; then
+              echo "Forbidden paths found (see CLAUDE.md 'Public Repository Discipline'):"
+              echo "$hits"
+              exit 1
+            fi
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks

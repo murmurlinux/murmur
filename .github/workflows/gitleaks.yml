@@ -1,0 +1,29 @@
+name: secret-scan
+
+# Scans commits for leaked secrets (API keys, tokens, private keys) using
+# TruffleHog OSS. Free, no license, no org restrictions. Only reports
+# CONFIRMED leaks (validates each finding against the actual service).
+#
+# This workflow does not interpolate any untrusted input into shell commands.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  trufflehog:
+    name: Scan for leaked secrets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --results=verified,unknown
