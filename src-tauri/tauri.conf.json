@@ -1,6 +1,6 @@
 {
   "productName": "Murmur",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "identifier": "com.murmurlinux.murmur",
   "build": {
     "frontendDist": "../dist",
