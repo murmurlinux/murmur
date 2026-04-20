@@ -1,0 +1,29 @@
+name: Repo structure
+
+# Enforces the allowlist in .repo-structure.yml. Every tracked path must
+# match a declared pattern. Anything undeclared fails CI.
+#
+# This workflow does not interpolate any untrusted input into shell commands.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  enforce:
+    name: Enforce repo structure allowlist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install checker deps
+        run: pip install --quiet pathspec pyyaml
+
+      - name: Run structure check
+        run: python3 .github/scripts/check-repo-structure.py
