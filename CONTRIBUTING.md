@@ -83,6 +83,14 @@ Use [GitHub Issues](https://github.com/murmurlinux/murmur/issues) with the appro
 
 Be respectful, constructive, and inclusive. We're building something for everyone.
 
+## Test integrity policy
+
+A portion of this project's test suite is maintained in a separate, private repository (`murmurlinux/tests`) that reviewers and maintainers treat as blind. When those tests fail in CI, the failure is diagnosed from the error messages alone, without reading the test source.
+
+This matters when AI tooling (LLM-assisted coding agents) is involved in a change. Code that can see its test cases can be trained or prompted toward passing the letter of the test rather than meeting the underlying requirement. Keeping the test suite blind to both contributors and agents is one of the few reliable ways to preserve signal that "the code works" means "the code meets the requirement", not "the code has been shaped to pass these specific assertions".
+
+If you are using an AI assistant while contributing, please do not point it at the blind test repository. Do not paste blind test source into prompts, and do not ask the assistant to retrieve or infer it. The public unit and integration tests in `src-tauri/` are fair game.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under [GPL-3.0](LICENSE).
