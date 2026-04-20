@@ -24,7 +24,7 @@ allowed:
   - .github/workflows/release.yml
   - .github/workflows/public-hygiene.yml
   - .github/workflows/repo-structure.yml
-  - .github/workflows/gitleaks.yml
+  - .github/workflows/secret-scan.yml
 
   # --- Community + customer-facing docs ---
   - LICENSE

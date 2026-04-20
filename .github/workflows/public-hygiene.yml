@@ -5,6 +5,11 @@ name: Public hygiene
 # Anything else (design exploration, competitor research, audit reports,
 # planning, scratch notes) must live in murmurlinux/internal, not here.
 #
+# Regex details: case-insensitive via `grep -iE`. Path-segment-anchored via
+# `(^|/)`. Extension-agnostic for audit/competitor so .pdf, .md.bak, .MD
+# etc are caught. Tested against every bypass path from the 2026-04-20
+# adversarial audit (see murmur-internal audits/ for report + test vectors).
+#
 # This workflow does not interpolate any untrusted input into shell commands.
 
 on:
@@ -25,9 +30,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          forbidden='^design/|^\.firecrawl/|^\.claude/|^\.unreleased|(^|/)AUDIT[-_]?.*\.md$|(^|/)COMPETITOR|mockup|concept-[0-9]|^planning/|^internal/|(^|/)scratch/|\.env\.[^/]*$'
+          forbidden='(^|/)(design|internal|planning|scratch|mockup)([-_./]|$)|(^|/)(audit|competitor)(/|[-_][^/]*|[^/]*\.(md|markdown|txt|pdf|html|doc|docx|rst|adoc|odt)(\.[^/]+)?)|(^|/)\.(firecrawl|claude|unreleased)|(^|/)\.env(\.[^/]*)?$|(^|/)concept[-_]?[0-9]'
 
-          hits=$(git ls-tree -r HEAD --name-only | grep -E "$forbidden" || true)
+          hits=$(git ls-tree -r HEAD --name-only | grep -iE "$forbidden" || true)
 
           if [ -n "$hits" ]; then
             echo "::error::Forbidden paths found in public repo tree:"
@@ -36,7 +41,7 @@ jobs:
             done
             echo ""
             echo "Move these files to the private murmurlinux/internal repo."
-            echo "See CLAUDE.md 'Public Repository Discipline' for rules."
+            echo "See CONTRIBUTING.md and the global Public Repository Discipline for rules."
             exit 1
           fi
 
