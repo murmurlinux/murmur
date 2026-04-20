@@ -1,6 +1,6 @@
 [package]
 name = "murmur_lib"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 description = "AI voice-to-text gadget for Linux. Speak anywhere, type everywhere."
 homepage = "https://murmurlinux.com"
