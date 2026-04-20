@@ -1,3 +1,4 @@
+# Build artifacts
 node_modules/
 dist/
 src-tauri/target/
@@ -14,13 +15,6 @@ src-tauri/gen/
 credentials*
 .secrets*
 
-# Research & design (not part of the app)
-.firecrawl/
-.claude/
-design/
-.unreleased-skins/
-AUDIT.md
-
 # IDE
 .vscode/
 .idea/
@@ -28,6 +22,3 @@ AUDIT.md
 *.swo
 *~
 .DS_Store
-
-# Design docs and implementation plans belong elsewhere, not in source.
-docs/superpowers/

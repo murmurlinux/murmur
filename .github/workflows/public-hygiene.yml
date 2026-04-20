@@ -1,0 +1,43 @@
+name: Public hygiene
+
+# Rejects non-public content in this repo. Public repos contain ONLY what
+# ships to users: app code, build config, customer-facing docs, public assets.
+# Anything else (design exploration, competitor research, audit reports,
+# planning, scratch notes) must live in murmurlinux/internal, not here.
+#
+# This workflow does not interpolate any untrusted input into shell commands.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  forbidden-paths:
+    name: Reject non-public paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan tree for forbidden paths
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          forbidden='^design/|^\.firecrawl/|^\.claude/|^\.unreleased|(^|/)AUDIT[-_]?.*\.md$|(^|/)COMPETITOR|mockup|concept-[0-9]|^planning/|^internal/|(^|/)scratch/|\.env\.[^/]*$'
+
+          hits=$(git ls-tree -r HEAD --name-only | grep -E "$forbidden" || true)
+
+          if [ -n "$hits" ]; then
+            echo "::error::Forbidden paths found in public repo tree:"
+            echo "$hits" | while read -r path; do
+              echo "::error file=$path::$path is non-public content and must not be tracked here"
+            done
+            echo ""
+            echo "Move these files to the private murmurlinux/internal repo."
+            echo "See CLAUDE.md 'Public Repository Discipline' for rules."
+            exit 1
+          fi
+
+          echo "OK: no forbidden paths found."
