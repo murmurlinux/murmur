@@ -1,0 +1,39 @@
+name: history-scan
+
+# Weekly deep secret scan across the full git history, not just HEAD.
+# The per-PR secret-scan workflow catches secrets introduced in the diff
+# of the current PR. This workflow catches secrets that were missed at the
+# time or that were landed before scanning was active, by walking every
+# commit reachable from every ref.
+#
+# Runs every Sunday at 03:00 UTC and on-demand via workflow_dispatch.
+#
+# If this workflow fails, investigate any new findings immediately and
+# follow the Recovery Procedures in SECURITY.md.
+#
+# Actions are SHA-pinned. Pinned SHAs:
+#   actions/checkout@v4 = 34e114876b0b11c390a56381ad16ebd13914f8d5
+#   trufflesecurity/trufflehog@main = 4d2a8ef686341ee81a283d1d0fbcb97a5017ef35
+#
+# This workflow does not interpolate any untrusted input into shell commands.
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  trufflehog-history:
+    name: Deep history scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog full-history scan
+        uses: trufflesecurity/trufflehog@4d2a8ef686341ee81a283d1d0fbcb97a5017ef35 # pinned from main 2026-04-20
+        with:
+          extra_args: --results=verified,unknown --since-commit=HEAD~100000

@@ -25,6 +25,7 @@ allowed:
   - .github/workflows/public-hygiene.yml
   - .github/workflows/repo-structure.yml
   - .github/workflows/secret-scan.yml
+  - .github/workflows/history-scan.yml
 
   # --- Community + customer-facing docs ---
   - LICENSE
