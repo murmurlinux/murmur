@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          forbidden='(^|/)(design|internal|planning|scratch|mockup)([-_./]|$)|(^|/)(audit|competitor)[-_]?[^/]*$|(^|/)\.(firecrawl|claude|unreleased)|(^|/)\.env(\.[^/]*)?$|(^|/)concept[-_]?[0-9]'
+          forbidden='(^|/)(design|internal|planning|scratch|mockup)([-_./]|$)|(^|/)(audit|competitor)(/|[-_][^/]*|[^/]*\.(md|markdown|txt|pdf|html|doc|docx|rst|adoc|odt)(\.[^/]+)?)|(^|/)\.(firecrawl|claude|unreleased)|(^|/)\.env(\.[^/]*)?$|(^|/)concept[-_]?[0-9]'
 
           hits=$(git ls-tree -r HEAD --name-only | grep -iE "$forbidden" || true)
 
