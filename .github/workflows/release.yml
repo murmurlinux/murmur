@@ -73,17 +73,11 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Murmur ${{ github.ref_name }}"
-          # releaseBody omitted: release-please populates the draft with the
-          # generated CHANGELOG section on release cut.
-          releaseDraft: true
+          # releaseBody omitted: release-please populates the release body with
+          # the generated CHANGELOG section when it creates the release itself.
+          releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
-
-      - name: Publish release (flip draft to published)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: gh release edit "$TAG" --draft=false --repo murmurlinux/murmur
 
   update-apt-repo:
     name: Update APT Repository
@@ -135,26 +129,28 @@ jobs:
           keep_files: false
 
   rollback-on-failure:
-    name: Rollback draft release on failure
+    name: Rollback release on build failure
     needs: [build-and-release, update-apt-repo]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Delete draft release if still draft
+      - name: Delete release (tag preserved for re-run)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
-          IS_DRAFT=$(gh release view "$TAG" --repo murmurlinux/murmur --json isDraft --jq '.isDraft' 2>/dev/null || echo "missing")
-          if [ "$IS_DRAFT" = "true" ]; then
-            gh release delete "$TAG" --repo murmurlinux/murmur --yes --cleanup-tag=false
-            echo "Rolled back draft release $TAG. Tag preserved."
-          elif [ "$IS_DRAFT" = "missing" ]; then
+          # Check if the release has assets; if so, refuse automatic rollback
+          # (users may have already downloaded it).
+          ASSETS=$(gh release view "$TAG" --repo murmurlinux/murmur --json assets --jq '.assets | length' 2>/dev/null || echo "missing")
+          if [ "$ASSETS" = "missing" ]; then
             echo "Release $TAG not found; nothing to roll back."
+          elif [ "$ASSETS" = "0" ]; then
+            gh release delete "$TAG" --repo murmurlinux/murmur --yes --cleanup-tag=false
+            echo "Rolled back empty release $TAG. Tag preserved; re-trigger release.yml to retry."
           else
-            echo "::warning::Release $TAG is already published; manual review required."
+            echo "::warning::Release $TAG already has $ASSETS asset(s); refusing automatic rollback. Manual review required."
             exit 1
           fi
 
