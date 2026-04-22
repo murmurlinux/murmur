@@ -8,23 +8,18 @@
   "separate-pull-requests": false,
   "changelog-path": "CHANGELOG.md",
   "packages": {
-    "src-tauri": {
-      "release-type": "rust",
+    ".": {
+      "release-type": "node",
       "package-name": "murmur",
       "component": "murmur",
-      "changelog-path": "../CHANGELOG.md",
       "extra-files": [
         {
           "type": "json",
-          "path": "../package.json",
+          "path": "src-tauri/tauri.conf.json",
           "jsonpath": "$.version"
         },
-        {
-          "type": "json",
-          "path": "tauri.conf.json",
-          "jsonpath": "$.version"
-        },
-        "../README.md"
+        "src-tauri/Cargo.toml",
+        "README.md"
       ]
     }
   }
