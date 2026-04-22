@@ -22,6 +22,8 @@ allowed:
   - .github/scripts/check-repo-structure.py
   - .github/workflows/ci.yml
   - .github/workflows/release.yml
+  - .github/workflows/release-please.yml
+  - .github/workflows/commitlint.yml
   - .github/workflows/public-hygiene.yml
   - .github/workflows/repo-structure.yml
   - .github/workflows/secret-scan.yml
@@ -50,6 +52,11 @@ allowed:
   - tsconfig.json
   - vite.config.ts
   - rust-toolchain.toml
+  - commitlint.config.mjs
+
+  # --- Release automation (release-please manifest mode) ---
+  - release-please-config.json
+  - .release-please-manifest.json
 
   # --- Tauri multi-window entry HTML ---
   - index.html
