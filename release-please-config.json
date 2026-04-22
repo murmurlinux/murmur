@@ -3,6 +3,7 @@
   "bump-minor-pre-major": false,
   "bump-patch-for-minor-pre-major": true,
   "include-v-in-tag": true,
+  "include-component-in-tag": false,
   "draft": false,
   "draft-pull-request": false,
   "separate-pull-requests": false,
@@ -11,14 +12,14 @@
     ".": {
       "release-type": "node",
       "package-name": "murmur",
+      "include-component-in-tag": false,
       "extra-files": [
         {
           "type": "json",
           "path": "src-tauri/tauri.conf.json",
           "jsonpath": "$.version"
         },
-        "src-tauri/Cargo.toml",
-        "README.md"
+        "src-tauri/Cargo.toml"
       ]
     }
   }
