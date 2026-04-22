@@ -40,18 +40,22 @@ Updates automatically via `sudo apt upgrade`.
 
 **AppImage (portable, auto-updates on launch):**
 
+<!-- x-release-please-start-version -->
 ```bash
 wget https://github.com/murmurlinux/murmur/releases/download/v0.3.4/Murmur_0.3.4_amd64.AppImage
 chmod +x Murmur_0.3.4_amd64.AppImage
 ./Murmur_0.3.4_amd64.AppImage
 ```
+<!-- x-release-please-end -->
 
 **.deb direct download (manual updates):**
 
+<!-- x-release-please-start-version -->
 ```bash
 wget https://github.com/murmurlinux/murmur/releases/download/v0.3.4/Murmur_0.3.4_amd64.deb
 sudo dpkg -i Murmur_0.3.4_amd64.deb
 ```
+<!-- x-release-please-end -->
 
 **Uninstall:**
 

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bump-minor-pre-major": false,
+  "bump-patch-for-minor-pre-major": true,
+  "include-v-in-tag": true,
+  "draft": true,
+  "draft-pull-request": false,
+  "separate-pull-requests": false,
+  "changelog-path": "CHANGELOG.md",
+  "packages": {
+    "src-tauri": {
+      "release-type": "rust",
+      "package-name": "murmur",
+      "component": "murmur",
+      "changelog-path": "../CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "../package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "tauri.conf.json",
+          "jsonpath": "$.version"
+        },
+        "../README.md"
+      ]
+    }
+  }
+}
