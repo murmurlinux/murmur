@@ -3,7 +3,7 @@
   "bump-minor-pre-major": false,
   "bump-patch-for-minor-pre-major": true,
   "include-v-in-tag": true,
-  "draft": true,
+  "draft": false,
   "draft-pull-request": false,
   "separate-pull-requests": false,
   "changelog-path": "CHANGELOG.md",
