@@ -1,6 +1,6 @@
 {
   "productName": "Murmur",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "identifier": "com.murmurlinux.murmur",
   "build": {
     "frontendDist": "../dist",
@@ -58,14 +58,21 @@
       "icons/512x512.png",
       "icons/icon.png"
     ],
-    "targets": ["deb", "appimage"],
+    "targets": [
+      "deb",
+      "appimage"
+    ],
     "shortDescription": "AI voice-to-text gadget for Linux",
     "longDescription": "Murmur is a Linux-native voice-to-text desktop gadget. Hold a button or hotkey, speak, and text appears at your cursor in any application. Powered by whisper.cpp for fast local transcription.",
     "homepage": "https://murmurlinux.com",
     "category": "Utility",
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1", "xdotool"],
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libayatana-appindicator3-1",
+          "xdotool"
+        ],
         "section": "utils"
       }
     }
