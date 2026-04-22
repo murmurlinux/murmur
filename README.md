@@ -42,9 +42,9 @@ Updates automatically via `sudo apt upgrade`.
 
 <!-- x-release-please-start-version -->
 ```bash
-wget https://github.com/murmurlinux/murmur/releases/download/v0.3.4/Murmur_0.3.4_amd64.AppImage
-chmod +x Murmur_0.3.4_amd64.AppImage
-./Murmur_0.3.4_amd64.AppImage
+wget https://github.com/murmurlinux/murmur/releases/download/v0.3.5/Murmur_0.3.4_amd64.AppImage
+chmod +x Murmur_0.3.5_amd64.AppImage
+./Murmur_0.3.5_amd64.AppImage
 ```
 <!-- x-release-please-end -->
 
@@ -52,8 +52,8 @@ chmod +x Murmur_0.3.4_amd64.AppImage
 
 <!-- x-release-please-start-version -->
 ```bash
-wget https://github.com/murmurlinux/murmur/releases/download/v0.3.4/Murmur_0.3.4_amd64.deb
-sudo dpkg -i Murmur_0.3.4_amd64.deb
+wget https://github.com/murmurlinux/murmur/releases/download/v0.3.5/Murmur_0.3.4_amd64.deb
+sudo dpkg -i Murmur_0.3.5_amd64.deb
 ```
 <!-- x-release-please-end -->
 
