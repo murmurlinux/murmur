@@ -73,16 +73,22 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Murmur ${{ github.ref_name }}"
-          releaseBody: "See the [CHANGELOG](https://github.com/murmurlinux/murmur/blob/main/CHANGELOG.md) for details."
-          releaseDraft: false
+          # releaseBody omitted: release-please populates the draft with the
+          # generated CHANGELOG section on release cut.
+          releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
+
+      - name: Publish release (flip draft to published)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --draft=false --repo murmurlinux/murmur
 
   update-apt-repo:
     name: Update APT Repository
     needs: build-and-release
     runs-on: ubuntu-latest
-    environment: production
     permissions:
       contents: write
 
@@ -127,3 +133,28 @@ jobs:
           publish_branch: gh-pages
           publish_dir: ./repo
           keep_files: false
+
+  rollback-on-failure:
+    name: Rollback draft release on failure
+    needs: [build-and-release, update-apt-repo]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete draft release if still draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          IS_DRAFT=$(gh release view "$TAG" --repo murmurlinux/murmur --json isDraft --jq '.isDraft' 2>/dev/null || echo "missing")
+          if [ "$IS_DRAFT" = "true" ]; then
+            gh release delete "$TAG" --repo murmurlinux/murmur --yes --cleanup-tag=false
+            echo "Rolled back draft release $TAG. Tag preserved."
+          elif [ "$IS_DRAFT" = "missing" ]; then
+            echo "Release $TAG not found; nothing to roll back."
+          else
+            echo "::warning::Release $TAG is already published; manual review required."
+            exit 1
+          fi
+

@@ -1,0 +1,46 @@
+name: Commit Lint
+
+# Validates that every commit in a PR and the PR title itself follow the
+# Conventional Commits spec. This is what release-please reads to decide
+# the next version bump and to generate the CHANGELOG, so a non-conventional
+# squash-merge subject silently breaks the release pipeline.
+#
+# All untrusted inputs (PR titles, branch SHAs) flow through env vars so
+# they cannot inject shell.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Install commitlint
+        run: |
+          npm install --no-save \
+            @commitlint/cli@^19 \
+            @commitlint/config-conventional@^19
+
+      - name: Lint PR commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx commitlint --from="$BASE_SHA" --to="$HEAD_SHA" --verbose
+
+      - name: Lint PR title (becomes the squash-merge subject)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | npx commitlint --verbose
