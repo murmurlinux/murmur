@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://murmurlinux.com">
-    <img src=".github/banner.png" alt="Murmur: AI voice to text for Linux" width="100%">
+    <img src=".github/banner.png" alt="Murmur: voice dictation for Linux that doesn't suck" width="100%">
   </a>
 </p>
 
@@ -124,7 +124,7 @@ Models auto-download from Hugging Face on first use. SHA256 verified.
 - [ ] Transcript history &mdash; Pro
 - [ ] Voice commands &mdash; Pro
 - [ ] Custom dictionaries / hot words &mdash; Pro
-- [ ] CLI mode &mdash; Pro
+- [x] CLI mode (murmur-cli, v0.2.1) &mdash; Pro
 
 See the full [roadmap](https://murmurlinux.com/about) on our website.
 

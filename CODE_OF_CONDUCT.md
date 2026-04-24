@@ -24,7 +24,7 @@ Examples of unacceptable behavior:
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to [dev@murmurlinux.com](mailto:dev@murmurlinux.com).
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to [hello@murmurlinux.com](mailto:hello@murmurlinux.com).
 
 All complaints will be reviewed and investigated promptly and fairly.
 

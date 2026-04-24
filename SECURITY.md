@@ -7,7 +7,7 @@ If you discover a security vulnerability in Murmur, please report it responsibly
 **Do NOT open a public issue.** Instead:
 
 1. Use GitHub's [private vulnerability reporting](https://github.com/murmurlinux/murmur/security/advisories/new)
-2. Or email [dev@murmurlinux.com](mailto:dev@murmurlinux.com)
+2. Or email [security@murmurlinux.com](mailto:security@murmurlinux.com)
 
 Include:
 - Description of the vulnerability
