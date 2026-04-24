@@ -48,7 +48,7 @@ Updates automatically via `sudo apt upgrade`.
 sudo apt remove murmur
 ```
 
-> Requires: Linux (Ubuntu 22.04+, Fedora 38+, Arch), PipeWire or PulseAudio, xdotool (X11) or wtype (Wayland)
+> Requires: Linux (Ubuntu 22.04+ or Fedora 38+), PipeWire or PulseAudio, xdotool (X11) or wtype (Wayland). Arch support planned via AUR.
 
 ## Build from Source
 
