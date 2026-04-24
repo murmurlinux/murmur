@@ -9,7 +9,7 @@ mod stt;
 pub use audio::capture::{start_capture, AudioLevel, AudioLevelCallback, AutoStopCallback};
 pub use commands::audio::trim_trailing_silence;
 pub use inject::display_server::{self as display_server, DisplayServer};
-pub use inject::paste::sanitise_for_injection;
+pub use inject::paste::{get_last_external_window, paste_text, sanitise_for_injection};
 pub use stt::engine::{SttConfig, SttEngine};
 pub use stt::local_whisper::LocalWhisperEngine;
 pub use stt::model_manager::{
