@@ -85,7 +85,10 @@ jobs:
         working-directory: src-tauri
         run: |
           cargo install cargo-audit --locked || true
-          cargo audit
+          # RUSTSEC-2026-0097: rand 0.8.5 unsoundness, transitive via tauri
+          # html5ever phf_generator. Not exploitable in our usage; ignore
+          # pending upstream bump to rand 0.9.
+          cargo audit --ignore RUSTSEC-2026-0097
 
       # --- Blind property tests (from private test repo) ---
       # Skipped on fork PRs where secrets are unavailable
