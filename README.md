@@ -17,6 +17,8 @@
 
 No cloud. No account. No telemetry. Your voice never leaves your machine.
 
+> Murmur Pro cloud-engine integrations (Groq Whisper, Deepgram Nova-3, LLM cleanup) live in a separate private repository. This repo is the free desktop app and is fully buildable from source, with no closed components, no build-time secrets, and no telemetry.
+
 ## Features
 
 - **100% Offline.** whisper.cpp runs locally on your CPU or GPU. Zero network requests after model download.
