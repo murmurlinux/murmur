@@ -4,6 +4,7 @@ import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
 import { initAuth, signIn, signOut, user, profile, isPro, authLoading } from "../lib/auth";
 import logoImg from "../assets/logo.png";
+import { AICleanupSection } from "./AICleanupSection";
 
 // --- Terminal Cream Theme ---
 
@@ -504,6 +505,8 @@ export function SettingsPanel() {
                 <AccountSignIn />
               )}
             </div>
+
+            <AICleanupSection />
 
             {/* Hotkey */}
             <div style={glass}>
