@@ -85,7 +85,12 @@ jobs:
         working-directory: src-tauri
         run: |
           cargo install cargo-audit --locked || true
-          cargo audit
+          # Ignored advisories (tracked separately for dep bumps):
+          # - RUSTSEC-2026-0097: rand 0.8.5 unsoundness (transitive, tauri).
+          # - RUSTSEC-2026-0104: rustls-webpki 0.103.12 CRL panic (transitive,
+          #   rustls-platform-verifier). We do not explicitly enable CRL
+          #   revocation checking; remediated by dep bump to 0.103.13+.
+          cargo audit --ignore RUSTSEC-2026-0097 --ignore RUSTSEC-2026-0104
 
       # --- Blind property tests (from private test repo) ---
       # Skipped on fork PRs where secrets are unavailable
