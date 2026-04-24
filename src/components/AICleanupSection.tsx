@@ -55,13 +55,14 @@ export function AICleanupSection() {
           Polishes dictated text with an LLM: fixes punctuation, capitalisation, typos, and removes filler words. Your wording is preserved. Runs only when enabled; key stored locally on your device.
         </p>
 
-        <div style={{ display: "flex", "align-items": "center", gap: "12px", "margin-bottom": "12px" }}>
-          <span style={{ "font-size": "13px", color: "#1a1a1a", "font-family": monoFont }}>Enabled</span>
+        <label style={{ display: "flex", "align-items": "center", gap: "12px", "margin-bottom": "12px", cursor: "pointer" }}>
           <input type="checkbox" checked={enabled()} onChange={(e) => setEnabled(e.currentTarget.checked)} />
-        </div>
+          <span style={{ "font-size": "13px", color: "#1a1a1a", "font-family": monoFont }}>Enabled</span>
+        </label>
 
-        <label style={label}>Provider</label>
+        <label for="ai-cleanup-provider" style={label}>Provider</label>
         <select
+          id="ai-cleanup-provider"
           value={provider()}
           onChange={(e) => setProvider(e.currentTarget.value as Provider)}
           style={{ ...inputBase, "margin-bottom": "10px" }}
@@ -73,8 +74,9 @@ export function AICleanupSection() {
           {PROVIDER_DESCRIPTIONS[provider()]}
         </p>
 
-        <label style={label}>API key</label>
+        <label for="ai-cleanup-api-key" style={label}>API key</label>
         <input
+          id="ai-cleanup-api-key"
           type="password"
           value={apiKey()}
           onInput={(e) => setApiKey(e.currentTarget.value)}

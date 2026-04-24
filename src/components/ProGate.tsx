@@ -21,23 +21,24 @@ export function ProGate(props: ProGateProps) {
     <Show
       when={isPro()}
       fallback={
-        <div
-          data-pro-gate={props.feature}
-          aria-disabled="true"
-          aria-label={props.title ? `${props.title} (Pro feature)` : undefined}
-          style={{
-            position: "relative",
-            opacity: "0.55",
-            "pointer-events": "none",
-            "user-select": "none",
-          }}
-        >
+        <div style={{ position: "relative" }}>
+          {/* inert prevents keyboard users from reaching gated controls */}
+          <div
+            inert
+            data-pro-gate={props.feature}
+            aria-label={props.title ? `${props.title} (Pro feature)` : "Pro feature"}
+            style={{
+              opacity: "0.55",
+              "user-select": "none",
+            }}
+          >
+            {props.children}
+          </div>
           <div
             style={{
               position: "absolute",
               top: "0",
               right: "0",
-              "pointer-events": "auto",
               display: "flex",
               "align-items": "center",
               gap: "8px",
@@ -69,10 +70,9 @@ export function ProGate(props: ProGateProps) {
                 "text-decoration": "underline",
               }}
             >
-              Learn more →
+              Learn more <span aria-hidden="true">→</span>
             </a>
           </div>
-          {props.children}
         </div>
       }
     >
