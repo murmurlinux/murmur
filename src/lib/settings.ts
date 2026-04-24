@@ -66,3 +66,39 @@ export interface ModelInfo {
 }
 
 export { DEFAULTS as SETTING_DEFAULTS };
+
+export type CleanupProvider = "groq" | "anthropic";
+
+export interface CleanupSettings {
+  enabled: boolean;
+  provider: CleanupProvider;
+  apiKey: string;
+}
+
+const DEFAULT_CLEANUP: CleanupSettings = {
+  enabled: true,
+  provider: "groq",
+  apiKey: "",
+};
+
+const CLEANUP_STORE_KEY = "cleanup";
+
+export async function loadCleanupSettings(): Promise<CleanupSettings> {
+  const store = await getStore();
+  const val = await store.get<CleanupSettings>(CLEANUP_STORE_KEY);
+  if (val && typeof val === "object") {
+    return { ...DEFAULT_CLEANUP, ...val };
+  }
+  return { ...DEFAULT_CLEANUP };
+}
+
+export async function saveCleanupSetting<K extends keyof CleanupSettings>(
+  key: K,
+  value: CleanupSettings[K],
+): Promise<void> {
+  const current = await loadCleanupSettings();
+  const updated: CleanupSettings = { ...current, [key]: value };
+  const store = await getStore();
+  await store.set(CLEANUP_STORE_KEY, updated);
+  await store.save();
+}
