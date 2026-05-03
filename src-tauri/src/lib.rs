@@ -263,12 +263,12 @@ pub fn run_free() {
         .expect("error while running tauri application");
 }
 
-#[cfg(all(target_os = "linux", feature = "wayland-portal"))]
+#[cfg(target_os = "linux")]
 fn is_wayland_session() -> bool {
     inject::display_server::detect() == inject::display_server::DisplayServer::Wayland
 }
 
-#[cfg(not(all(target_os = "linux", feature = "wayland-portal")))]
+#[cfg(not(target_os = "linux"))]
 fn is_wayland_session() -> bool {
     false
 }

@@ -1,0 +1,13 @@
+# Grant the active local user read access to keyboard input devices so
+# Murmur can detect its global push-to-talk hotkey on Wayland sessions
+# (where the X11 XGrabKey path used by the standard global-shortcut
+# plugin cannot see hardware key events for non-focused windows).
+#
+# `TAG+="uaccess"` causes systemd-logind to ACL these devices to the
+# active session user at login, with no group membership required and
+# no log out / log in dance. See systemd.device(5) for details.
+#
+# Murmur opens these devices read-only. Input is never injected through
+# /dev/input or uinput; text injection uses wtype / xdotool / clipboard
+# fallback at user privilege.
+KERNEL=="event*", SUBSYSTEM=="input", TAG+="uaccess"

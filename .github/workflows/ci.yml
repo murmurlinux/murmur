@@ -72,14 +72,14 @@ jobs:
 
       - name: Rust linting
         working-directory: src-tauri
-        run: cargo clippy --all-features -- -D warnings
+        run: cargo clippy -- -D warnings
 
       - name: Frontend build
         run: pnpm build
 
       - name: Rust check
         working-directory: src-tauri
-        run: cargo check --all-features
+        run: cargo check
 
       - name: Dependency audit
         working-directory: src-tauri

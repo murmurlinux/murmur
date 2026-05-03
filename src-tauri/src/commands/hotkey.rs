@@ -6,7 +6,7 @@ use crate::commands::audio;
 use crate::commands::settings;
 use crate::state::{AppState, RecordingState};
 
-#[cfg(all(target_os = "linux", feature = "wayland-portal"))]
+#[cfg(target_os = "linux")]
 use crate::inject::display_server::{detect as detect_display_server, DisplayServer};
 
 /// The global shortcut that opens the settings window.
@@ -33,20 +33,16 @@ fn is_recording(app: &AppHandle) -> bool {
 /// Called on startup and when the user changes the hotkey.
 ///
 /// On X11 sessions this drives `tauri-plugin-global-shortcut`. On Wayland
-/// sessions the X11 path silently fails (XGrabKey can't see hardware key
-/// events for unfocused windows) so we route through the
-/// `org.freedesktop.portal.GlobalShortcuts` portal via
-/// [`crate::commands::hotkey_wayland`].
+/// sessions the X11 path silently fails (XGrabKey cannot see hardware
+/// key events for unfocused windows under the Wayland security model) so
+/// we read input events directly via [`crate::commands::hotkey_evdev`].
 pub fn register_hotkey(app: &AppHandle, shortcut: &str) -> Result<(), String> {
-    #[cfg(all(target_os = "linux", feature = "wayland-portal"))]
+    #[cfg(target_os = "linux")]
     {
         let ds = detect_display_server();
-        eprintln!(
-            "[murmur:hotkey] register_hotkey('{}') on {:?} session",
-            shortcut, ds
-        );
+        log::info!("register_hotkey('{}') on {:?} session", shortcut, ds);
         if ds == DisplayServer::Wayland {
-            return crate::commands::hotkey_wayland::register(app, shortcut);
+            return crate::commands::hotkey_evdev::register(app, shortcut);
         }
     }
 
