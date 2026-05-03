@@ -1,6 +1,6 @@
 pub mod audio;
 pub mod hotkey;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "wayland-portal"))]
 pub mod hotkey_wayland;
 pub mod models;
 pub mod popup;

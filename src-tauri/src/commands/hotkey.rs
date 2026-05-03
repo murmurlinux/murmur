@@ -6,7 +6,7 @@ use crate::commands::audio;
 use crate::commands::settings;
 use crate::state::{AppState, RecordingState};
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "wayland-portal"))]
 use crate::inject::display_server::{detect as detect_display_server, DisplayServer};
 
 /// The global shortcut that opens the settings window.
@@ -38,7 +38,7 @@ fn is_recording(app: &AppHandle) -> bool {
 /// `org.freedesktop.portal.GlobalShortcuts` portal via
 /// [`crate::commands::hotkey_wayland`].
 pub fn register_hotkey(app: &AppHandle, shortcut: &str) -> Result<(), String> {
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "wayland-portal"))]
     if detect_display_server() == DisplayServer::Wayland {
         return crate::commands::hotkey_wayland::register(app, shortcut);
     }

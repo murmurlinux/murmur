@@ -11,6 +11,14 @@ license = "GPL-3.0"
 name = "murmur_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+default = []
+# Enables the Wayland portal hotkey path (#129). Requires the patched
+# global-hotkey crate (see [patch.crates-io] below). Off by default so
+# downstream workspaces (e.g. the blind test crate) that build murmur_lib
+# without applying the patch still compile.
+wayland-portal = []
+
 [[bin]]
 name = "murmur"
 path = "src/main.rs"

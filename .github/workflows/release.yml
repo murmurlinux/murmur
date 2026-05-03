@@ -78,6 +78,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
+          args: --features wayland-portal
 
   update-apt-repo:
     name: Update APT Repository
