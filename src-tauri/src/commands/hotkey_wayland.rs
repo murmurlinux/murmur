@@ -145,38 +145,47 @@ fn spawn_changed_pump(app: AppHandle, manager: &GlobalHotKeyManager) {
 
 fn handle_event(app: &AppHandle, event: GlobalHotKeyEvent) {
     let id = event.id();
+    let state = event.state();
+    eprintln!(
+        "[murmur:wayland] event received: id={} state={:?}",
+        id, state
+    );
     match id {
-        PTT_ACTION_ID => handle_ptt(app, event.state()),
+        PTT_ACTION_ID => handle_ptt(app, state),
         SETTINGS_ACTION_ID => {
-            if event.state() == HotKeyState::Pressed {
-                log::debug!("Settings shortcut pressed -- opening settings");
+            if state == HotKeyState::Pressed {
+                eprintln!("[murmur:wayland] settings shortcut pressed");
                 settings::open_settings_internal(app);
             }
         }
-        other => log::debug!("Ignoring Wayland hotkey event for unknown id {}", other),
+        other => eprintln!("[murmur:wayland] ignoring event for unknown id {}", other),
     }
 }
 
 fn handle_ptt(app: &AppHandle, state: HotKeyState) {
     let mode = get_record_mode(app);
+    eprintln!(
+        "[murmur:wayland] handle_ptt state={:?} mode={}",
+        state, mode
+    );
     match state {
         HotKeyState::Pressed => {
             if mode == "tap" {
                 if is_recording(app) {
-                    log::debug!("Hotkey tap -- stopping recording");
+                    eprintln!("[murmur:wayland] tap stop");
                     let _ = audio::stop_recording_internal(app.clone());
                 } else {
-                    log::debug!("Hotkey tap -- starting recording");
+                    eprintln!("[murmur:wayland] tap start");
                     let _ = audio::start_recording_internal(app.clone());
                 }
             } else {
-                log::debug!("Hotkey pressed -- starting recording");
+                eprintln!("[murmur:wayland] hold start");
                 let _ = audio::start_recording_internal(app.clone());
             }
         }
         HotKeyState::Released => {
             if mode != "tap" {
-                log::debug!("Hotkey released -- stopping recording");
+                eprintln!("[murmur:wayland] hold stop");
                 let _ = audio::stop_recording_internal(app.clone());
             }
         }
