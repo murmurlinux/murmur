@@ -45,20 +45,23 @@ static MANAGER: OnceLock<GlobalHotKeyManager> = OnceLock::new();
 /// `Settings → Keyboard → Custom Shortcuts`.
 pub fn register(app: &AppHandle, ptt_hotkey: &str) -> Result<(), String> {
     if MANAGER.get().is_some() {
-        log::info!(
-            "Wayland hotkeys already registered. New PTT preference '{}' will take effect on next launch (or via system Keyboard settings).",
+        eprintln!(
+            "[murmur:wayland] hotkeys already registered; ignoring repeat call (preference '{}')",
             ptt_hotkey
         );
         return Ok(());
     }
 
-    let manager = GlobalHotKeyManager::new()
-        .map_err(|e| format!("Failed to create GlobalHotKeyManager: {}", e))?;
+    eprintln!("[murmur:wayland] init: creating GlobalHotKeyManager");
+    let manager = GlobalHotKeyManager::new().map_err(|e| {
+        eprintln!("[murmur:wayland] GlobalHotKeyManager::new failed: {}", e);
+        format!("Failed to create GlobalHotKeyManager: {}", e)
+    })?;
 
     let preferred_ptt = HotKey::from_str(ptt_hotkey).ok();
     if preferred_ptt.is_none() {
-        log::warn!(
-            "Could not parse stored PTT hotkey '{}' as a HotKey. Portal will prompt with no default.",
+        eprintln!(
+            "[murmur:wayland] WARN: could not parse PTT hotkey '{}' (portal will prompt with no default)",
             ptt_hotkey
         );
     }
@@ -73,12 +76,18 @@ pub fn register(app: &AppHandle, ptt_hotkey: &str) -> Result<(), String> {
         ),
     ];
 
-    manager
-        .wl_register_all(APP_ID, &actions)
-        .map_err(|e| format!("wl_register_all failed: {}", e))?;
+    eprintln!(
+        "[murmur:wayland] calling wl_register_all(app_id={}) with {} actions",
+        APP_ID,
+        actions.len()
+    );
+    manager.wl_register_all(APP_ID, &actions).map_err(|e| {
+        eprintln!("[murmur:wayland] wl_register_all FAILED: {}", e);
+        format!("wl_register_all failed: {}", e)
+    })?;
 
-    log::info!(
-        "Registered Wayland global shortcuts via xdg-desktop-portal (app_id={})",
+    eprintln!(
+        "[murmur:wayland] wl_register_all OK; portal binding established for {}",
         APP_ID
     );
 

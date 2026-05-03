@@ -228,6 +228,11 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run_free() {
+    env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Info)
+        .format_timestamp_secs()
+        .init();
+
     let mut builder = tauri::Builder::default()
         .manage(state::AppState::default())
         .plugin(tauri_plugin_store::Builder::new().build())

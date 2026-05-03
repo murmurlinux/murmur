@@ -39,8 +39,15 @@ fn is_recording(app: &AppHandle) -> bool {
 /// [`crate::commands::hotkey_wayland`].
 pub fn register_hotkey(app: &AppHandle, shortcut: &str) -> Result<(), String> {
     #[cfg(all(target_os = "linux", feature = "wayland-portal"))]
-    if detect_display_server() == DisplayServer::Wayland {
-        return crate::commands::hotkey_wayland::register(app, shortcut);
+    {
+        let ds = detect_display_server();
+        eprintln!(
+            "[murmur:hotkey] register_hotkey('{}') on {:?} session",
+            shortcut, ds
+        );
+        if ds == DisplayServer::Wayland {
+            return crate::commands::hotkey_wayland::register(app, shortcut);
+        }
     }
 
     register_x11(app, shortcut)

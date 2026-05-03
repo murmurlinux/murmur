@@ -73,7 +73,8 @@
           "libayatana-appindicator3-1",
           "xdotool"
         ],
-        "section": "utils"
+        "section": "utils",
+        "postInstallScript": "debian/postinst.sh"
       }
     }
   }
