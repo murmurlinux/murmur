@@ -228,11 +228,18 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run_free() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .manage(state::AppState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_process::init());
+
+    // On Wayland the X11 hotkey plugin is bypassed: its set_event_handler call
+    // would swallow events from the portal-backed path used by hotkey_wayland.
+    if !is_wayland_session() {
+        builder = builder.plugin(tauri_plugin_global_shortcut::Builder::new().build());
+    }
+
+    builder
         .invoke_handler(tauri::generate_handler![
             commands::audio::start_recording,
             commands::audio::stop_recording,
@@ -249,4 +256,14 @@ pub fn run_free() {
         .setup(shared_setup)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(target_os = "linux")]
+fn is_wayland_session() -> bool {
+    inject::display_server::detect() == inject::display_server::DisplayServer::Wayland
+}
+
+#[cfg(not(target_os = "linux"))]
+fn is_wayland_session() -> bool {
+    false
 }

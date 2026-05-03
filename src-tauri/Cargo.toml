@@ -29,6 +29,7 @@ cpal = "0.15"
 whisper-rs = { version = "0.16", features = ["vulkan"] }
 arboard = "3"
 tauri-plugin-global-shortcut = "2"
+global-hotkey = "0.7"
 reqwest = { version = "0.13", features = ["stream"] }
 futures-util = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread"] }
@@ -38,4 +39,12 @@ hex = "0.4"
 tauri-plugin-store = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+
+# Wayland global-hotkey support (#129).
+# Vendors tauri-apps/global-hotkey#162 by @Adamskye, which adds the
+# org.freedesktop.portal.GlobalShortcuts backend used on Wayland sessions.
+# Upstream PR is review-ready but unmerged since 2025-11. Drop this patch
+# the moment it lands upstream and bump tauri-plugin-global-shortcut.
+[patch.crates-io]
+global-hotkey = { git = "https://github.com/Adamskye/global-hotkey.git", branch = "wayland_support" }
 
