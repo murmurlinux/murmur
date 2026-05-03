@@ -321,11 +321,7 @@ fn dispatch(app: &AppHandle, action_id: u32, pressed: bool) {
     eprintln!("[murmur:evdev] action_id={} pressed={}", action_id, pressed);
     match action_id {
         PTT_ACTION_ID => handle_ptt(app, pressed),
-        SETTINGS_ACTION_ID => {
-            if pressed {
-                settings::open_settings_internal(app);
-            }
-        }
+        SETTINGS_ACTION_ID if pressed => settings::open_settings_internal(app),
         _ => {}
     }
 }
