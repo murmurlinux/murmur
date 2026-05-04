@@ -32,14 +32,27 @@ case "$1" in
             fi
         fi
 
-        # Reload udev so the input-device ACL rule we ship in
-        # /lib/udev/rules.d/99-murmur.rules takes effect on the user's
-        # next login (and on currently-attached devices via udevadm
-        # trigger). The setgid helper is the fallback for any session
-        # where logind does not apply uaccess (SSH, virt, multi-seat).
+        # Reload udev so the rules we ship in
+        # /lib/udev/rules.d/99-murmur.rules take effect. `event*`
+        # devices live under the `input` subsystem; `uinput` lives
+        # under `misc`. Trigger both.
         if command -v udevadm >/dev/null 2>&1; then
             udevadm control --reload-rules || true
             udevadm trigger --subsystem-match=input || true
+            udevadm trigger --subsystem-match=misc || true
+        fi
+
+        # The /dev/uinput node was created by the kernel at module
+        # load time, BEFORE our udev rule was on the system, so its
+        # owner/mode are still the kernel defaults (root:root 0600).
+        # `udevadm trigger` does not retroactively re-apply
+        # GROUP=/MODE= clauses to existing nodes; only the
+        # OPTIONS+="static_node=uinput" line in our rule fixes that,
+        # and only at next boot. Apply the same perms directly here so
+        # the helper can use uinput in the current session too.
+        if [ -e /dev/uinput ] && getent group input >/dev/null; then
+            chgrp input /dev/uinput || true
+            chmod 0660 /dev/uinput || true
         fi
         ;;
 
