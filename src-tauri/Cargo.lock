@@ -2468,6 +2468,7 @@ dependencies = [
  "futures-util",
  "hex",
  "log",
+ "nix",
  "reqwest",
  "serde",
  "serde_json",

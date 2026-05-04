@@ -15,7 +15,9 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 
 use evdev::{Device, EventSummary, KeyCode, KeyEvent};
@@ -77,30 +79,105 @@ pub fn register(app: &AppHandle, ptt_hotkey: &str) -> Result<(), String> {
         chords[0], chords[1]
     );
 
-    let devices = open_keyboard_devices(&chords)?;
-    if devices.is_empty() {
-        return Err(
-            "Murmur could not access any keyboard devices. Reload udev with \
-             `sudo udevadm control --reload && sudo udevadm trigger`, then restart Murmur."
-                .to_string(),
-        );
-    }
-    eprintln!(
-        "[murmur:evdev] watching {} keyboard device(s)",
-        devices.len()
-    );
-
     let (tx, rx) = std::sync::mpsc::channel::<(KeyCode, i32)>();
 
-    for device in devices {
-        let tx = tx.clone();
-        std::thread::spawn(move || run_device(device, tx));
+    match open_keyboard_devices(&chords) {
+        Ok(devices) if !devices.is_empty() => {
+            eprintln!(
+                "[murmur:evdev] direct path: watching {} keyboard device(s)",
+                devices.len()
+            );
+            for device in devices {
+                let tx = tx.clone();
+                std::thread::spawn(move || run_device(device, tx));
+            }
+        }
+        result => {
+            if matches!(&result, Ok(devices) if devices.is_empty()) {
+                eprintln!(
+                    "[murmur:evdev] direct opens denied or no devices visible; falling back to setgid helper"
+                );
+            } else if let Err(e) = result {
+                eprintln!(
+                    "[murmur:evdev] direct enumeration failed: {}; falling back to setgid helper",
+                    e
+                );
+            }
+            spawn_helper(tx.clone())?;
+        }
     }
 
     let app_clone = app.clone();
     std::thread::spawn(move || run_arbiter(app_clone, chords, rx));
 
     let _ = STARTED.set(());
+    Ok(())
+}
+
+/// Locate the privileged input helper binary. Production install ships it at
+/// `/usr/libexec/murmur/murmur-input-helper`. `MURMUR_INPUT_HELPER` overrides
+/// for dev builds; falling back to a sibling of the running binary is a
+/// last-resort dev convenience.
+fn helper_path() -> Option<PathBuf> {
+    if let Ok(p) = std::env::var("MURMUR_INPUT_HELPER") {
+        return Some(PathBuf::from(p));
+    }
+    let production = Path::new("/usr/libexec/murmur/murmur-input-helper");
+    if production.exists() {
+        return Some(production.to_path_buf());
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let sibling = dir.join("murmur-input-helper");
+            if sibling.exists() {
+                return Some(sibling);
+            }
+        }
+    }
+    None
+}
+
+fn spawn_helper(tx: std::sync::mpsc::Sender<(KeyCode, i32)>) -> Result<(), String> {
+    let path = helper_path().ok_or_else(|| {
+        "Cannot find murmur-input-helper. Reinstall Murmur, or set the \
+         MURMUR_INPUT_HELPER env var to its path."
+            .to_string()
+    })?;
+    eprintln!("[murmur:evdev] spawning helper: {}", path.display());
+
+    let mut child = Command::new(&path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn {}: {}", path.display(), e))?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "helper produced no stdout pipe".to_string())?;
+
+    // Detach the child handle. The helper lives for the murmur process
+    // lifetime; closing our stdout pipe (when we exit) gives it EPIPE on its
+    // next write so it tears down cleanly.
+    std::mem::forget(child);
+
+    std::thread::spawn(move || {
+        let mut reader = BufReader::new(stdout);
+        let mut frame = [0u8; 6];
+        loop {
+            if reader.read_exact(&mut frame).is_err() {
+                eprintln!("[murmur:evdev] helper stdout closed");
+                return;
+            }
+            let code_raw = u16::from_le_bytes([frame[0], frame[1]]);
+            let value = i32::from_le_bytes([frame[2], frame[3], frame[4], frame[5]]);
+            let code = KeyCode::new(code_raw);
+            if tx.send((code, value)).is_err() {
+                return;
+            }
+        }
+    });
+
     Ok(())
 }
 
