@@ -19,8 +19,9 @@ case "$1" in
         # Apply setgid `input` to the privileged keyboard helper so it can
         # open /dev/input/event* without the calling user being in the
         # input group. The helper drops gid back to the caller's real gid
-        # immediately after opening the devices.
-        HELPER=/usr/libexec/murmur/murmur-input-helper
+        # immediately after opening the devices. Same shape as
+        # /usr/bin/dumpcap shipped by the wireshark-common package.
+        HELPER=/usr/bin/murmur-input-helper
         if [ -x "$HELPER" ]; then
             if getent group input >/dev/null; then
                 chown root:input "$HELPER"

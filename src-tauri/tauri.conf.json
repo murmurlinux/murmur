@@ -77,8 +77,7 @@
         "postInstallScript": "debian/postinst.sh",
         "preRemoveScript": "debian/prerm.sh",
         "files": {
-          "/lib/udev/rules.d/99-murmur.rules": "debian/99-murmur.rules",
-          "/usr/libexec/murmur/murmur-input-helper": "../target/release/murmur-input-helper"
+          "/lib/udev/rules.d/99-murmur.rules": "debian/99-murmur.rules"
         }
       }
     }

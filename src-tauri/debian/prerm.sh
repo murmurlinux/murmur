@@ -7,7 +7,7 @@ set -e
 
 case "$1" in
     remove|upgrade|deconfigure|"")
-        HELPER=/usr/libexec/murmur/murmur-input-helper
+        HELPER=/usr/bin/murmur-input-helper
         if [ -e "$HELPER" ]; then
             chmod 0755 "$HELPER" || true
         fi

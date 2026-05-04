@@ -6,6 +6,7 @@ description = "AI voice-to-text gadget for Linux. Speak anywhere, type everywher
 homepage = "https://murmurlinux.com"
 repository = "https://github.com/murmurlinux/murmur"
 license = "GPL-3.0"
+default-run = "murmur"
 
 [lib]
 name = "murmur_lib"
