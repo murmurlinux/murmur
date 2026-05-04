@@ -57,11 +57,3 @@ tauri-plugin-process = "2"
 [target.'cfg(target_os = "linux")'.dependencies]
 evdev = "0.13"
 nix = { version = "0.29", features = ["user"] }
-# Wayland text injection (#137) via xdg-desktop-portal RemoteDesktop +
-# the libei (Emulated Input) socket the portal hands off. wtype's
-# zwp_virtual_keyboard_manager_v1 path is gated to IME clients only on
-# Mutter and KWin since 2024, so the portal route is the production path
-# for GNOME 49 and Plasma 6+. ashpd handles the portal session, consent
-# dialog, and restore_token persistence; we use NotifyKeyboardKeysym for
-# Unicode-safe text emission.
-ashpd = { version = "0.13", features = ["tokio", "remote_desktop", "screencast"], default-features = false }

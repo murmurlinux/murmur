@@ -201,24 +201,25 @@ fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 
 /// Inject text on Wayland.
 ///
-/// Order:
-///   1. xdg-desktop-portal RemoteDesktop (libei). Required path on
-///      GNOME 49 and KDE Plasma 6, where the virtual-keyboard protocol
-///      below is gated to IME clients.
-///   2. wtype via the virtual-keyboard-v1 protocol. Works on
-///      wlroots-family compositors (Hyprland, Sway, river, COSMIC).
-///      Per-compositor priority tweak tracked in #138.
-///   3. Clipboard + synthetic Ctrl+V (best-effort), final fallback.
+/// On Wayland the only universally-working synthetic-input path is
+/// /dev/uinput. We delegate to the privileged `murmur-input-helper`
+/// (already running for the global hotkey) which holds the input gid
+/// and emits Ctrl+V on a virtual keyboard. The transcript was already
+/// placed on the clipboard by the caller; the receiving app handles
+/// the paste.
+///
+/// `wtype` (`zwp_virtual_keyboard_manager_v1`) stays as a degraded
+/// fallback for wlroots-family compositors where it works, but on
+/// GNOME / KDE the helper path is what runs.
 fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
-    match crate::inject::portal_input::type_text(text) {
-        Ok(()) => {
-            log::debug!(
-                "portal typed: {:?}",
-                text.chars().take(50).collect::<String>()
-            );
-            return Ok(());
-        }
-        Err(e) => log::info!("portal injection unavailable ({}); trying wtype", e),
+    if let Err(e) = crate::commands::hotkey_evdev::send_helper_command("paste") {
+        log::info!("helper paste unavailable ({}); trying wtype", e);
+    } else {
+        log::debug!(
+            "helper pasted: {:?}",
+            text.chars().take(50).collect::<String>()
+        );
+        return Ok(());
     }
 
     if is_wtype_available() {
@@ -234,8 +235,6 @@ fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
             Ok(s) => log::warn!("wtype exited with: {}; falling back to Ctrl+V", s),
             Err(e) => log::warn!("wtype failed: {}; falling back to Ctrl+V", e),
         }
-    } else {
-        log::info!("wtype not found; falling back to Ctrl+V");
     }
 
     paste_via_ctrl_v_wayland()

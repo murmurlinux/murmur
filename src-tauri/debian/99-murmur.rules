@@ -11,3 +11,9 @@
 # /dev/input or uinput; text injection uses wtype / xdotool / clipboard
 # fallback at user privilege.
 KERNEL=="event*", SUBSYSTEM=="input", TAG+="uaccess"
+
+# Grant the privileged input helper write access to /dev/uinput so it
+# can synthesise key events for paste-on-transcribe. The helper is the
+# only Murmur binary with this capability (via setgid `input`); the main
+# murmur binary stays unprivileged.
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"

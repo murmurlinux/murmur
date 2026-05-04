@@ -14,13 +14,12 @@
 //! required on stock Ubuntu 26.04 LTS.
 
 use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::OnceLock;
+use std::process::{ChildStdin, Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 
-use evdev::{Device, EventSummary, KeyCode, KeyEvent};
+use evdev::KeyCode;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_store::StoreExt;
 
@@ -36,6 +35,28 @@ const SETTINGS_HOTKEY: &str = "Ctrl+Shift+Comma";
 /// must not spawn duplicate listeners. A future iteration will support
 /// live rebinds without restart.
 static STARTED: OnceLock<()> = OnceLock::new();
+
+/// Writer end of the pipe to the privileged helper. Held for the helper's
+/// lifetime so [`crate::inject::paste`] can ask the helper to synthesise
+/// Ctrl+V on Wayland sessions where wtype is gated by the compositor.
+static HELPER_STDIN: OnceLock<Mutex<ChildStdin>> = OnceLock::new();
+
+/// Send a command line to the privileged helper. Returns `Ok(())` if the
+/// helper is running and the line was written; `Err` if the helper was
+/// never spawned (no Wayland fallback was needed) or the pipe is dead.
+pub fn send_helper_command(line: &str) -> std::io::Result<()> {
+    let stdin = HELPER_STDIN
+        .get()
+        .ok_or_else(|| std::io::Error::other("helper is not running"))?;
+    let mut guard = stdin
+        .lock()
+        .map_err(|_| std::io::Error::other("helper stdin mutex poisoned"))?;
+    guard.write_all(line.as_bytes())?;
+    if !line.ends_with('\n') {
+        guard.write_all(b"\n")?;
+    }
+    guard.flush()
+}
 
 /// A registered hotkey expressed as keycodes the kernel emits.
 ///
@@ -81,31 +102,11 @@ pub fn register(app: &AppHandle, ptt_hotkey: &str) -> Result<(), String> {
 
     let (tx, rx) = std::sync::mpsc::channel::<(KeyCode, i32)>();
 
-    match open_keyboard_devices(&chords) {
-        Ok(devices) if !devices.is_empty() => {
-            eprintln!(
-                "[murmur:evdev] direct path: watching {} keyboard device(s)",
-                devices.len()
-            );
-            for device in devices {
-                let tx = tx.clone();
-                std::thread::spawn(move || run_device(device, tx));
-            }
-        }
-        result => {
-            if matches!(&result, Ok(devices) if devices.is_empty()) {
-                eprintln!(
-                    "[murmur:evdev] direct opens denied or no devices visible; falling back to setgid helper"
-                );
-            } else if let Err(e) = result {
-                eprintln!(
-                    "[murmur:evdev] direct enumeration failed: {}; falling back to setgid helper",
-                    e
-                );
-            }
-            spawn_helper(tx.clone())?;
-        }
-    }
+    // Always spawn the helper. It owns both the evdev read path and the
+    // uinput write path used by the paste-after-transcribe injector. The
+    // helper drops gid back to the caller's after opening the devices, so
+    // only the brief setup window holds elevated privilege.
+    spawn_helper(tx.clone())?;
 
     let app_clone = app.clone();
     std::thread::spawn(move || run_arbiter(app_clone, chords, rx));
@@ -147,6 +148,7 @@ fn spawn_helper(tx: std::sync::mpsc::Sender<(KeyCode, i32)>) -> Result<(), Strin
     eprintln!("[murmur:evdev] spawning helper: {}", path.display());
 
     let mut child = Command::new(&path)
+        .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
@@ -156,11 +158,17 @@ fn spawn_helper(tx: std::sync::mpsc::Sender<(KeyCode, i32)>) -> Result<(), Strin
         .stdout
         .take()
         .ok_or_else(|| "helper produced no stdout pipe".to_string())?;
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "helper produced no stdin pipe".to_string())?;
 
     // Detach the child handle. The helper lives for the murmur process
-    // lifetime; closing our stdout pipe (when we exit) gives it EPIPE on its
-    // next write so it tears down cleanly.
+    // lifetime; closing our pipes (when we exit) gives it EOF/EPIPE so
+    // it tears down cleanly.
     std::mem::forget(child);
+
+    let _ = HELPER_STDIN.set(Mutex::new(stdin));
 
     std::thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
@@ -288,83 +296,6 @@ fn parse_key(lower: &str) -> Option<KeyCode> {
             _ => None,
         },
         _ => None,
-    }
-}
-
-fn open_keyboard_devices(chords: &[Chord]) -> Result<Vec<Device>, String> {
-    let mut wanted: HashSet<KeyCode> = HashSet::new();
-    for c in chords {
-        wanted.insert(c.key);
-        for group in &c.modifier_groups {
-            for k in group {
-                wanted.insert(*k);
-            }
-        }
-    }
-
-    let mut devices: Vec<Device> = Vec::new();
-    let entries = fs::read_dir("/dev/input").map_err(|e| {
-        format!(
-            "Cannot read /dev/input: {}. Is the udev rule installed and reloaded?",
-            e
-        )
-    })?;
-    for entry in entries.flatten() {
-        let path: PathBuf = entry.path();
-        let name = match path.file_name().and_then(|n| n.to_str()) {
-            Some(n) => n,
-            None => continue,
-        };
-        if !name.starts_with("event") {
-            continue;
-        }
-        let device = match Device::open(&path) {
-            Ok(d) => d,
-            Err(e) => {
-                eprintln!(
-                    "[murmur:evdev] skipping {}: {} (likely permissions)",
-                    path.display(),
-                    e
-                );
-                continue;
-            }
-        };
-        let supported = match device.supported_keys() {
-            Some(set) => set,
-            None => continue,
-        };
-        if wanted.iter().any(|k| supported.contains(*k)) {
-            eprintln!(
-                "[murmur:evdev] opened {} ({})",
-                path.display(),
-                device.name().unwrap_or("?")
-            );
-            devices.push(device);
-        }
-    }
-    Ok(devices)
-}
-
-fn run_device(mut device: Device, tx: std::sync::mpsc::Sender<(KeyCode, i32)>) {
-    let name = device.name().unwrap_or("?").to_string();
-    loop {
-        let events = match device.fetch_events() {
-            Ok(events) => events,
-            Err(e) => {
-                eprintln!("[murmur:evdev] {} read error: {}", name, e);
-                return;
-            }
-        };
-        for ev in events {
-            if let EventSummary::Key(KeyEvent { .. }, code, value) = ev.destructure() {
-                if value == 2 {
-                    continue;
-                }
-                if tx.send((code, value)).is_err() {
-                    return;
-                }
-            }
-        }
     }
 }
 
