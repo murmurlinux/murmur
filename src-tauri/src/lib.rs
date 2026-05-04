@@ -205,131 +205,43 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
         })
         .build(app)?;
 
-    // --- Tray icon + tooltip driven by recording state and live mic level ---
+    // --- Tray icon + tooltip driven by recording state ---
     //
-    // Three visible states with five amplitude variants for the recording
-    // glow that responds to the user's voice in real time:
-    //
-    //   idle       -> brand icon                            + "Murmur -- Voice to Text"
-    //   recording  -> red record dot with pulsing glow      + "Murmur -- Recording..."
-    //                 (5 variants 0..4 driven by mic RMS)
-    //   processing -> blue ring                             + "Murmur -- Processing..."
+    //   idle       -> brand icon       + "Murmur -- Voice to Text"
+    //   recording  -> red record dot   + "Murmur -- Recording..."
+    //   processing -> green ring       + "Murmur -- Processing..."
     //
     // On Wayland this is the only recording indicator (the popup pill is
-    // suppressed there because Wayland forbids absolute window positioning,
+    // suppressed because Wayland forbids absolute window positioning,
     // see murmurlinux/internal#136). On X11 the pill still shows; the
-    // tray animation is additive.
-    let idle_icon = std::sync::Arc::new(
-        tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png"))
-            .expect("idle tray icon failed to load"),
-    );
-    let recording_icons: std::sync::Arc<[tauri::image::Image]> = std::sync::Arc::from([
-        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording-0.png"))
-            .expect("recording-0 icon failed to load"),
-        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording-1.png"))
-            .expect("recording-1 icon failed to load"),
-        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording-2.png"))
-            .expect("recording-2 icon failed to load"),
-        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording-3.png"))
-            .expect("recording-3 icon failed to load"),
-        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording-4.png"))
-            .expect("recording-4 icon failed to load"),
-    ]);
-    let processing_icon = std::sync::Arc::new(
+    // tray indicator is additive.
+    let idle_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png"))
+        .expect("idle tray icon failed to load");
+    let recording_icon =
+        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording.png"))
+            .expect("recording tray icon failed to load");
+    let processing_icon =
         tauri::image::Image::from_bytes(include_bytes!("../icons/icon-processing.png"))
-            .expect("processing tray icon failed to load"),
-    );
+            .expect("processing tray icon failed to load");
 
-    // Shared across both listeners. STATE_RECORDING (1) is the only state
-    // that lets the audio-level handler touch the icon.
-    const STATE_IDLE: u8 = 0;
-    const STATE_RECORDING: u8 = 1;
-    const STATE_PROCESSING: u8 = 2;
+    let handle_for_tray = app.handle().clone();
+    app.listen("recording-state", move |event| {
+        let state = serde_json::from_str::<serde_json::Value>(event.payload())
+            .ok()
+            .and_then(|v| v.get("state").and_then(|s| s.as_str().map(String::from)))
+            .unwrap_or_default();
 
-    let current_state = std::sync::Arc::new(std::sync::atomic::AtomicU8::new(STATE_IDLE));
-    let last_level_update_ms = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+        let (icon, tooltip) = match state.as_str() {
+            "recording" => (&recording_icon, "Murmur -- Recording..."),
+            "processing" => (&processing_icon, "Murmur -- Processing..."),
+            _ => (&idle_icon, "Murmur -- Voice to Text"),
+        };
 
-    {
-        let handle = app.handle().clone();
-        let state = current_state.clone();
-        let idle = idle_icon.clone();
-        let recording = recording_icons.clone();
-        let processing = processing_icon.clone();
-        app.listen("recording-state", move |event| {
-            let payload_state = serde_json::from_str::<serde_json::Value>(event.payload())
-                .ok()
-                .and_then(|v| v.get("state").and_then(|s| s.as_str().map(String::from)))
-                .unwrap_or_default();
-
-            let (code, icon_clone, tooltip): (u8, tauri::image::Image, &str) =
-                match payload_state.as_str() {
-                    "recording" => (
-                        STATE_RECORDING,
-                        recording[0].clone(),
-                        "Murmur -- Recording...",
-                    ),
-                    "processing" => (
-                        STATE_PROCESSING,
-                        (*processing).clone(),
-                        "Murmur -- Processing...",
-                    ),
-                    _ => (STATE_IDLE, (*idle).clone(), "Murmur -- Voice to Text"),
-                };
-
-            state.store(code, std::sync::atomic::Ordering::Relaxed);
-            if let Some(tray) = handle.tray_by_id(TRAY_ID) {
-                let _ = tray.set_icon(Some(icon_clone));
-                let _ = tray.set_tooltip(Some(tooltip));
-            }
-        });
-    }
-
-    // audio-level fires at ~60Hz from the capture thread. Throttle tray
-    // updates to ~10Hz so the kernel and tray bus are not overloaded.
-    {
-        let handle = app.handle().clone();
-        let state = current_state.clone();
-        let last_ms = last_level_update_ms.clone();
-        let recording = recording_icons.clone();
-        app.listen("audio-level", move |event| {
-            if state.load(std::sync::atomic::Ordering::Relaxed) != STATE_RECORDING {
-                return;
-            }
-            let now_ms = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis() as u64)
-                .unwrap_or(0);
-            let prev = last_ms.load(std::sync::atomic::Ordering::Relaxed);
-            if now_ms.saturating_sub(prev) < 100 {
-                return;
-            }
-            last_ms.store(now_ms, std::sync::atomic::Ordering::Relaxed);
-
-            let rms = serde_json::from_str::<serde_json::Value>(event.payload())
-                .ok()
-                .and_then(|v| v.get("rms").and_then(|r| r.as_f64()))
-                .unwrap_or(0.0);
-
-            // Empirical thresholds tuned for normal speech-volume RMS in
-            // 0.0-1.0. Quiet rooms sit around 0.02; conversational
-            // dictation is 0.08-0.20; loud emphasis 0.30+.
-            let variant = if rms < 0.03 {
-                0
-            } else if rms < 0.08 {
-                1
-            } else if rms < 0.18 {
-                2
-            } else if rms < 0.32 {
-                3
-            } else {
-                4
-            };
-
-            if let Some(tray) = handle.tray_by_id(TRAY_ID) {
-                let _ = tray.set_icon(Some(recording[variant].clone()));
-            }
-        });
-    }
+        if let Some(tray) = handle_for_tray.tray_by_id(TRAY_ID) {
+            let _ = tray.set_icon(Some(icon.clone()));
+            let _ = tray.set_tooltip(Some(tooltip));
+        }
+    });
 
     Ok(())
 }
