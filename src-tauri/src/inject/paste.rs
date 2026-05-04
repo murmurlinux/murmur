@@ -25,12 +25,20 @@ pub fn is_xdotool_available() -> bool {
 }
 
 /// Check if wtype is available on the system.
+///
+/// `wtype` does not have a `--version` or `--help` flag — it interprets
+/// every argument as text to type. So we probe by looking it up on PATH
+/// via `which`, falling back to a stat of `/usr/bin/wtype`.
 fn is_wtype_available() -> bool {
-    Command::new("wtype")
-        .arg("--version")
+    if Command::new("which")
+        .arg("wtype")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
+    {
+        return true;
+    }
+    std::path::Path::new("/usr/bin/wtype").exists()
 }
 
 // ---------------------------------------------------------------------------
@@ -191,12 +199,30 @@ fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 // Wayland injection (wtype + clipboard fallback)
 // ---------------------------------------------------------------------------
 
-/// Inject text on Wayland via wtype, falling back to clipboard + Ctrl+V.
+/// Inject text on Wayland.
+///
+/// Order:
+///   1. xdg-desktop-portal RemoteDesktop (libei). Required path on
+///      GNOME 49 and KDE Plasma 6, where the virtual-keyboard protocol
+///      below is gated to IME clients.
+///   2. wtype via the virtual-keyboard-v1 protocol. Works on
+///      wlroots-family compositors (Hyprland, Sway, river, COSMIC).
+///      Per-compositor priority tweak tracked in #138.
+///   3. Clipboard + synthetic Ctrl+V (best-effort), final fallback.
 fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
-    // Try wtype first -- Wayland-native, supports Unicode/CJK
+    match crate::inject::portal_input::type_text(text) {
+        Ok(()) => {
+            log::debug!(
+                "portal typed: {:?}",
+                text.chars().take(50).collect::<String>()
+            );
+            return Ok(());
+        }
+        Err(e) => log::info!("portal injection unavailable ({}); trying wtype", e),
+    }
+
     if is_wtype_available() {
         let status = Command::new("wtype").arg("--").arg(text).status();
-
         match status {
             Ok(s) if s.success() => {
                 log::debug!(
@@ -205,18 +231,13 @@ fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
                 );
                 return Ok(());
             }
-            Ok(s) => {
-                log::warn!("wtype exited with: {}. Trying Ctrl+V fallback.", s);
-            }
-            Err(e) => {
-                log::warn!("wtype failed: {}. Trying Ctrl+V fallback.", e);
-            }
+            Ok(s) => log::warn!("wtype exited with: {}; falling back to Ctrl+V", s),
+            Err(e) => log::warn!("wtype failed: {}; falling back to Ctrl+V", e),
         }
     } else {
-        log::info!("wtype not found. Using clipboard + Ctrl+V fallback.");
+        log::info!("wtype not found; falling back to Ctrl+V");
     }
 
-    // Fallback: clipboard is already set by caller, simulate Ctrl+V
     paste_via_ctrl_v_wayland()
 }
 
