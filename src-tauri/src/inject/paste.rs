@@ -25,12 +25,20 @@ pub fn is_xdotool_available() -> bool {
 }
 
 /// Check if wtype is available on the system.
+///
+/// `wtype` does not have a `--version` or `--help` flag — it interprets
+/// every argument as text to type. So we probe by looking it up on PATH
+/// via `which`, falling back to a stat of `/usr/bin/wtype`.
 fn is_wtype_available() -> bool {
-    Command::new("wtype")
-        .arg("--version")
+    if Command::new("which")
+        .arg("wtype")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
+    {
+        return true;
+    }
+    std::path::Path::new("/usr/bin/wtype").exists()
 }
 
 // ---------------------------------------------------------------------------
@@ -191,33 +199,58 @@ fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 // Wayland injection (wtype + clipboard fallback)
 // ---------------------------------------------------------------------------
 
-/// Inject text on Wayland via wtype, falling back to clipboard + Ctrl+V.
+/// Inject text on Wayland.
+///
+/// On Wayland the only universally-working synthetic-input path is
+/// /dev/uinput. We delegate to the privileged `murmur-input-helper`
+/// (already running for the global hotkey) which holds the input gid
+/// and types each character as a real key event. This works in
+/// terminals (which do not honour synthetic Ctrl+V), text editors,
+/// browsers, and any app that accepts keyboard input.
+///
+/// `wtype` (`zwp_virtual_keyboard_manager_v1`) stays as a degraded
+/// fallback for wlroots-family compositors where it works, but on
+/// GNOME / KDE the helper path is what runs.
 fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
-    // Try wtype first -- Wayland-native, supports Unicode/CJK
+    let stripped = strip_for_helper(text);
+    let cmd = format!("type {}", stripped);
+    if let Err(e) = crate::commands::hotkey_evdev::send_helper_command(&cmd) {
+        log::info!("helper type unavailable ({}); trying wtype", e);
+    } else {
+        log::info!(
+            "helper typed: {:?}",
+            stripped.chars().take(50).collect::<String>()
+        );
+        return Ok(());
+    }
+
     if is_wtype_available() {
         let status = Command::new("wtype").arg("--").arg(text).status();
-
         match status {
             Ok(s) if s.success() => {
-                log::debug!(
+                log::info!(
                     "wtype typed: {:?}",
                     text.chars().take(50).collect::<String>()
                 );
                 return Ok(());
             }
-            Ok(s) => {
-                log::warn!("wtype exited with: {}. Trying Ctrl+V fallback.", s);
-            }
-            Err(e) => {
-                log::warn!("wtype failed: {}. Trying Ctrl+V fallback.", e);
-            }
+            Ok(s) => log::warn!("wtype exited with: {}; falling back to Ctrl+V", s),
+            Err(e) => log::warn!("wtype failed: {}; falling back to Ctrl+V", e),
         }
-    } else {
-        log::info!("wtype not found. Using clipboard + Ctrl+V fallback.");
     }
 
-    // Fallback: clipboard is already set by caller, simulate Ctrl+V
     paste_via_ctrl_v_wayland()
+}
+
+/// Drop characters that would break the helper's line-oriented stdin
+/// protocol. The helper's `type` command takes the rest of the line as
+/// the text to type; embedded newlines would split into multiple
+/// commands, the second of which would be parsed as an unknown command.
+/// Whisper rarely emits `\n`, but if it does we strip it for now and
+/// will switch to a length-prefixed binary protocol when we add
+/// multi-paragraph dictation.
+fn strip_for_helper(text: &str) -> String {
+    text.chars().filter(|c| *c != '\n' && *c != '\r').collect()
 }
 
 /// Simulate Ctrl+V on Wayland via wtype key simulation.
