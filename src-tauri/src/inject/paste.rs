@@ -204,20 +204,22 @@ fn paste_text_x11(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
 /// On Wayland the only universally-working synthetic-input path is
 /// /dev/uinput. We delegate to the privileged `murmur-input-helper`
 /// (already running for the global hotkey) which holds the input gid
-/// and emits Ctrl+V on a virtual keyboard. The transcript was already
-/// placed on the clipboard by the caller; the receiving app handles
-/// the paste.
+/// and types each character as a real key event. This works in
+/// terminals (which do not honour synthetic Ctrl+V), text editors,
+/// browsers, and any app that accepts keyboard input.
 ///
 /// `wtype` (`zwp_virtual_keyboard_manager_v1`) stays as a degraded
 /// fallback for wlroots-family compositors where it works, but on
 /// GNOME / KDE the helper path is what runs.
 fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
-    if let Err(e) = crate::commands::hotkey_evdev::send_helper_command("paste") {
-        log::info!("helper paste unavailable ({}); trying wtype", e);
+    let stripped = strip_for_helper(text);
+    let cmd = format!("type {}", stripped);
+    if let Err(e) = crate::commands::hotkey_evdev::send_helper_command(&cmd) {
+        log::info!("helper type unavailable ({}); trying wtype", e);
     } else {
-        log::debug!(
-            "helper pasted: {:?}",
-            text.chars().take(50).collect::<String>()
+        log::info!(
+            "helper typed: {:?}",
+            stripped.chars().take(50).collect::<String>()
         );
         return Ok(());
     }
@@ -226,7 +228,7 @@ fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
         let status = Command::new("wtype").arg("--").arg(text).status();
         match status {
             Ok(s) if s.success() => {
-                log::debug!(
+                log::info!(
                     "wtype typed: {:?}",
                     text.chars().take(50).collect::<String>()
                 );
@@ -238,6 +240,17 @@ fn paste_text_wayland(text: &str) -> Result<(), anyhow::Error> {
     }
 
     paste_via_ctrl_v_wayland()
+}
+
+/// Drop characters that would break the helper's line-oriented stdin
+/// protocol. The helper's `type` command takes the rest of the line as
+/// the text to type; embedded newlines would split into multiple
+/// commands, the second of which would be parsed as an unknown command.
+/// Whisper rarely emits `\n`, but if it does we strip it for now and
+/// will switch to a length-prefixed binary protocol when we add
+/// multi-paragraph dictation.
+fn strip_for_helper(text: &str) -> String {
+    text.chars().filter(|c| *c != '\n' && *c != '\r').collect()
 }
 
 /// Simulate Ctrl+V on Wayland via wtype key simulation.

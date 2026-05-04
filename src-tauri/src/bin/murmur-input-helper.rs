@@ -120,14 +120,74 @@ fn open_keyboards() -> io::Result<Vec<Device>> {
     Ok(devices)
 }
 
-/// Construct a uinput virtual keyboard with just the keys we need to
-/// synthesise Ctrl+V. Keeping the key set minimal narrows the helper's
-/// blast radius if compromised.
+/// Construct a uinput virtual keyboard covering the keys we need to
+/// type printable ASCII text plus a few control combinations. We
+/// register the full A-Z / 0-9 / common-symbol range so the helper
+/// can synthesise typed transcripts that work in terminals (which do
+/// not honour synthetic Ctrl+V) and any other text input.
 fn build_virtual_keyboard() -> io::Result<VirtualDevice> {
     let mut keys = AttributeSet::<KeyCode>::new();
-    keys.insert(KeyCode::KEY_LEFTCTRL);
-    keys.insert(KeyCode::KEY_LEFTSHIFT);
-    keys.insert(KeyCode::KEY_V);
+    for k in [
+        // Modifiers
+        KeyCode::KEY_LEFTCTRL,
+        KeyCode::KEY_LEFTSHIFT,
+        // Whitespace + control
+        KeyCode::KEY_SPACE,
+        KeyCode::KEY_ENTER,
+        KeyCode::KEY_TAB,
+        // Punctuation / symbols on US QWERTY
+        KeyCode::KEY_GRAVE,
+        KeyCode::KEY_MINUS,
+        KeyCode::KEY_EQUAL,
+        KeyCode::KEY_LEFTBRACE,
+        KeyCode::KEY_RIGHTBRACE,
+        KeyCode::KEY_BACKSLASH,
+        KeyCode::KEY_SEMICOLON,
+        KeyCode::KEY_APOSTROPHE,
+        KeyCode::KEY_COMMA,
+        KeyCode::KEY_DOT,
+        KeyCode::KEY_SLASH,
+        // Digits
+        KeyCode::KEY_0,
+        KeyCode::KEY_1,
+        KeyCode::KEY_2,
+        KeyCode::KEY_3,
+        KeyCode::KEY_4,
+        KeyCode::KEY_5,
+        KeyCode::KEY_6,
+        KeyCode::KEY_7,
+        KeyCode::KEY_8,
+        KeyCode::KEY_9,
+        // Letters
+        KeyCode::KEY_A,
+        KeyCode::KEY_B,
+        KeyCode::KEY_C,
+        KeyCode::KEY_D,
+        KeyCode::KEY_E,
+        KeyCode::KEY_F,
+        KeyCode::KEY_G,
+        KeyCode::KEY_H,
+        KeyCode::KEY_I,
+        KeyCode::KEY_J,
+        KeyCode::KEY_K,
+        KeyCode::KEY_L,
+        KeyCode::KEY_M,
+        KeyCode::KEY_N,
+        KeyCode::KEY_O,
+        KeyCode::KEY_P,
+        KeyCode::KEY_Q,
+        KeyCode::KEY_R,
+        KeyCode::KEY_S,
+        KeyCode::KEY_T,
+        KeyCode::KEY_U,
+        KeyCode::KEY_V,
+        KeyCode::KEY_W,
+        KeyCode::KEY_X,
+        KeyCode::KEY_Y,
+        KeyCode::KEY_Z,
+    ] {
+        keys.insert(k);
+    }
 
     VirtualDevice::builder()?
         .name("murmur-virtual-keyboard")
@@ -163,8 +223,7 @@ fn pump_device(mut device: Device, tx: mpsc::Sender<(u16, i32)>) {
 /// a narrow allowlist.
 ///
 /// Commands:
-///   `paste`         emit Ctrl+V on the virtual keyboard
-///   `paste-shift`   emit Ctrl+Shift+V (terminal-friendly variant)
+///   `type <text>`   type the rest of the line as keystrokes (US QWERTY)
 fn stdin_command_loop(uinput: Arc<Mutex<VirtualDevice>>) {
     let stdin = io::stdin();
     let reader = BufReader::new(stdin.lock());
@@ -173,45 +232,160 @@ fn stdin_command_loop(uinput: Arc<Mutex<VirtualDevice>>) {
             Ok(l) => l,
             Err(_) => return,
         };
-        let cmd = line.trim();
-        match cmd {
-            "paste" => {
-                if let Err(e) = emit_ctrl_v(&uinput, false) {
-                    eprintln!("murmur-input-helper: paste failed: {}", e);
-                }
+        if line.is_empty() {
+            continue;
+        }
+        if let Some(text) = line.strip_prefix("type ") {
+            if let Err(e) = emit_typed_text(&uinput, text) {
+                eprintln!("murmur-input-helper: type failed: {}", e);
             }
-            "paste-shift" => {
-                if let Err(e) = emit_ctrl_v(&uinput, true) {
-                    eprintln!("murmur-input-helper: paste-shift failed: {}", e);
-                }
-            }
-            "" => continue,
-            other => eprintln!("murmur-input-helper: unknown command {:?}", other),
+        } else {
+            eprintln!("murmur-input-helper: unknown command {:?}", line);
         }
     }
 }
 
-fn emit_ctrl_v(uinput: &Mutex<VirtualDevice>, with_shift: bool) -> io::Result<()> {
+/// Translate `text` into press/release sequences on the virtual
+/// keyboard, applying Shift where the US QWERTY mapping requires it.
+/// Characters with no mapping are silently skipped -- callers can
+/// inspect their original text against what arrived if they need a
+/// completeness check.
+fn emit_typed_text(uinput: &Mutex<VirtualDevice>, text: &str) -> io::Result<()> {
     let mut dev = uinput
         .lock()
         .map_err(|_| io::Error::other("uinput mutex poisoned"))?;
 
     let key_type = EventType::KEY.0;
-    let mut sequence: Vec<InputEvent> = Vec::with_capacity(8);
-    sequence.push(InputEvent::new(key_type, KeyCode::KEY_LEFTCTRL.0, 1));
-    if with_shift {
-        sequence.push(InputEvent::new(key_type, KeyCode::KEY_LEFTSHIFT.0, 1));
+    let shift_code = KeyCode::KEY_LEFTSHIFT.0;
+    for c in text.chars() {
+        let Some((key, needs_shift)) = char_to_key(c) else {
+            continue;
+        };
+        let mut events: Vec<InputEvent> = Vec::with_capacity(4);
+        if needs_shift {
+            events.push(InputEvent::new(key_type, shift_code, 1));
+        }
+        events.push(InputEvent::new(key_type, key.0, 1));
+        events.push(InputEvent::new(key_type, key.0, 0));
+        if needs_shift {
+            events.push(InputEvent::new(key_type, shift_code, 0));
+        }
+        dev.emit(&events)?;
     }
-    sequence.push(InputEvent::new(key_type, KeyCode::KEY_V.0, 1));
-    sequence.push(InputEvent::new(key_type, KeyCode::KEY_V.0, 0));
-    if with_shift {
-        sequence.push(InputEvent::new(key_type, KeyCode::KEY_LEFTSHIFT.0, 0));
-    }
-    sequence.push(InputEvent::new(key_type, KeyCode::KEY_LEFTCTRL.0, 0));
-
-    dev.emit(&sequence)?;
-    // Tiny breath so the receiving app processes the chord before we
-    // tear down the session.
+    // Tiny breath so the receiving app drains the queue before any
+    // follow-up work happens on our side.
     thread::sleep(Duration::from_millis(5));
     Ok(())
+}
+
+/// Map a Unicode `char` to the keycode + shift state that produces it
+/// on a US QWERTY layout. Returns `None` for chars we cannot type
+/// (non-ASCII, or symbols outside the printable range).
+#[allow(clippy::too_many_lines)]
+fn char_to_key(c: char) -> Option<(KeyCode, bool)> {
+    Some(match c {
+        // Whitespace / control
+        ' ' => (KeyCode::KEY_SPACE, false),
+        '\n' => (KeyCode::KEY_ENTER, false),
+        '\t' => (KeyCode::KEY_TAB, false),
+        // Letters
+        'a' => (KeyCode::KEY_A, false),
+        'b' => (KeyCode::KEY_B, false),
+        'c' => (KeyCode::KEY_C, false),
+        'd' => (KeyCode::KEY_D, false),
+        'e' => (KeyCode::KEY_E, false),
+        'f' => (KeyCode::KEY_F, false),
+        'g' => (KeyCode::KEY_G, false),
+        'h' => (KeyCode::KEY_H, false),
+        'i' => (KeyCode::KEY_I, false),
+        'j' => (KeyCode::KEY_J, false),
+        'k' => (KeyCode::KEY_K, false),
+        'l' => (KeyCode::KEY_L, false),
+        'm' => (KeyCode::KEY_M, false),
+        'n' => (KeyCode::KEY_N, false),
+        'o' => (KeyCode::KEY_O, false),
+        'p' => (KeyCode::KEY_P, false),
+        'q' => (KeyCode::KEY_Q, false),
+        'r' => (KeyCode::KEY_R, false),
+        's' => (KeyCode::KEY_S, false),
+        't' => (KeyCode::KEY_T, false),
+        'u' => (KeyCode::KEY_U, false),
+        'v' => (KeyCode::KEY_V, false),
+        'w' => (KeyCode::KEY_W, false),
+        'x' => (KeyCode::KEY_X, false),
+        'y' => (KeyCode::KEY_Y, false),
+        'z' => (KeyCode::KEY_Z, false),
+        'A' => (KeyCode::KEY_A, true),
+        'B' => (KeyCode::KEY_B, true),
+        'C' => (KeyCode::KEY_C, true),
+        'D' => (KeyCode::KEY_D, true),
+        'E' => (KeyCode::KEY_E, true),
+        'F' => (KeyCode::KEY_F, true),
+        'G' => (KeyCode::KEY_G, true),
+        'H' => (KeyCode::KEY_H, true),
+        'I' => (KeyCode::KEY_I, true),
+        'J' => (KeyCode::KEY_J, true),
+        'K' => (KeyCode::KEY_K, true),
+        'L' => (KeyCode::KEY_L, true),
+        'M' => (KeyCode::KEY_M, true),
+        'N' => (KeyCode::KEY_N, true),
+        'O' => (KeyCode::KEY_O, true),
+        'P' => (KeyCode::KEY_P, true),
+        'Q' => (KeyCode::KEY_Q, true),
+        'R' => (KeyCode::KEY_R, true),
+        'S' => (KeyCode::KEY_S, true),
+        'T' => (KeyCode::KEY_T, true),
+        'U' => (KeyCode::KEY_U, true),
+        'V' => (KeyCode::KEY_V, true),
+        'W' => (KeyCode::KEY_W, true),
+        'X' => (KeyCode::KEY_X, true),
+        'Y' => (KeyCode::KEY_Y, true),
+        'Z' => (KeyCode::KEY_Z, true),
+        // Digits
+        '0' => (KeyCode::KEY_0, false),
+        '1' => (KeyCode::KEY_1, false),
+        '2' => (KeyCode::KEY_2, false),
+        '3' => (KeyCode::KEY_3, false),
+        '4' => (KeyCode::KEY_4, false),
+        '5' => (KeyCode::KEY_5, false),
+        '6' => (KeyCode::KEY_6, false),
+        '7' => (KeyCode::KEY_7, false),
+        '8' => (KeyCode::KEY_8, false),
+        '9' => (KeyCode::KEY_9, false),
+        // Shifted digits (US QWERTY)
+        ')' => (KeyCode::KEY_0, true),
+        '!' => (KeyCode::KEY_1, true),
+        '@' => (KeyCode::KEY_2, true),
+        '#' => (KeyCode::KEY_3, true),
+        '$' => (KeyCode::KEY_4, true),
+        '%' => (KeyCode::KEY_5, true),
+        '^' => (KeyCode::KEY_6, true),
+        '&' => (KeyCode::KEY_7, true),
+        '*' => (KeyCode::KEY_8, true),
+        '(' => (KeyCode::KEY_9, true),
+        // Punctuation
+        '`' => (KeyCode::KEY_GRAVE, false),
+        '~' => (KeyCode::KEY_GRAVE, true),
+        '-' => (KeyCode::KEY_MINUS, false),
+        '_' => (KeyCode::KEY_MINUS, true),
+        '=' => (KeyCode::KEY_EQUAL, false),
+        '+' => (KeyCode::KEY_EQUAL, true),
+        '[' => (KeyCode::KEY_LEFTBRACE, false),
+        '{' => (KeyCode::KEY_LEFTBRACE, true),
+        ']' => (KeyCode::KEY_RIGHTBRACE, false),
+        '}' => (KeyCode::KEY_RIGHTBRACE, true),
+        '\\' => (KeyCode::KEY_BACKSLASH, false),
+        '|' => (KeyCode::KEY_BACKSLASH, true),
+        ';' => (KeyCode::KEY_SEMICOLON, false),
+        ':' => (KeyCode::KEY_SEMICOLON, true),
+        '\'' => (KeyCode::KEY_APOSTROPHE, false),
+        '"' => (KeyCode::KEY_APOSTROPHE, true),
+        ',' => (KeyCode::KEY_COMMA, false),
+        '<' => (KeyCode::KEY_COMMA, true),
+        '.' => (KeyCode::KEY_DOT, false),
+        '>' => (KeyCode::KEY_DOT, true),
+        '/' => (KeyCode::KEY_SLASH, false),
+        '?' => (KeyCode::KEY_SLASH, true),
+        _ => return None,
+    })
 }
