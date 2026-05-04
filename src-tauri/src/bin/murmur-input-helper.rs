@@ -245,6 +245,14 @@ fn stdin_command_loop(uinput: Arc<Mutex<VirtualDevice>>) {
     }
 }
 
+/// Per-character delay between synthetic keystrokes. Without this,
+/// the kernel queues events faster than apps can drain them and chars
+/// get coalesced or dropped, especially on VMs and busy systems. xdotool
+/// defaults to 12ms for the same reason; 10ms is a good middle ground
+/// (~100 chars/sec, faster than any human can type, slow enough that
+/// terminal emulators and Electron apps keep up).
+const PER_KEY_DELAY: Duration = Duration::from_millis(10);
+
 /// Translate `text` into press/release sequences on the virtual
 /// keyboard, applying Shift where the US QWERTY mapping requires it.
 /// Characters with no mapping are silently skipped -- callers can
@@ -271,10 +279,8 @@ fn emit_typed_text(uinput: &Mutex<VirtualDevice>, text: &str) -> io::Result<()> 
             events.push(InputEvent::new(key_type, shift_code, 0));
         }
         dev.emit(&events)?;
+        thread::sleep(PER_KEY_DELAY);
     }
-    // Tiny breath so the receiving app drains the queue before any
-    // follow-up work happens on our side.
-    thread::sleep(Duration::from_millis(5));
     Ok(())
 }
 
