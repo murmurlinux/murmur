@@ -38,8 +38,21 @@ fn get_bottom_center_position(app: &AppHandle) -> (i32, i32) {
 }
 
 /// Show the popup if the main skin is hidden.
+///
+/// On Wayland sessions the popup is suppressed entirely: the compositor
+/// refuses to honour absolute window positioning, so the pill ends up
+/// centre-screen, which looks broken. The tray icon's red recording
+/// dot is the visible indicator there. Tracked in
+/// `murmurlinux/internal#136` until / unless we ship a layer-shell
+/// path for wlroots compositors.
 pub fn show_popup(app: &AppHandle) {
     if !should_show_popup(app) {
+        return;
+    }
+    #[cfg(target_os = "linux")]
+    if crate::inject::display_server::detect()
+        == crate::inject::display_server::DisplayServer::Wayland
+    {
         return;
     }
     if let Some(popup) = app.get_webview_window("popup") {
