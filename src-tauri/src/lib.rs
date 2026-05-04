@@ -205,20 +205,41 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
         })
         .build(app)?;
 
-    // --- Update tray tooltip when recording state changes ---
+    // --- Update tray icon + tooltip when recording state changes ---
+    //
+    // Three states drive the visible tray:
+    //   idle       -> brand icon                + "Murmur -- Voice to Text"
+    //   recording  -> brand icon w/ red dot     + "Murmur -- Recording..."
+    //   processing -> brand icon w/ blue dot    + "Murmur -- Processing..."
+    //
+    // On Wayland this is the only recording indicator (the popup pill is
+    // mid-screen because Wayland forbids absolute window positioning, see
+    // murmurlinux/internal#136). On X11 the pill still shows; the tray
+    // animation is additive.
+    let idle_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png"))
+        .expect("idle tray icon failed to load");
+    let recording_icon =
+        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording.png"))
+            .expect("recording tray icon failed to load");
+    let processing_icon =
+        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-processing.png"))
+            .expect("processing tray icon failed to load");
+
     let handle_for_tray = app.handle().clone();
     app.listen("recording-state", move |event| {
-        let tooltip = serde_json::from_str::<serde_json::Value>(event.payload())
+        let state = serde_json::from_str::<serde_json::Value>(event.payload())
             .ok()
             .and_then(|v| v.get("state").and_then(|s| s.as_str().map(String::from)))
-            .map(|state| match state.as_str() {
-                "recording" => "Murmur -- Recording...",
-                "processing" => "Murmur -- Processing...",
-                _ => "Murmur -- Voice to Text",
-            })
-            .unwrap_or("Murmur -- Voice to Text");
+            .unwrap_or_default();
+
+        let (icon, tooltip) = match state.as_str() {
+            "recording" => (&recording_icon, "Murmur -- Recording..."),
+            "processing" => (&processing_icon, "Murmur -- Processing..."),
+            _ => (&idle_icon, "Murmur -- Voice to Text"),
+        };
 
         if let Some(tray) = handle_for_tray.tray_by_id(TRAY_ID) {
+            let _ = tray.set_icon(Some(icon.clone()));
             let _ = tray.set_tooltip(Some(tooltip));
         }
     });

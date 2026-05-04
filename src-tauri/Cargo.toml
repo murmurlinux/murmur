@@ -25,7 +25,7 @@ required-features = []
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-utils = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
