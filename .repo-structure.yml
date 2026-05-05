@@ -23,6 +23,7 @@ allowed:
   - .github/workflows/ci.yml
   - .github/workflows/release.yml
   - .github/workflows/release-please.yml
+  - .github/workflows/test-build-22.yml
   - .github/workflows/commitlint.yml
   - .github/workflows/public-hygiene.yml
   - .github/workflows/repo-structure.yml
