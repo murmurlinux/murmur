@@ -6,6 +6,9 @@ use crate::commands::audio;
 use crate::commands::settings;
 use crate::state::{AppState, RecordingState};
 
+#[cfg(target_os = "linux")]
+use crate::inject::display_server::{detect as detect_display_server, DisplayServer};
+
 /// The global shortcut that opens the settings window.
 pub const SETTINGS_SHORTCUT: &str = "Ctrl+Shift+,";
 
@@ -29,9 +32,24 @@ fn is_recording(app: &AppHandle) -> bool {
 /// Register the recording hotkey with the given shortcut string.
 /// Called on startup and when the user changes the hotkey.
 ///
-/// This unregisters all shortcuts and re-registers both the recording
-/// hotkey and the settings shortcut, so that both coexist.
+/// On X11 sessions this drives `tauri-plugin-global-shortcut`. On Wayland
+/// sessions the X11 path silently fails (XGrabKey cannot see hardware
+/// key events for unfocused windows under the Wayland security model) so
+/// we read input events directly via [`crate::commands::hotkey_evdev`].
 pub fn register_hotkey(app: &AppHandle, shortcut: &str) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        let ds = detect_display_server();
+        log::info!("register_hotkey('{}') on {:?} session", shortcut, ds);
+        if ds == DisplayServer::Wayland {
+            return crate::commands::hotkey_evdev::register(app, shortcut);
+        }
+    }
+
+    register_x11(app, shortcut)
+}
+
+fn register_x11(app: &AppHandle, shortcut: &str) -> Result<(), String> {
     let gs = app.global_shortcut();
 
     // Unregister any existing shortcuts first
@@ -74,7 +92,7 @@ pub fn register_hotkey(app: &AppHandle, shortcut: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Register the global shortcut that opens the settings window.
+/// Register the global shortcut that opens the settings window (X11 only).
 pub fn register_settings_shortcut(app: &AppHandle) -> Result<(), String> {
     let gs = app.global_shortcut();
 

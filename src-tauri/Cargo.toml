@@ -6,6 +6,7 @@ description = "AI voice-to-text gadget for Linux. Speak anywhere, type everywher
 homepage = "https://murmurlinux.com"
 repository = "https://github.com/murmurlinux/murmur"
 license = "GPL-3.0"
+default-run = "murmur"
 
 [lib]
 name = "murmur_lib"
@@ -15,16 +16,22 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "murmur"
 path = "src/main.rs"
 
+[[bin]]
+name = "murmur-input-helper"
+path = "src/bin/murmur-input-helper.rs"
+required-features = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-utils = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
 log = "0.4"
+env_logger = "0.11"
 cpal = "0.15"
 whisper-rs = { version = "0.16", features = ["vulkan"] }
 arboard = "3"
@@ -39,3 +46,14 @@ tauri-plugin-store = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 
+# Wayland global hotkey support (#129) is implemented via direct evdev
+# reads (see commands/hotkey_evdev.rs). The xdg-desktop-portal
+# GlobalShortcuts API does not deliver reliable Released events for
+# hold-to-talk on GNOME Wayland; evdev is what every comparable Linux
+# voice-to-text app ships. /lib/udev/rules.d/99-murmur.rules grants the
+# active local user read access to /dev/input/event* via systemd-logind
+# session ACLs (TAG+="uaccess"), so no `input` group membership is
+# required on Ubuntu 26.04 LTS.
+[target.'cfg(target_os = "linux")'.dependencies]
+evdev = "0.13"
+nix = { version = "0.29", features = ["user"] }

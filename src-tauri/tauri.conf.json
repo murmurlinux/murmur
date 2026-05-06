@@ -73,7 +73,12 @@
           "libayatana-appindicator3-1",
           "xdotool"
         ],
-        "section": "utils"
+        "section": "utils",
+        "postInstallScript": "debian/postinst.sh",
+        "preRemoveScript": "debian/prerm.sh",
+        "files": {
+          "/lib/udev/rules.d/99-murmur.rules": "debian/99-murmur.rules"
+        }
       }
     }
   }

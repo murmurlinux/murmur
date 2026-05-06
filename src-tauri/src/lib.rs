@@ -205,20 +205,40 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
         })
         .build(app)?;
 
-    // --- Update tray tooltip when recording state changes ---
+    // --- Tray icon + tooltip driven by recording state ---
+    //
+    //   idle       -> brand icon       + "Murmur -- Voice to Text"
+    //   recording  -> red record dot   + "Murmur -- Recording..."
+    //   processing -> green ring       + "Murmur -- Processing..."
+    //
+    // On Wayland this is the only recording indicator (the popup pill is
+    // suppressed because Wayland forbids absolute window positioning,
+    // see murmurlinux/internal#136). On X11 the pill still shows; the
+    // tray indicator is additive.
+    let idle_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png"))
+        .expect("idle tray icon failed to load");
+    let recording_icon =
+        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-recording.png"))
+            .expect("recording tray icon failed to load");
+    let processing_icon =
+        tauri::image::Image::from_bytes(include_bytes!("../icons/icon-processing.png"))
+            .expect("processing tray icon failed to load");
+
     let handle_for_tray = app.handle().clone();
     app.listen("recording-state", move |event| {
-        let tooltip = serde_json::from_str::<serde_json::Value>(event.payload())
+        let state = serde_json::from_str::<serde_json::Value>(event.payload())
             .ok()
             .and_then(|v| v.get("state").and_then(|s| s.as_str().map(String::from)))
-            .map(|state| match state.as_str() {
-                "recording" => "Murmur -- Recording...",
-                "processing" => "Murmur -- Processing...",
-                _ => "Murmur -- Voice to Text",
-            })
-            .unwrap_or("Murmur -- Voice to Text");
+            .unwrap_or_default();
+
+        let (icon, tooltip) = match state.as_str() {
+            "recording" => (&recording_icon, "Murmur -- Recording..."),
+            "processing" => (&processing_icon, "Murmur -- Processing..."),
+            _ => (&idle_icon, "Murmur -- Voice to Text"),
+        };
 
         if let Some(tray) = handle_for_tray.tray_by_id(TRAY_ID) {
+            let _ = tray.set_icon(Some(icon.clone()));
             let _ = tray.set_tooltip(Some(tooltip));
         }
     });
@@ -228,11 +248,23 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run_free() {
-    tauri::Builder::default()
+    env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Info)
+        .format_timestamp_secs()
+        .init();
+
+    let mut builder = tauri::Builder::default()
         .manage(state::AppState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_process::init());
+
+    // On Wayland the X11 hotkey plugin is bypassed: its set_event_handler call
+    // would swallow events from the portal-backed path used by hotkey_wayland.
+    if !is_wayland_session() {
+        builder = builder.plugin(tauri_plugin_global_shortcut::Builder::new().build());
+    }
+
+    builder
         .invoke_handler(tauri::generate_handler![
             commands::audio::start_recording,
             commands::audio::stop_recording,
@@ -249,4 +281,14 @@ pub fn run_free() {
         .setup(shared_setup)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(target_os = "linux")]
+fn is_wayland_session() -> bool {
+    inject::display_server::detect() == inject::display_server::DisplayServer::Wayland
+}
+
+#[cfg(not(target_os = "linux"))]
+fn is_wayland_session() -> bool {
+    false
 }

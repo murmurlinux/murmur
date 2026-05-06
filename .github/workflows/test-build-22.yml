@@ -1,0 +1,108 @@
+name: Test build (Ubuntu 22.04)
+
+# On-demand test build that produces a .deb artifact built on the
+# oldest glibc we support (ubuntu-22.04 = glibc 2.35). Used to verify
+# the matrix coverage for issues like murmurlinux/internal#129 and #143
+# without cutting a release.
+#
+# Triggers:
+#   - pull_request: every push to a PR branch produces a fresh artifact,
+#     downloadable via `gh run download`. Sidesteps local-build flakiness
+#     during upstream incidents (e.g. the Canonical DDoS aftermath of
+#     2026-04-30 — see #143 for context).
+#   - workflow_dispatch: manual ad-hoc trigger for any branch.
+#
+# The output .deb is uploaded as an artifact for ~7 days; long enough
+# for any test cycle, short enough not to bloat the repo.
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build .deb on Ubuntu 22.04
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LunarG Vulkan SDK
+        # 22.04 main archive does not package glslc. LunarG (the company
+        # that maintains the Khronos Vulkan SDK) publishes their own apt
+        # repo for jammy with current glslc + glslangValidator + libs.
+        # Standard pattern across every commercial Linux Vulkan-using
+        # app shipping to LTS Ubuntu versions.
+        run: |
+          wget -qO /tmp/lunarg.asc https://packages.lunarg.com/lunarg-signing-key-pub.asc
+          gpg --dearmor < /tmp/lunarg.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.gpg > /dev/null
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libclang-dev \
+            libvulkan-dev \
+            vulkan-sdk \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            pkg-config \
+            xdotool \
+            wtype \
+            patchelf \
+            librsvg2-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-test22-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-test22-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build .deb (unsigned)
+        # Skips the updater signing step since this is a test artifact,
+        # not a release. Tauri logs an Error on the missing signing
+        # key but the .deb itself is produced successfully.
+        run: |
+          set +e
+          pnpm tauri build --bundles deb
+          test -f src-tauri/target/release/bundle/deb/Murmur_*.deb
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: murmur-22.04-deb
+          path: src-tauri/target/release/bundle/deb/Murmur_*.deb
+          retention-days: 7
