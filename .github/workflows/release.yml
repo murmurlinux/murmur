@@ -11,12 +11,23 @@ env:
 jobs:
   build-and-release:
     name: Build and Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install LunarG Vulkan SDK
+        # 22.04 main archive does not package glslc. LunarG (the company
+        # that maintains the Khronos Vulkan SDK) publishes their own apt
+        # repo for jammy with current glslc + glslangValidator + libs.
+        # Standard pattern across every commercial Linux Vulkan-using
+        # app shipping to LTS Ubuntu versions. See #143.
+        run: |
+          wget -qO /tmp/lunarg.asc https://packages.lunarg.com/lunarg-signing-key-pub.asc
+          gpg --dearmor < /tmp/lunarg.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.gpg > /dev/null
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
 
       - name: Install system dependencies
         run: |
@@ -25,8 +36,7 @@ jobs:
             libasound2-dev \
             libclang-dev \
             libvulkan-dev \
-            glslc \
-            glslang-tools \
+            vulkan-sdk \
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             pkg-config \
@@ -47,8 +57,8 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             src-tauri/target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-release-
+          key: ${{ runner.os }}-cargo-release-22.04-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-release-22.04-
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
