@@ -22,6 +22,11 @@ name: release-please
 on:
   push:
     branches: [main]
+  # Manual re-trigger for recovery scenarios — e.g. when a stuck
+  # `autorelease: pending` label on a prior release PR caused the
+  # action to abort with "untagged, merged release PRs outstanding"
+  # and a fresh evaluation is needed without an actual code commit.
+  workflow_dispatch:
 
 permissions:
   contents: read
