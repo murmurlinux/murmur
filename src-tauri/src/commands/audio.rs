@@ -1,4 +1,5 @@
 use crate::audio::capture;
+use crate::cleanup;
 use crate::inject::paste;
 use crate::state::{AppState, RecordingState};
 use crate::stt::{model_manager, whisper};
@@ -170,6 +171,31 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
         })
         .unwrap_or_else(|| ("en".to_string(), false));
 
+    // Read cleanup config from settings store (nested under "cleanup")
+    let (cleanup_enabled, cleanup_provider, cleanup_api_key) = app
+        .store("settings.json")
+        .ok()
+        .map(|store| {
+            let obj = store.get("cleanup");
+            let enabled = obj
+                .as_ref()
+                .and_then(|v| v.get("enabled"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let provider = obj
+                .as_ref()
+                .and_then(|v| v.get("provider"))
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "groq".to_string());
+            let key = obj
+                .as_ref()
+                .and_then(|v| v.get("apiKey"))
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_default();
+            (enabled, provider, key)
+        })
+        .unwrap_or((false, "groq".to_string(), String::new()));
+
     // Spawn transcription on a background thread
     let active_model = get_active_model(app);
     let app_handle = app.clone();
@@ -209,26 +235,90 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
         let trimmed = trim_trailing_silence(&audio_data, sample_rate);
         let audio_16k = whisper::resample(trimmed, sample_rate, 16000);
 
-        match whisper::transcribe(
+        let text = match whisper::transcribe(
             &model_path.to_string_lossy(),
             &audio_16k,
             &language,
             translate,
         ) {
-            Ok(text) => {
-                let duration_ms = start.elapsed().as_millis() as u64;
-                if !text.is_empty() {
-                    if let Err(e) = paste::paste_text(&text, previous_window.as_deref()) {
-                        log::error!("Paste failed: {}", e);
+            Ok(t) => t,
+            Err(e) => {
+                log::error!("Transcription failed: {}", e);
+                reset_idle();
+                return;
+            }
+        };
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+
+        if text.is_empty() {
+            reset_idle();
+            return;
+        }
+
+        // Run LLM cleanup post-transcription. On any failure (network,
+        // auth, sanity reject, etc.) we fall back to the raw whisper text
+        // and emit a cleanup-status event so the UI can warn the user.
+        // The whole block runs synchronously inside this OS thread so
+        // reqwest::blocking is safe here.
+        let (final_text, cleanup_result) = if cleanup_enabled && !cleanup_api_key.is_empty() {
+            let cl_start = std::time::Instant::now();
+            match cleanup::factory::build_cleanup_service(
+                &cleanup_provider,
+                &cleanup_api_key,
+                cleanup::factory::DEFAULT_TIMEOUT,
+            ) {
+                Ok(svc) => {
+                    let cfg = cleanup::sanity::SanityConfig::default();
+                    match cleanup::run_cleanup(svc.as_ref(), &text, &language, &cfg) {
+                        Ok(cleaned) => {
+                            let ms = cl_start.elapsed().as_millis() as u64;
+                            log::info!("cleanup ok ({}ms via {})", ms, cleanup_provider);
+                            (cleaned, Some(("success", None::<String>, ms)))
+                        }
+                        Err(e) => {
+                            log::warn!("cleanup failed, pasting raw: {e}");
+                            (
+                                text.clone(),
+                                Some((
+                                    "raw_fallback",
+                                    Some(e.to_string()),
+                                    cl_start.elapsed().as_millis() as u64,
+                                )),
+                            )
+                        }
                     }
-                    let _ = app_handle.emit(
-                        "transcription-result",
-                        TranscriptionResult { text, duration_ms },
-                    );
+                }
+                Err(e) => {
+                    log::warn!("cleanup service init failed: {e}");
+                    (text.clone(), Some(("raw_fallback", Some(e), 0u64)))
                 }
             }
-            Err(e) => log::error!("Transcription failed: {}", e),
+        } else {
+            (text.clone(), None)
+        };
+
+        if let Some((status, reason, cl_duration_ms)) = cleanup_result {
+            let _ = app_handle.emit(
+                "cleanup-status",
+                serde_json::json!({
+                    "status": status,
+                    "reason": reason,
+                    "duration_ms": cl_duration_ms,
+                }),
+            );
         }
+
+        if let Err(e) = paste::paste_text(&final_text, previous_window.as_deref()) {
+            log::error!("Paste failed: {}", e);
+        }
+        let _ = app_handle.emit(
+            "transcription-result",
+            TranscriptionResult {
+                text: final_text,
+                duration_ms,
+            },
+        );
 
         reset_idle();
     });
