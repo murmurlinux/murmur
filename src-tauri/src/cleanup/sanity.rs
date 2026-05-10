@@ -6,8 +6,14 @@ pub struct SanityConfig {
 
 impl Default for SanityConfig {
     fn default() -> Self {
+        // min_length_ratio is intentionally loose: filler-heavy
+        // conversational speech compresses ~3x after cleanup
+        // ("um like yeah we should you know ship it" -> "We should
+        // ship it"), and we don't want the sanity check rejecting
+        // legitimate output. 0.3 still catches real truncation
+        // hallucinations once input is more than ~7 characters.
         Self {
-            min_length_ratio: 0.5,
+            min_length_ratio: 0.3,
             max_length_ratio: 2.0,
         }
     }
