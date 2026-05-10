@@ -159,8 +159,20 @@ export function AICleanupSection() {
         }}
       >
         Polishes dictated text with an LLM: fixes punctuation, capitalisation, typos,
-        and removes filler words. Your wording is preserved. Runs only when enabled;
-        key stored locally on your device. Your key, your control. We never see it.
+        and removes filler words. Your wording is preserved. Runs only when enabled.
+        Your key, your control. We never see it.
+      </p>
+      <p
+        style={{
+          "font-size": "11px",
+          color: "#a33a2a",
+          "margin-bottom": "14px",
+          "max-width": "520px",
+        }}
+      >
+        Note: your key is stored as plaintext in your app config. Any process
+        running as your user account can read it. Encrypted OS keyring storage
+        is on the roadmap.
       </p>
 
       <div
