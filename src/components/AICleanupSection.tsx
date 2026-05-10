@@ -44,7 +44,7 @@ const inputBase: JSX.CSSProperties = {
 };
 
 const PROVIDER_DESCRIPTIONS: Record<CleanupProvider, string> = {
-  groq: "Very fast (typically <1s). Cheapest option. Adequate for cleanup tasks. Uses Llama 3.3 70B.",
+  groq: "Very fast (typically <1s). Cheapest option. Llama 3.3 70B inference on Groq LPU hardware. Groq Inc., not xAI's Grok.",
   anthropic: "Higher quality prompt-following. Slightly slower (approx 1-2s). Uses Claude Haiku 4.5.",
   xai: "xAI's Grok 4 Fast (non-reasoning). Different vendor to Groq Inc. Cheap and quick, with more recent training data.",
 };
