@@ -118,9 +118,12 @@ pub fn register(app: &AppHandle, ptt_hotkey: &str) -> Result<(), String> {
 /// Locate the privileged input helper binary. Production install ships it
 /// alongside the main binary at `/usr/bin/murmur-input-helper`, mirroring
 /// the wireshark-common layout for `/usr/bin/dumpcap`. `MURMUR_INPUT_HELPER`
-/// overrides for dev builds; falling back to a sibling of the running
-/// binary is a last-resort dev convenience.
+/// overrides in debug builds only (a process running as the user could
+/// otherwise replace the helper with an attacker-controlled binary on the
+/// next launch); falling back to a sibling of the running binary is a
+/// last-resort dev convenience.
 fn helper_path() -> Option<PathBuf> {
+    #[cfg(debug_assertions)]
     if let Ok(p) = std::env::var("MURMUR_INPUT_HELPER") {
         return Some(PathBuf::from(p));
     }
