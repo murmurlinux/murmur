@@ -90,6 +90,9 @@ export function AICleanupSection() {
           setLastToast(
             `Cleanup unavailable: pasted raw (${e.payload.reason ?? "unknown"})`,
           );
+        } else if (e.payload.status === "success") {
+          // Clear any stale "unavailable" toast once cleanup recovers.
+          setLastToast(null);
         }
       });
       unlistenFallback = await listen<SttFallbackPayload>("stt-fallback", (e) => {
@@ -121,6 +124,10 @@ export function AICleanupSection() {
         apiKey: apiKey(),
       });
       setTestResult(res);
+      if (res.success) {
+        // Test passed -- clear any stale "unavailable" toast.
+        setLastToast(null);
+      }
     } catch (err: unknown) {
       setTestResult({
         success: false,

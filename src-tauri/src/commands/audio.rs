@@ -271,14 +271,11 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
                 Ok(svc) => {
                     let cfg = cleanup::sanity::SanityConfig::default();
                     match cleanup::run_cleanup(svc.as_ref(), &text, &language, &cfg) {
-                        Ok(cleaned) => (
-                            cleaned,
-                            Some((
-                                "success",
-                                None::<String>,
-                                cl_start.elapsed().as_millis() as u64,
-                            )),
-                        ),
+                        Ok(cleaned) => {
+                            let ms = cl_start.elapsed().as_millis() as u64;
+                            log::info!("cleanup ok ({}ms via {})", ms, cleanup_provider);
+                            (cleaned, Some(("success", None::<String>, ms)))
+                        }
                         Err(e) => {
                             log::warn!("cleanup failed, pasting raw: {e}");
                             (
