@@ -18,7 +18,7 @@ export function Select<T extends string | number>(props: {
     props.options.find((o) => o.value === props.value)?.label ?? String(props.value);
 
   const handleClickOutside = (e: MouseEvent) => {
-    if (containerRef && !containerRef.contains(e.target as Node)) {
+    if (!containerRef?.contains(e.target as Node)) {
       setOpen(false);
     }
   };
