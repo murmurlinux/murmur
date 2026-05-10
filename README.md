@@ -21,7 +21,7 @@ No cloud. No account. No telemetry. Your voice never leaves your machine.
 
 ## Features
 
-- **100% Offline.** whisper.cpp runs locally on your CPU or GPU. Zero network requests after model download.
+- **Offline by default.** whisper.cpp runs locally on your CPU or GPU; transcription never leaves your machine. Optional AI cleanup is opt-in and uses your own API key for an external LLM.
 - **Lives in the Tray.** No floating widget, no extra chrome. Click the tray icon to open settings; the app is out of the way until you press the hotkey.
 - **Universal Text Injection.** Types into any app via xdotool (X11) or wtype (Wayland). Terminals, IDEs, browsers, chat. If it has a cursor, Murmur types into it.
 - **Hold or Tap to Record.** Configurable global hotkey. Hold to record and release to transcribe, or tap to toggle. Voice activity detection auto-stops when you finish speaking.
