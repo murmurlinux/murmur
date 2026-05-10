@@ -146,29 +146,6 @@ pub fn sanitise_for_injection(text: &str) -> String {
         .collect()
 }
 
-#[cfg(test)]
-mod sanitise_tests {
-    use super::sanitise_for_injection;
-
-    #[test]
-    fn strips_newlines_and_tabs() {
-        let out = sanitise_for_injection("hello\nworld\there");
-        assert_eq!(out, "helloworldhere");
-    }
-
-    #[test]
-    fn keeps_printable_ascii_and_unicode() {
-        let out = sanitise_for_injection("Hello, world! café 日本語");
-        assert_eq!(out, "Hello, world! café 日本語");
-    }
-
-    #[test]
-    fn strips_other_control_chars() {
-        let out = sanitise_for_injection("a\x07b\x1bc");
-        assert_eq!(out, "abc");
-    }
-}
-
 // ---------------------------------------------------------------------------
 // X11 injection (xdotool -- existing approach)
 // ---------------------------------------------------------------------------
@@ -341,5 +318,28 @@ pub fn paste_text(text: &str, target_window: Option<&str>) -> Result<(), anyhow:
             log::warn!("Unknown display server. Text is on clipboard -- paste manually.");
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod sanitise_tests {
+    use super::sanitise_for_injection;
+
+    #[test]
+    fn strips_newlines_and_tabs() {
+        let out = sanitise_for_injection("hello\nworld\there");
+        assert_eq!(out, "helloworldhere");
+    }
+
+    #[test]
+    fn keeps_printable_ascii_and_unicode() {
+        let out = sanitise_for_injection("Hello, world! café 日本語");
+        assert_eq!(out, "Hello, world! café 日本語");
+    }
+
+    #[test]
+    fn strips_other_control_chars() {
+        let out = sanitise_for_injection("a\x07b\x1bc");
+        assert_eq!(out, "abc");
     }
 }
