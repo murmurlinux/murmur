@@ -6,6 +6,8 @@ import {
   saveCleanupSetting,
   type CleanupProvider,
 } from "../lib/settings";
+import { Toggle } from "./Toggle";
+import { Select } from "./Select";
 
 const monoFont = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
 
@@ -48,9 +50,11 @@ const PROVIDER_DESCRIPTIONS: Record<CleanupProvider, string> = {
 
 type TestCleanupResult = {
   success: boolean;
+  input: string;
   cleaned: string | null;
   error: string | null;
   duration_ms: number;
+  provider: string;
 };
 
 type CleanupStatusPayload = {
@@ -131,9 +135,11 @@ export function AICleanupSection() {
     } catch (err: unknown) {
       setTestResult({
         success: false,
+        input: "",
         cleaned: null,
         error: String(err),
         duration_ms: 0,
+        provider: provider(),
       });
     } finally {
       setTesting(false);
@@ -156,45 +162,41 @@ export function AICleanupSection() {
         key stored locally on your device. Your key, your control. We never see it.
       </p>
 
-      <label
+      <div
         style={{
           display: "flex",
           "align-items": "center",
-          gap: "12px",
-          "margin-bottom": "12px",
-          cursor: "pointer",
+          "justify-content": "space-between",
+          "margin-bottom": "14px",
         }}
       >
-        <input
-          type="checkbox"
-          checked={enabled()}
-          onChange={(e) => {
-            const v = e.currentTarget.checked;
+        <span style={{ "font-size": "13px", color: "#6b655a" }}>Enabled</span>
+        <Toggle
+          value={enabled()}
+          onChange={() => {
+            const v = !enabled();
             setEnabled(v);
             persist("enabled", v);
           }}
         />
-        <span style={{ "font-size": "13px", color: "#1a1a1a", "font-family": monoFont }}>
-          Enabled
-        </span>
-      </label>
+      </div>
 
       <label for="ai-cleanup-provider" style={label}>
         Provider
       </label>
-      <select
-        id="ai-cleanup-provider"
-        value={provider()}
-        onChange={(e) => {
-          const v = e.currentTarget.value as CleanupProvider;
-          setProvider(v);
-          persist("provider", v);
-        }}
-        style={{ ...inputBase, "margin-bottom": "10px" }}
-      >
-        <option value="groq">Groq</option>
-        <option value="anthropic">Anthropic</option>
-      </select>
+      <div style={{ "margin-bottom": "10px" }}>
+        <Select<CleanupProvider>
+          value={provider()}
+          onChange={(v) => {
+            setProvider(v);
+            persist("provider", v);
+          }}
+          options={[
+            { value: "groq", label: "Groq" },
+            { value: "anthropic", label: "Anthropic" },
+          ]}
+        />
+      </div>
       <p style={{ "font-size": "11px", color: "#5a5140", "margin-bottom": "14px" }}>
         {PROVIDER_DESCRIPTIONS[provider()]}
       </p>
@@ -229,9 +231,21 @@ export function AICleanupSection() {
       {testResult() !== null && (
         <div style={{ "margin-top": "10px", "font-size": "12px", "font-family": monoFont }}>
           {testResult()!.success ? (
-            <span style={{ color: "#c9482b" }}>
-              OK: {testResult()!.cleaned} ({testResult()!.duration_ms}ms)
-            </span>
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+              {testResult()!.input && (
+                <div>
+                  <span style={{ color: "#6b655a" }}>Input:&nbsp;</span>
+                  <span style={{ color: "#1a1a1a" }}>{testResult()!.input}</span>
+                </div>
+              )}
+              <div>
+                <span style={{ color: "#6b655a" }}>Output:&nbsp;</span>
+                <span style={{ color: "#c9482b" }}>{testResult()!.cleaned}</span>
+              </div>
+              <div style={{ color: "#6b655a", "font-size": "11px" }}>
+                {testResult()!.duration_ms}ms via {testResult()!.provider}
+              </div>
+            </div>
           ) : (
             <span style={{ color: "#5a5140" }}>Failed: {testResult()!.error}</span>
           )}

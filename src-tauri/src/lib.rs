@@ -24,6 +24,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Listener, Manager,
 };
+use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_store::StoreExt;
 
 const DEFAULT_HOTKEY: &str = "Ctrl+Shift+Space";
@@ -232,8 +233,27 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
             .and_then(|v| v.get("state").and_then(|s| s.as_str().map(String::from)))
             .unwrap_or_default();
 
+        // When transitioning into "processing", check whether the user has
+        // cleanup enabled so the tooltip reflects what's actually happening
+        // mid-dictation. Without this, users have no passive signal that
+        // cleanup is running.
+        let cleanup_enabled = handle_for_tray
+            .store("settings.json")
+            .ok()
+            .map(|s| {
+                s.get("cleanup")
+                    .as_ref()
+                    .and_then(|v| v.get("enabled"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false);
+
         let (icon, tooltip) = match state.as_str() {
             "recording" => (&recording_icon, "Murmur -- Recording..."),
+            "processing" if cleanup_enabled => {
+                (&processing_icon, "Murmur -- Processing (cleanup)...")
+            }
             "processing" => (&processing_icon, "Murmur -- Processing..."),
             _ => (&idle_icon, "Murmur -- Voice to Text"),
         };
@@ -241,6 +261,39 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
         if let Some(tray) = handle_for_tray.tray_by_id(TRAY_ID) {
             let _ = tray.set_icon(Some(icon.clone()));
             let _ = tray.set_tooltip(Some(tooltip));
+        }
+    });
+
+    // Surface cleanup-status raw_fallback events as desktop notifications.
+    // Without this, a silent fallback to raw whisper output gives the user
+    // no signal that cleanup didn't run -- they just see worse text and
+    // assume the model is bad.
+    let handle_for_notification = app.handle().clone();
+    app.listen("cleanup-status", move |event| {
+        let payload: serde_json::Value = match serde_json::from_str(event.payload()) {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        let status = payload
+            .get("status")
+            .and_then(|s| s.as_str())
+            .unwrap_or_default();
+        if status != "raw_fallback" {
+            return;
+        }
+        let reason = payload
+            .get("reason")
+            .and_then(|s| s.as_str())
+            .unwrap_or("unknown");
+        let body = format!("Pasted raw text. Reason: {}", reason);
+        if let Err(e) = handle_for_notification
+            .notification()
+            .builder()
+            .title("AI cleanup unavailable")
+            .body(body)
+            .show()
+        {
+            log::warn!("cleanup-status notification failed: {}", e);
         }
     });
 
@@ -257,7 +310,8 @@ pub fn run_free() {
     let mut builder = tauri::Builder::default()
         .manage(state::AppState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_process::init());
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_notification::init());
 
     // On Wayland the X11 hotkey plugin is bypassed: its set_event_handler call
     // would swallow events from the portal-backed path used by hotkey_wayland.

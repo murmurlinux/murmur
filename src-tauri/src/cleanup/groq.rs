@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::cleanup::{prompt, CleanupError, CleanupService};
+use crate::cleanup::{parse_error_detail, prompt, CleanupError, CleanupService};
 
 const GROQ_DEFAULT_BASE: &str = "https://api.groq.com";
 const GROQ_MODEL: &str = "llama-3.3-70b-versatile";
@@ -62,7 +62,11 @@ impl CleanupService for GroqCleanup {
 
         match status.as_u16() {
             200..=299 => {}
-            401 | 403 => return Err(CleanupError::Auth),
+            401 | 403 => {
+                return Err(CleanupError::Auth {
+                    detail: parse_error_detail(&body_text),
+                })
+            }
             429 => return Err(CleanupError::RateLimit),
             s => {
                 return Err(CleanupError::ProviderError {

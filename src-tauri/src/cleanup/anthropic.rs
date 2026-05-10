@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::cleanup::{prompt, CleanupError, CleanupService};
+use crate::cleanup::{parse_error_detail, prompt, CleanupError, CleanupService};
 
 const ANTHROPIC_DEFAULT_BASE: &str = "https://api.anthropic.com";
 const ANTHROPIC_MODEL: &str = "claude-haiku-4-5";
@@ -65,7 +65,11 @@ impl CleanupService for AnthropicCleanup {
 
         match status.as_u16() {
             200..=299 => {}
-            401 | 403 => return Err(CleanupError::Auth),
+            401 | 403 => {
+                return Err(CleanupError::Auth {
+                    detail: parse_error_detail(&body_text),
+                })
+            }
             429 => return Err(CleanupError::RateLimit),
             s => {
                 return Err(CleanupError::ProviderError {

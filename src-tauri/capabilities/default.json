@@ -21,6 +21,7 @@
     "core:window:allow-inner-size",
     "store:default",
     "updater:default",
-    "process:default"
+    "process:default",
+    "notification:default"
   ]
 }
