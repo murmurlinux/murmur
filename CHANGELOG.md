@@ -2,6 +2,23 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.7](https://github.com/murmurlinux/murmur/compare/v0.3.6...v0.3.7) (2026-05-10)
+
+
+### Features
+
+* add LLM cleanup providers and test_cleanup command to murmur_lib ([#78](https://github.com/murmurlinux/murmur/issues/78)) ([20306d2](https://github.com/murmurlinux/murmur/commit/20306d23e60d7918cfdad237941a3eba8cac6af9))
+* expose paste_text and get_last_external_window in library surface ([#70](https://github.com/murmurlinux/murmur/issues/70)) ([d956245](https://github.com/murmurlinux/murmur/commit/d95624585984f173f5f9b67f92f13e7619d3473c))
+* Pro-gated AI Cleanup settings skeleton ([#69](https://github.com/murmurlinux/murmur/issues/69)) ([5ad158c](https://github.com/murmurlinux/murmur/commit/5ad158cd57b60bd11f2aad1f09d8732eec3a4ebf))
+* run cleanup post-transcription before paste ([#79](https://github.com/murmurlinux/murmur/issues/79)) ([27bde11](https://github.com/murmurlinux/murmur/commit/27bde11e374f1666e67e2a1b1fcca4b770c678b4))
+* **ui:** AI cleanup panel polish + xAI Grok provider ([#80](https://github.com/murmurlinux/murmur/issues/80)) ([8ea368f](https://github.com/murmurlinux/murmur/commit/8ea368ffaf7d03b926576bea26a2d20fa7ff77f1))
+* wire AI Cleanup section to Pro backend ([#71](https://github.com/murmurlinux/murmur/issues/71)) ([b4a924f](https://github.com/murmurlinux/murmur/commit/b4a924faac0e863632051c226db438d5504982f1))
+
+
+### Bug Fixes
+
+* route global hotkey through xdg-desktop-portal on Wayland ([#73](https://github.com/murmurlinux/murmur/issues/73)) ([6230bce](https://github.com/murmurlinux/murmur/commit/6230bcee93497122f4b6504e21cdd9b2fac25478))
+
 ## [0.3.6](https://github.com/murmurlinux/murmur/compare/v0.3.5...v0.3.6) (2026-04-22)
 
 
