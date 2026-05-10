@@ -67,7 +67,7 @@ export interface ModelInfo {
 
 export { DEFAULTS as SETTING_DEFAULTS };
 
-export type CleanupProvider = "groq" | "anthropic";
+export type CleanupProvider = "groq" | "anthropic" | "xai";
 
 export interface CleanupSettings {
   enabled: boolean;

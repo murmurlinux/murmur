@@ -5,6 +5,7 @@ pub mod factory;
 pub mod groq;
 pub mod prompt;
 pub mod sanity;
+pub mod xai;
 
 use std::time::Duration;
 

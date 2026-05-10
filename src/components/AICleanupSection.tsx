@@ -46,6 +46,7 @@ const inputBase: JSX.CSSProperties = {
 const PROVIDER_DESCRIPTIONS: Record<CleanupProvider, string> = {
   groq: "Very fast (typically <1s). Cheapest option. Adequate for cleanup tasks. Uses Llama 3.3 70B.",
   anthropic: "Higher quality prompt-following. Slightly slower (approx 1-2s). Uses Claude Haiku 4.5.",
+  xai: "xAI's Grok 4 Fast (non-reasoning). Different vendor to Groq Inc. Cheap and quick, with more recent training data.",
 };
 
 type TestCleanupResult = {
@@ -194,6 +195,7 @@ export function AICleanupSection() {
           options={[
             { value: "groq", label: "Groq" },
             { value: "anthropic", label: "Anthropic" },
+            { value: "xai", label: "xAI (Grok)" },
           ]}
         />
       </div>

@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use crate::cleanup::{anthropic::AnthropicCleanup, groq::GroqCleanup, CleanupService};
+use crate::cleanup::{
+    anthropic::AnthropicCleanup, groq::GroqCleanup, xai::XaiCleanup, CleanupService,
+};
 
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -19,6 +21,7 @@ fn override_env_var(provider: &str) -> Option<&'static str> {
     match provider {
         "groq" => Some("MURMUR_GROQ_LLM_BASE_URL"),
         "anthropic" => Some("MURMUR_ANTHROPIC_LLM_BASE_URL"),
+        "xai" => Some("MURMUR_XAI_LLM_BASE_URL"),
         _ => None,
     }
 }
@@ -48,6 +51,10 @@ fn build_cleanup_service_with_base(
             Some(b) => AnthropicCleanup::new_with_base(api_key, b, timeout),
             None => AnthropicCleanup::new(api_key, timeout),
         })),
+        "xai" => Ok(Box::new(match base_url {
+            Some(b) => XaiCleanup::new_with_base(api_key, b, timeout),
+            None => XaiCleanup::new(api_key, timeout),
+        })),
         other => Err(format!("unknown cleanup provider: {other}")),
     }
 }
@@ -67,6 +74,11 @@ mod tests {
     }
 
     #[test]
+    fn builds_xai() {
+        assert!(build_cleanup_service("xai", "k", DEFAULT_TIMEOUT).is_ok());
+    }
+
+    #[test]
     fn rejects_unknown_provider() {
         match build_cleanup_service("openai", "k", DEFAULT_TIMEOUT) {
             Err(msg) => assert!(msg.contains("unknown")),
@@ -81,6 +93,7 @@ mod tests {
             override_env_var("anthropic"),
             Some("MURMUR_ANTHROPIC_LLM_BASE_URL")
         );
+        assert_eq!(override_env_var("xai"), Some("MURMUR_XAI_LLM_BASE_URL"));
         assert_eq!(override_env_var("openai"), None);
     }
 
