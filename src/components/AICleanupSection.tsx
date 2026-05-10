@@ -1,7 +1,6 @@
 import { createSignal, onMount, onCleanup, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { ProGate } from "./ProGate";
 import {
   loadCleanupSettings,
   saveCleanupSetting,
@@ -135,117 +134,115 @@ export function AICleanupSection() {
   };
 
   return (
-    <ProGate feature="ai-cleanup" title="AI cleanup">
-      <div style={glass}>
-        <div style={{ ...label, "margin-bottom": "14px" }}>AI cleanup</div>
-        <p
-          style={{
-            "font-size": "12px",
-            color: "#5a5140",
-            "margin-bottom": "14px",
-            "max-width": "520px",
-          }}
-        >
-          Polishes dictated text with an LLM: fixes punctuation, capitalisation, typos,
-          and removes filler words. Your wording is preserved. Runs only when enabled;
-          key stored locally on your device.
-        </p>
+    <div style={glass}>
+      <div style={{ ...label, "margin-bottom": "14px" }}>AI cleanup</div>
+      <p
+        style={{
+          "font-size": "12px",
+          color: "#5a5140",
+          "margin-bottom": "14px",
+          "max-width": "520px",
+        }}
+      >
+        Polishes dictated text with an LLM: fixes punctuation, capitalisation, typos,
+        and removes filler words. Your wording is preserved. Runs only when enabled;
+        key stored locally on your device. Your key, your control. We never see it.
+      </p>
 
-        <label
-          style={{
-            display: "flex",
-            "align-items": "center",
-            gap: "12px",
-            "margin-bottom": "12px",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={enabled()}
-            onChange={(e) => {
-              const v = e.currentTarget.checked;
-              setEnabled(v);
-              persist("enabled", v);
-            }}
-          />
-          <span style={{ "font-size": "13px", color: "#1a1a1a", "font-family": monoFont }}>
-            Enabled
-          </span>
-        </label>
-
-        <label for="ai-cleanup-provider" style={label}>
-          Provider
-        </label>
-        <select
-          id="ai-cleanup-provider"
-          value={provider()}
-          onChange={(e) => {
-            const v = e.currentTarget.value as CleanupProvider;
-            setProvider(v);
-            persist("provider", v);
-          }}
-          style={{ ...inputBase, "margin-bottom": "10px" }}
-        >
-          <option value="groq">Groq</option>
-          <option value="anthropic">Anthropic</option>
-        </select>
-        <p style={{ "font-size": "11px", color: "#5a5140", "margin-bottom": "14px" }}>
-          {PROVIDER_DESCRIPTIONS[provider()]}
-        </p>
-
-        <label for="ai-cleanup-api-key" style={label}>
-          API key
-        </label>
+      <label
+        style={{
+          display: "flex",
+          "align-items": "center",
+          gap: "12px",
+          "margin-bottom": "12px",
+          cursor: "pointer",
+        }}
+      >
         <input
-          id="ai-cleanup-api-key"
-          type="password"
-          value={apiKey()}
-          onInput={(e) => setApiKey(e.currentTarget.value)}
-          onBlur={() => persist("apiKey", apiKey())}
-          placeholder="Paste your BYOK key"
-          style={{ ...inputBase, "margin-bottom": "10px" }}
+          type="checkbox"
+          checked={enabled()}
+          onChange={(e) => {
+            const v = e.currentTarget.checked;
+            setEnabled(v);
+            persist("enabled", v);
+          }}
         />
+        <span style={{ "font-size": "13px", color: "#1a1a1a", "font-family": monoFont }}>
+          Enabled
+        </span>
+      </label>
 
-        <button
-          disabled={testing() || apiKey().length === 0}
-          onClick={runTest}
+      <label for="ai-cleanup-provider" style={label}>
+        Provider
+      </label>
+      <select
+        id="ai-cleanup-provider"
+        value={provider()}
+        onChange={(e) => {
+          const v = e.currentTarget.value as CleanupProvider;
+          setProvider(v);
+          persist("provider", v);
+        }}
+        style={{ ...inputBase, "margin-bottom": "10px" }}
+      >
+        <option value="groq">Groq</option>
+        <option value="anthropic">Anthropic</option>
+      </select>
+      <p style={{ "font-size": "11px", color: "#5a5140", "margin-bottom": "14px" }}>
+        {PROVIDER_DESCRIPTIONS[provider()]}
+      </p>
+
+      <label for="ai-cleanup-api-key" style={label}>
+        API key
+      </label>
+      <input
+        id="ai-cleanup-api-key"
+        type="password"
+        value={apiKey()}
+        onInput={(e) => setApiKey(e.currentTarget.value)}
+        onBlur={() => persist("apiKey", apiKey())}
+        placeholder="Paste your BYOK key"
+        style={{ ...inputBase, "margin-bottom": "10px" }}
+      />
+
+      <button
+        disabled={testing() || apiKey().length === 0}
+        onClick={runTest}
+        style={{
+          ...inputBase,
+          width: "auto",
+          padding: "6px 14px",
+          cursor: testing() || apiKey().length === 0 ? "not-allowed" : "pointer",
+          background: testing() || apiKey().length === 0 ? "#d4c9b5" : "#f5f0e6",
+        }}
+      >
+        {testing() ? "Testing..." : "Test connection"}
+      </button>
+
+      {testResult() !== null && (
+        <div style={{ "margin-top": "10px", "font-size": "12px", "font-family": monoFont }}>
+          {testResult()!.success ? (
+            <span style={{ color: "#c9482b" }}>
+              OK: {testResult()!.cleaned} ({testResult()!.duration_ms}ms)
+            </span>
+          ) : (
+            <span style={{ color: "#5a5140" }}>Failed: {testResult()!.error}</span>
+          )}
+        </div>
+      )}
+
+      {lastToast() !== null && (
+        <div
           style={{
-            ...inputBase,
-            width: "auto",
-            padding: "6px 14px",
-            cursor: testing() || apiKey().length === 0 ? "not-allowed" : "pointer",
-            background: testing() || apiKey().length === 0 ? "#d4c9b5" : "#f5f0e6",
+            "margin-top": "8px",
+            "font-size": "11px",
+            color: "#5a5140",
+            "font-family": monoFont,
           }}
         >
-          {testing() ? "Testing..." : "Test connection"}
-        </button>
-
-        {testResult() !== null && (
-          <div style={{ "margin-top": "10px", "font-size": "12px", "font-family": monoFont }}>
-            {testResult()!.success ? (
-              <span style={{ color: "#c9482b" }}>
-                OK: {testResult()!.cleaned} ({testResult()!.duration_ms}ms)
-              </span>
-            ) : (
-              <span style={{ color: "#5a5140" }}>Failed: {testResult()!.error}</span>
-            )}
-          </div>
-        )}
-
-        {lastToast() !== null && (
-          <div
-            style={{
-              "margin-top": "8px",
-              "font-size": "11px",
-              color: "#5a5140",
-              "font-family": monoFont,
-            }}
-          >
-            {lastToast()}
-          </div>
-        )}
-      </div>
-    </ProGate>
+          {lastToast()}
+        </div>
+      )}
+    </div>
   );
 }

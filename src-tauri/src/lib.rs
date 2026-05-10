@@ -1,4 +1,5 @@
 mod audio;
+pub mod cleanup;
 pub mod commands;
 mod inject;
 pub mod state;
@@ -277,6 +278,7 @@ pub fn run_free() {
             commands::settings::check_microphone,
             commands::settings::list_microphones,
             commands::settings::start_mic_test,
+            commands::llm_cleanup::test_cleanup,
         ])
         .setup(shared_setup)
         .run(tauri::generate_context!())
