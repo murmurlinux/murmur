@@ -17,8 +17,12 @@ static TRACKER_STOP: AtomicBool = AtomicBool::new(false);
 
 /// Check if xdotool is available on the system.
 pub fn is_xdotool_available() -> bool {
+    // `xdotool version` is not a real subcommand and exits with code 1.
+    // The actual flag is `--version`. Using the wrong probe meant this
+    // returned false on every system that had xdotool installed,
+    // silently disabling X11 window tracking.
     Command::new("xdotool")
-        .arg("version")
+        .arg("--version")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
@@ -125,17 +129,44 @@ pub fn get_last_external_window() -> Option<String> {
 /// Sanitise transcribed text for safe injection.
 /// Strips control characters that could produce unintended keystrokes.
 ///
-/// Note: newlines and tabs are intentionally allowed for paragraph dictation.
-/// In terminal emulators, a newline will trigger Enter (command execution).
-/// This is accepted behaviour since voice-to-text is primarily used in text
-/// editors, chat apps, and document fields, not terminals.
+/// Newlines and tabs are stripped. A single hotkey-press dictation does not
+/// legitimately produce them, and allowing them through is a prompt-injection
+/// vector: an LLM-cleanup output containing `\n` types Enter in the focused
+/// window, which in a terminal executes whatever was typed before it. The
+/// cost of stripping is that intentional paragraph-break dictation rounds to
+/// space; the cost of not stripping is unrecoverable command execution.
 pub fn sanitise_for_injection(text: &str) -> String {
     text.chars()
         .filter(|c| {
-            // Allow printable ASCII, newline, tab, and all Unicode above ASCII
-            matches!(*c, '\n' | '\t' | ' '..='~') || (*c as u32 > 127 && !c.is_control())
+            // Allow printable ASCII (excluding newline and tab) and all
+            // non-control Unicode above ASCII. Newlines and tabs are
+            // stripped (see doc comment).
+            matches!(*c, ' '..='~') || (*c as u32 > 127 && !c.is_control())
         })
         .collect()
+}
+
+#[cfg(test)]
+mod sanitise_tests {
+    use super::sanitise_for_injection;
+
+    #[test]
+    fn strips_newlines_and_tabs() {
+        let out = sanitise_for_injection("hello\nworld\there");
+        assert_eq!(out, "helloworldhere");
+    }
+
+    #[test]
+    fn keeps_printable_ascii_and_unicode() {
+        let out = sanitise_for_injection("Hello, world! café 日本語");
+        assert_eq!(out, "Hello, world! café 日本語");
+    }
+
+    #[test]
+    fn strips_other_control_chars() {
+        let out = sanitise_for_injection("a\x07b\x1bc");
+        assert_eq!(out, "abc");
+    }
 }
 
 // ---------------------------------------------------------------------------
