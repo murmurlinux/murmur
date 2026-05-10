@@ -2,21 +2,23 @@ use std::time::Duration;
 
 use crate::cleanup::{parse_error_detail, prompt, CleanupError, CleanupService};
 
-const ANTHROPIC_DEFAULT_BASE: &str = "https://api.anthropic.com";
-const ANTHROPIC_MODEL: &str = "claude-haiku-4-5";
-const ANTHROPIC_VERSION: &str = "2023-06-01";
-const MAX_TOKENS: u32 = 4096;
+const XAI_DEFAULT_BASE: &str = "https://api.x.ai";
+// grok-4-fast-non-reasoning is xAI's cheap and fast variant: no
+// chain-of-thought overhead, suitable for short text cleanup. The
+// reasoning variant adds latency and cost without meaningfully
+// improving the cleanup task surface, so we don't expose it here.
+const XAI_MODEL: &str = "grok-4-fast-non-reasoning";
 
-pub struct AnthropicCleanup {
+pub struct XaiCleanup {
     api_key: String,
     base_url: String,
     timeout: Duration,
     model: String,
 }
 
-impl AnthropicCleanup {
+impl XaiCleanup {
     pub fn new(api_key: &str, timeout: Duration) -> Self {
-        Self::new_with_base(api_key, ANTHROPIC_DEFAULT_BASE, timeout)
+        Self::new_with_base(api_key, XAI_DEFAULT_BASE, timeout)
     }
 
     pub fn new_with_base(api_key: &str, base_url: &str, timeout: Duration) -> Self {
@@ -24,12 +26,12 @@ impl AnthropicCleanup {
             api_key: api_key.to_string(),
             base_url: base_url.trim_end_matches('/').to_string(),
             timeout,
-            model: ANTHROPIC_MODEL.to_string(),
+            model: XAI_MODEL.to_string(),
         }
     }
 }
 
-impl CleanupService for AnthropicCleanup {
+impl CleanupService for XaiCleanup {
     fn cleanup(&self, text: &str, _language: &str) -> Result<String, CleanupError> {
         let client = reqwest::blocking::Client::builder()
             .timeout(self.timeout)
@@ -38,18 +40,20 @@ impl CleanupService for AnthropicCleanup {
 
         let body = serde_json::json!({
             "model": self.model,
-            "max_tokens": MAX_TOKENS,
-            "system": prompt::build_system_prompt(),
+            "temperature": 0.0,
             "messages": [
-                { "role": "user", "content": prompt::build_user_message(text) }
+                { "role": "system", "content": prompt::build_system_prompt() },
+                { "role": "user", "content": prompt::build_user_message(text) },
             ],
         });
 
-        let url = format!("{}/v1/messages", self.base_url);
+        // xAI's chat-completions endpoint is the OpenAI-compatible path
+        // at /v1/chat/completions (not /v1/responses, which is xAI's
+        // newer Responses API and uses a different request shape).
+        let url = format!("{}/v1/chat/completions", self.base_url);
         let response: reqwest::blocking::Response = match client
             .post(&url)
-            .header("x-api-key", &self.api_key)
-            .header("anthropic-version", ANTHROPIC_VERSION)
+            .bearer_auth(&self.api_key)
             .json(&body)
             .send()
         {
@@ -81,8 +85,8 @@ impl CleanupService for AnthropicCleanup {
 
         let json: serde_json::Value = serde_json::from_str(&body_text)
             .map_err(|e| CleanupError::Network(format!("parse: {e}")))?;
-        let text_out = json
-            .pointer("/content/0/text")
+        let content = json
+            .pointer("/choices/0/message/content")
             .and_then(|v| v.as_str())
             .ok_or_else(|| CleanupError::ProviderError {
                 status: 200,
@@ -91,6 +95,6 @@ impl CleanupService for AnthropicCleanup {
             .trim()
             .to_string();
 
-        Ok(text_out)
+        Ok(content)
     }
 }

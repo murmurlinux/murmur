@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { saveSetting, type ModelInfo } from "../lib/settings";
 import logoImg from "../assets/logo.png";
+import { Select } from "./Select";
 
 const ACCENT = "#c9482b";
 
@@ -33,18 +34,6 @@ const btnSecondary = {
   color: "#1a1a1a",
   "font-size": "14px",
   cursor: "pointer",
-};
-
-const selectStyle = {
-  padding: "10px 14px",
-  background: "#f5f0e6",
-  border: "1px solid #1a1a1a",
-  "border-radius": "0",
-  color: "#1a1a1a",
-  "font-size": "13px",
-  cursor: "pointer",
-  width: "100%",
-  appearance: "none" as any,
 };
 
 // Model filename mapping
@@ -345,19 +334,15 @@ export function OnboardingWizard() {
 
             {/* Device selector */}
             <Show when={mics().length > 1}>
-              <select
-                style={selectStyle}
+              <Select<number>
                 value={selectedMic()}
-                onChange={(e) => {
-                  setSelectedMic(parseInt(e.currentTarget.value));
+                onChange={(i) => {
+                  setSelectedMic(i);
                   setMicConfirmed(false);
                   setMicLevel(0);
                 }}
-              >
-                <For each={mics()}>
-                  {(mic, i) => <option value={i()}>{mic.name}</option>}
-                </For>
-              </select>
+                options={mics().map((mic, i) => ({ value: i, label: mic.name }))}
+              />
               <div style={{ height: "10px" }} />
             </Show>
 

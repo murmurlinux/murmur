@@ -5,6 +5,8 @@ import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "
 import { initAuth, signIn, signOut, user, profile, isPro, authLoading } from "../lib/auth";
 import logoImg from "../assets/logo.png";
 import { AICleanupSection } from "./AICleanupSection";
+import { Toggle } from "./Toggle";
+import { Select } from "./Select";
 
 // --- Terminal Cream Theme ---
 
@@ -42,39 +44,6 @@ const inputBase: JSX.CSSProperties = {
   outline: "none",
 };
 
-function Toggle(props: { value: boolean; onChange: () => void; disabled?: boolean }) {
-  return (
-    <button
-      onClick={() => !props.disabled && props.onChange()}
-      style={{
-        width: "40px",
-        height: "22px",
-        "border-radius": "11px",
-        border: "none",
-        cursor: props.disabled ? "not-allowed" : "pointer",
-        background: props.disabled ? "#e0d9cc" : props.value ? "#c9482b" : "#d4c9b5",
-        position: "relative",
-        transition: "background 0.2s ease",
-        "flex-shrink": "0",
-        opacity: props.disabled ? "0.5" : "1",
-      }}
-    >
-      <div
-        style={{
-          width: "16px",
-          height: "16px",
-          "border-radius": "50%",
-          background: "#f5f0e6",
-          position: "absolute",
-          top: "3px",
-          left: props.value && !props.disabled ? "21px" : "3px",
-          transition: "left 0.2s ease",
-        }}
-      />
-    </button>
-  );
-}
-
 function SettingRow(props: { label: string; children: JSX.Element }) {
   return (
     <div
@@ -111,87 +80,6 @@ const LANGUAGES = [
   { value: "id", label: "Indonesian" },
   { value: "uk", label: "Ukrainian" },
 ];
-
-function CustomSelect(props: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
-  const [open, setOpen] = createSignal(false);
-  let containerRef: HTMLDivElement | undefined;
-
-  const selected = () => props.options.find((o) => o.value === props.value)?.label || props.value;
-
-  const handleClickOutside = (e: MouseEvent) => {
-    if (containerRef && !containerRef.contains(e.target as Node)) {
-      setOpen(false);
-    }
-  };
-
-  onMount(() => document.addEventListener("mousedown", handleClickOutside));
-  onCleanup(() => document.removeEventListener("mousedown", handleClickOutside));
-
-  return (
-    <div ref={containerRef} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(!open())}
-        style={{
-          width: "100%",
-          padding: "8px 12px",
-          background: "#f5f0e6",
-          border: "1px solid #1a1a1a",
-          "border-radius": "0",
-          color: "#1a1a1a",
-          "font-size": "13px",
-          "font-family": monoFont,
-          cursor: "pointer",
-          "text-align": "left",
-          display: "flex",
-          "justify-content": "space-between",
-          "align-items": "center",
-        }}
-      >
-        {selected()}
-        <span style={{ color: "#6b655a", "font-size": "10px" }}>{open() ? "\u25B2" : "\u25BC"}</span>
-      </button>
-      {open() && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: "0",
-            right: "0",
-            background: "#f5f0e6",
-            border: "1px solid #1a1a1a",
-            "border-top": "none",
-            "max-height": "200px",
-            "overflow-y": "auto",
-            "z-index": "10",
-          }}
-        >
-          {props.options.map((opt) => (
-            <div
-              onClick={() => { props.onChange(opt.value); setOpen(false); }}
-              style={{
-                padding: "6px 12px",
-                cursor: "pointer",
-                "font-size": "13px",
-                "font-family": monoFont,
-                color: opt.value === props.value ? "#c9482b" : "#1a1a1a",
-                "font-weight": opt.value === props.value ? "700" : "400",
-                background: opt.value === props.value ? "#ece4d0" : "transparent",
-              }}
-              onMouseEnter={(e) => {
-                if (opt.value !== props.value) e.currentTarget.style.background = "#ece4d0";
-              }}
-              onMouseLeave={(e) => {
-                if (opt.value !== props.value) e.currentTarget.style.background = "transparent";
-              }}
-            >
-              {opt.label}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function AccountSignIn() {
   const [email, setEmail] = createSignal("");
@@ -455,6 +343,21 @@ export function SettingsPanel() {
             {/* Account */}
             <div style={glass}>
               <span style={label}>Account</span>
+              {!authLoading() && !user() && (
+                <p
+                  style={{
+                    "font-size": "12px",
+                    color: "#5a5140",
+                    "margin-bottom": "14px",
+                    "max-width": "520px",
+                  }}
+                >
+                  Sign-in is optional. With your own provider keys (set in
+                  AI Cleanup below), no account is needed. A Pro subscription
+                  lets you sign in and have Murmur handle cloud cleanup for
+                  you.
+                </p>
+              )}
               {authLoading() ? (
                 <p style={{ color: "#6b655a", "font-size": "13px" }}>Loading...</p>
               ) : user() ? (
@@ -744,7 +647,7 @@ export function SettingsPanel() {
             <div style={glass}>
               <label style={label}>Language</label>
               <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                <CustomSelect
+                <Select
                   value={settings()!.language}
                   onChange={(v) => updateSetting("language", v)}
                   options={LANGUAGES}
