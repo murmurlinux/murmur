@@ -31,6 +31,20 @@ jobs:
   build:
     name: Build .deb on Ubuntu 22.04
     runs-on: ubuntu-22.04
+    env:
+      # Pin ggml CPU instruction-set target. With GGML_NATIVE=ON (the
+      # ggml default), the compile picks up -march=native and bakes in
+      # whatever extensions the build runner's CPU happens to expose.
+      # GitHub Actions runner SKUs vary; some Xeon runners expose ISA
+      # extensions that consumer CPUs do not. Setting GGML_NATIVE=OFF on
+      # a native-capable host leaves INS_ENB=ON in ggml's CMakeLists, so
+      # AVX/AVX2/FMA/F16C/BMI2/SSE4.2 default ON and AVX-512 stays OFF.
+      # Target: x86-64-v3 baseline (Haswell 2013+, Zen 1+).
+      GGML_NATIVE: "OFF"
+      GGML_AVX512: "OFF"
+      GGML_AVX512_VBMI: "OFF"
+      GGML_AVX512_VNNI: "OFF"
+      GGML_AVX512_BF16: "OFF"
 
     steps:
       - uses: actions/checkout@v4
@@ -99,6 +113,33 @@ jobs:
           set +e
           pnpm tauri build --bundles deb
           test -f src-tauri/target/release/bundle/deb/Murmur_*.deb
+
+      - name: Verify ISA baseline (no AVX-512 in ggml/whisper code)
+        # Belt-and-braces: even with GGML_NATIVE=OFF, a future ggml
+        # default change could re-enable instruction-set auto-detection.
+        # Crypto crates (ring, aws-lc-sys) legitimately compile AVX-512
+        # GHASH paths and gate them via runtime cpuid dispatch — those
+        # are safe. We only fail on AVX-512 inside ggml/whisper function
+        # bodies where the dispatch guarantee does not hold.
+        run: |
+          BIN=src-tauri/target/release/murmur
+          [ -f "$BIN" ] || { echo "could not locate built murmur binary at $BIN"; exit 1; }
+          echo "Scanning $BIN for AVX-512 inside ggml/whisper functions"
+          objdump -d "$BIN" 2>/dev/null | awk '
+            /^[0-9a-f]+ <[^>]*>:/ {
+              fn = $0; sub(/^.*</, "", fn); sub(/>:.*$/, "", fn)
+              is_target = (fn ~ /(ggml|whisper)/)
+              next
+            }
+            is_target && /%zmm|\{%k[0-7]\}/ {
+              if (count < 10) { print "  " fn ": " $0 }
+              count++
+            }
+            END {
+              print "ggml/whisper AVX-512 refs: " count+0
+              if (count+0 > 0) exit 1
+            }
+          '
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
