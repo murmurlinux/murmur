@@ -14,6 +14,20 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+    env:
+      # Pin ggml CPU instruction-set target. With GGML_NATIVE=ON (the
+      # ggml default), the compile picks up -march=native and bakes in
+      # whatever extensions the build runner's CPU happens to expose.
+      # GitHub Actions runner SKUs vary; some Xeon runners expose ISA
+      # extensions that consumer CPUs do not. Setting GGML_NATIVE=OFF on
+      # a native-capable host leaves INS_ENB=ON in ggml's CMakeLists, so
+      # AVX/AVX2/FMA/F16C/BMI2/SSE4.2 default ON and AVX-512 stays OFF.
+      # Target: x86-64-v3 baseline (Haswell 2013+, Zen 1+).
+      GGML_NATIVE: "OFF"
+      GGML_AVX512: "OFF"
+      GGML_AVX512_VBMI: "OFF"
+      GGML_AVX512_VNNI: "OFF"
+      GGML_AVX512_BF16: "OFF"
 
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +102,24 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
+
+      - name: Verify ISA baseline (no AVX-512 in produced binary)
+        # Belt-and-braces: even with GGML_NATIVE=OFF, a future ggml
+        # default change or transitively-built C dependency could
+        # re-enable instruction-set auto-detection. Fail fast if any
+        # AVX-512 instructions reach the binary so the apt-repo job
+        # never runs on an unsafe build.
+        run: |
+          BIN=src-tauri/target/release/murmur
+          [ -f "$BIN" ] || { echo "could not locate built murmur binary at $BIN"; exit 1; }
+          echo "Scanning $BIN for AVX-512 markers"
+          ZMM=$(objdump -d "$BIN" | grep -cE '%zmm|\{%k[0-7]\}' || true)
+          echo "AVX-512 instruction count: $ZMM"
+          if [ "$ZMM" -ne 0 ]; then
+            echo "::error::AVX-512 instructions present ($ZMM refs). Build env must keep GGML_NATIVE=OFF."
+            objdump -d "$BIN" | grep -E '%zmm|\{%k[0-7]\}' | head -10
+            exit 1
+          fi
 
   update-apt-repo:
     name: Update APT Repository
