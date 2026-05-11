@@ -18,6 +18,17 @@ All notable changes to Murmur will be documented in this file.
 ### Bug Fixes
 
 * route global hotkey through xdg-desktop-portal on Wayland ([#73](https://github.com/murmurlinux/murmur/issues/73)) ([6230bce](https://github.com/murmurlinux/murmur/commit/6230bcee93497122f4b6504e21cdd9b2fac25478))
+* strip newlines and tabs from injected text ([#81](https://github.com/murmurlinux/murmur/issues/81)) ([950b285](https://github.com/murmurlinux/murmur/commit/950b285e8afd6b36b0146bc46c74caa60d692aca))
+* xdotool availability check now uses --version (X11 window tracking previously silently disabled on systems with xdotool installed) ([#81](https://github.com/murmurlinux/murmur/issues/81)) ([950b285](https://github.com/murmurlinux/murmur/commit/950b285e8afd6b36b0146bc46c74caa60d692aca))
+* reject non-2xx responses in model download ([#81](https://github.com/murmurlinux/murmur/issues/81)) ([950b285](https://github.com/murmurlinux/murmur/commit/950b285e8afd6b36b0146bc46c74caa60d692aca))
+
+
+### Hardening
+
+* restrict MURMUR_INPUT_HELPER env override to debug builds ([#81](https://github.com/murmurlinux/murmur/issues/81)) ([950b285](https://github.com/murmurlinux/murmur/commit/950b285e8afd6b36b0146bc46c74caa60d692aca))
+* expire profile cache after 7 days ([#81](https://github.com/murmurlinux/murmur/issues/81)) ([950b285](https://github.com/murmurlinux/murmur/commit/950b285e8afd6b36b0146bc46c74caa60d692aca))
+* document audio-as-keystroke threat model in SECURITY.md ([#81](https://github.com/murmurlinux/murmur/issues/81)) ([950b285](https://github.com/murmurlinux/murmur/commit/950b285e8afd6b36b0146bc46c74caa60d692aca))
+* disclose plaintext API key storage in AI Cleanup section ([#81](https://github.com/murmurlinux/murmur/issues/81)) ([950b285](https://github.com/murmurlinux/murmur/commit/950b285e8afd6b36b0146bc46c74caa60d692aca))
 
 ## [0.3.6](https://github.com/murmurlinux/murmur/compare/v0.3.5...v0.3.6) (2026-04-22)
 
