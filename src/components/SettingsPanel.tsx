@@ -352,10 +352,9 @@ export function SettingsPanel() {
                     "max-width": "520px",
                   }}
                 >
-                  Sign-in is optional. With your own provider keys (set in
-                  AI Cleanup below), no account is needed. A Pro subscription
-                  lets you sign in and have Murmur handle cloud cleanup for
-                  you.
+                  You don't need an account. Just bring your own AI key below
+                  and you're set. Pro is for when you'd rather not bother with
+                  keys at all, we handle it.
                 </p>
               )}
               {authLoading() ? (
