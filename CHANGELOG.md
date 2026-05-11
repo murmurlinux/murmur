@@ -2,6 +2,15 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.8](https://github.com/murmurlinux/murmur/compare/v0.3.7...v0.3.8) (2026-05-11)
+
+
+### Bug Fixes
+
+* **ci:** pin cpu instruction set baseline for whisper.cpp build ([#82](https://github.com/murmurlinux/murmur/issues/82)) ([e2a97a3](https://github.com/murmurlinux/murmur/commit/e2a97a30283dbd944fae31938e84f19eeb9267e6))
+* **ci:** narrow ISA gate to ggml/whisper function bodies ([#82](https://github.com/murmurlinux/murmur/issues/82)) ([14f438f](https://github.com/murmurlinux/murmur/commit/14f438fb83fef34081e2dee16776e9e8d4ab8f1c))
+* bump version to 0.3.8 ([#83](https://github.com/murmurlinux/murmur/issues/83)) ([2023a8d](https://github.com/murmurlinux/murmur/commit/2023a8ded39ad510cef97c7b6fcba3077435fc43))
+
 ## [0.3.7](https://github.com/murmurlinux/murmur/compare/v0.3.6...v0.3.7) (2026-05-10)
 
 
