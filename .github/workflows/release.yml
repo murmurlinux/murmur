@@ -103,23 +103,32 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
 
-      - name: Verify ISA baseline (no AVX-512 in produced binary)
+      - name: Verify ISA baseline (no AVX-512 in ggml/whisper code)
         # Belt-and-braces: even with GGML_NATIVE=OFF, a future ggml
-        # default change or transitively-built C dependency could
-        # re-enable instruction-set auto-detection. Fail fast if any
-        # AVX-512 instructions reach the binary so the apt-repo job
-        # never runs on an unsafe build.
+        # default change could re-enable instruction-set auto-detection.
+        # Crypto crates (ring, aws-lc-sys) legitimately compile AVX-512
+        # GHASH paths and gate them via runtime cpuid dispatch — those
+        # are safe. We only fail on AVX-512 inside ggml/whisper function
+        # bodies where the dispatch guarantee does not hold.
         run: |
           BIN=src-tauri/target/release/murmur
           [ -f "$BIN" ] || { echo "could not locate built murmur binary at $BIN"; exit 1; }
-          echo "Scanning $BIN for AVX-512 markers"
-          ZMM=$(objdump -d "$BIN" | grep -cE '%zmm|\{%k[0-7]\}' || true)
-          echo "AVX-512 instruction count: $ZMM"
-          if [ "$ZMM" -ne 0 ]; then
-            echo "::error::AVX-512 instructions present ($ZMM refs). Build env must keep GGML_NATIVE=OFF."
-            objdump -d "$BIN" | grep -E '%zmm|\{%k[0-7]\}' | head -10
-            exit 1
-          fi
+          echo "Scanning $BIN for AVX-512 inside ggml/whisper functions"
+          objdump -d "$BIN" 2>/dev/null | awk '
+            /^[0-9a-f]+ <[^>]*>:/ {
+              fn = $0; sub(/^.*</, "", fn); sub(/>:.*$/, "", fn)
+              is_target = (fn ~ /(ggml|whisper)/)
+              next
+            }
+            is_target && /%zmm|\{%k[0-7]\}/ {
+              if (count < 10) { print "  " fn ": " $0 }
+              count++
+            }
+            END {
+              print "ggml/whisper AVX-512 refs: " count+0
+              if (count+0 > 0) exit 1
+            }
+          '
 
   update-apt-repo:
     name: Update APT Repository
