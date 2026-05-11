@@ -352,9 +352,12 @@ export function SettingsPanel() {
                     "max-width": "520px",
                   }}
                 >
-                  You don't need an account. Just bring your own AI key below
-                  and you're set. Pro is for when you'd rather not bother with
-                  keys at all, we handle it.
+                  Murmur transcription works out of the box, offline, no keys
+                  needed. You don't need an account. If you want cloud AI
+                  cleanup, bring your own API keys and enter them below.
+                  Pro is for when you'd rather not bother with keys or
+                  separate cloud bills, plus the other Pro features as
+                  they ship.
                 </p>
               )}
               {authLoading() ? (
