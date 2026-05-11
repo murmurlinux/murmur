@@ -7,9 +7,11 @@
 # active session user at login, with no group membership required and
 # no log out / log in dance. See systemd.device(5) for details.
 #
-# Murmur opens these devices read-only. Input is never injected through
-# /dev/input or uinput; text injection uses wtype / xdotool / clipboard
-# fallback at user privilege.
+# Murmur reads /dev/input/event* devices read-only via the privileged
+# `murmur-input-helper` binary. The same helper writes to /dev/uinput
+# (see the rule below) to synthesise key events when injecting
+# transcribed text on Wayland; on X11, text injection uses xdotool at
+# user privilege.
 KERNEL=="event*", SUBSYSTEM=="input", TAG+="uaccess"
 
 # Grant the privileged input helper write access to /dev/uinput so it

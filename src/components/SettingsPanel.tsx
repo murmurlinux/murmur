@@ -352,10 +352,12 @@ export function SettingsPanel() {
                     "max-width": "520px",
                   }}
                 >
-                  Sign-in is optional. With your own provider keys (set in
-                  AI Cleanup below), no account is needed. A Pro subscription
-                  lets you sign in and have Murmur handle cloud cleanup for
-                  you.
+                  Murmur transcription works out of the box, offline, no keys
+                  needed. You don't need an account. If you want cloud AI
+                  cleanup, bring your own API keys and enter them below.
+                  Pro is for when you'd rather not bother with keys or
+                  separate cloud bills, plus the other Pro features as
+                  they ship.
                 </p>
               )}
               {authLoading() ? (

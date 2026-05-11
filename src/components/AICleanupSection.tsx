@@ -44,9 +44,9 @@ const inputBase: JSX.CSSProperties = {
 };
 
 const PROVIDER_DESCRIPTIONS: Record<CleanupProvider, string> = {
-  groq: "Very fast (typically <1s). Cheapest option. Llama 3.3 70B inference on Groq LPU hardware. Groq Inc., not xAI's Grok.",
-  anthropic: "Higher quality prompt-following. Slightly slower (approx 1-2s). Uses Claude Haiku 4.5.",
-  xai: "xAI's Grok 4 Fast (non-reasoning). Different vendor to Groq Inc. Cheap and quick, with more recent training data.",
+  groq: "Fast and cheap, usually under a second. Uses Llama 3.3 70B on Groq Inc.'s LPU hardware (easy to mix up with xAI's Grok).",
+  anthropic: "More careful, a touch slower. Around one to two seconds. Uses Claude Haiku 4.5.",
+  xai: "Grok, the fast version. Trained on more recent data than the others. Uses Grok 4 Fast (xAI, not Groq Inc.).",
 };
 
 type TestCleanupResult = {
@@ -158,9 +158,19 @@ export function AICleanupSection() {
           "max-width": "520px",
         }}
       >
-        Polishes dictated text with an LLM: fixes punctuation, capitalisation, typos,
-        and removes filler words. Your wording is preserved. Runs only when enabled;
-        key stored locally on your device. Your key, your control. We never see it.
+        Tidies up your dictation. Removes the "um" and "ah", fixes punctuation,
+        catches typos. Your wording stays yours. We never see your key.
+      </p>
+      <p
+        style={{
+          "font-size": "11px",
+          color: "#a33a2a",
+          "margin-bottom": "14px",
+          "max-width": "520px",
+        }}
+      >
+        Heads up: your key is saved as plain text on your machine. Anything
+        running as you could read it. We're working on encrypted storage.
       </p>
 
       <div

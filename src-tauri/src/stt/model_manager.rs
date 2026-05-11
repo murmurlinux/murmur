@@ -242,6 +242,15 @@ pub async fn download_model_by_name(
             }
         };
 
+        // Reject non-2xx responses up front. Without this check a 404
+        // would have its HTML body written to the .tmp file and only
+        // the SHA256 mismatch at the end would catch it, after a full
+        // download cycle worth of useless I/O.
+        if !response.status().is_success() {
+            last_error = Some(format!("HTTP {} from {}", response.status(), url));
+            continue;
+        }
+
         let total = response.content_length().unwrap_or(0);
         let mut downloaded: u64 = 0;
         let mut file = match std::fs::File::create(&tmp_dest) {

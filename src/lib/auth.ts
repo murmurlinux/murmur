@@ -30,16 +30,37 @@ async function getStore(): Promise<Store> {
   return _store;
 }
 
+// 7-day cache TTL. pro_expires_at is the primary control for offline
+// Pro grace; this is defence-in-depth so a permanently-offline user
+// whose subscription was cancelled doesn't keep Pro forever.
+const PROFILE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface CachedProfile {
+  profile: UserProfile;
+  cached_at: number;
+}
+
 async function cacheProfile(p: UserProfile): Promise<void> {
   const store = await getStore();
-  await store.set("profile", p);
+  const wrapped: CachedProfile = { profile: p, cached_at: Date.now() };
+  await store.set("profile", wrapped);
   await store.save();
 }
 
 async function loadCachedProfile(): Promise<UserProfile | null> {
   try {
     const store = await getStore();
-    return (await store.get<UserProfile>("profile")) ?? null;
+    const raw = await store.get<CachedProfile | UserProfile>("profile");
+    if (!raw) return null;
+    if (typeof raw === "object" && "cached_at" in raw && "profile" in raw) {
+      const wrapped = raw as CachedProfile;
+      if (Date.now() - wrapped.cached_at > PROFILE_CACHE_TTL_MS) {
+        return null;
+      }
+      return wrapped.profile;
+    }
+    // Legacy bare-profile entries (no cached_at) treated as expired.
+    return null;
   } catch {
     return null;
   }
