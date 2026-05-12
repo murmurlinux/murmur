@@ -8,9 +8,13 @@ name: release-please
 #   2. If a release PR is open, we enable auto-merge on it so the release
 #      cuts automatically once CI is green. Human approval lives on the
 #      feature PRs that fed into main, not here.
-#   3. When a release is cut (the PR merges into main), we dispatch a
-#      murmur-release event at murmurlinux/murmur-web so the website
-#      updates its version constant.
+#
+# When a release is cut here (or when a tag is pushed manually for a
+# hotfix), the tag push triggers release.yml, which builds the binaries
+# AND dispatches the website-version sync downstream. That keeps a
+# single source of truth for "a release happened" and avoids the
+# silent-skip seen on v0.3.7 / v0.3.8 when the website lagged because
+# the dispatch was previously gated on release-please's own output.
 #
 # No tag signing (bot-created tags show "Unverified"; users verify the
 # Tauri .sig artefact signatures on the release assets, not tag sigs).
@@ -39,9 +43,6 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      releases_created: ${{ steps.rp.outputs.releases_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
-      version: ${{ steps.rp.outputs.version }}
       pr_number: ${{ steps.rp.outputs.pr && fromJson(steps.rp.outputs.pr).number }}
     steps:
       - name: Mint App token
@@ -80,28 +81,3 @@ jobs:
           PR_NUMBER: ${{ needs.release-please.outputs.pr_number }}
         run: gh pr merge --auto --squash --repo murmurlinux/murmur "$PR_NUMBER"
 
-  dispatch-to-website:
-    needs: release-please
-    if: needs.release-please.outputs.releases_created == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Mint App token for cross-repo dispatch
-        id: app-token
-        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v1.11.0
-        with:
-          app-id: ${{ secrets.MURMURLINUX_BOT_APP_ID }}
-          private-key: ${{ secrets.MURMURLINUX_BOT_PRIVATE_KEY }}
-          owner: murmurlinux
-          repositories: murmur-web
-
-      - name: Dispatch version-sync to murmur-web
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          VERSION: ${{ needs.release-please.outputs.version }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
-        run: |
-          gh api repos/murmurlinux/murmur-web/dispatches \
-            -X POST \
-            -F event_type=murmur-release \
-            -f "client_payload[version]=$VERSION" \
-            -f "client_payload[tag]=$TAG"
