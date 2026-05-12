@@ -222,7 +222,7 @@ export function AICleanupSection() {
         value={apiKey()}
         onInput={(e) => setApiKey(e.currentTarget.value)}
         onBlur={() => persist("apiKey", apiKey())}
-        placeholder="Paste your BYOK key"
+        placeholder="Paste your provider API key"
         style={{ ...inputBase, "margin-bottom": "10px" }}
       />
 
