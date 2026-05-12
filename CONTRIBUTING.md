@@ -51,9 +51,9 @@ murmur/
 ## Making Changes
 
 1. **Fork** the repo and create a branch: `git checkout -b feature/your-feature`
-2. **Make your changes**:follow existing code patterns
-3. **Test**:make sure the app builds and runs: `pnpm tauri dev`
-4. **Commit**:use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
+2. **Make your changes**: follow existing code patterns
+3. **Test**: make sure the app builds and runs: `pnpm tauri dev`
+4. **Commit**: use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
 5. **Push** and open a **Pull Request**
 
 ### Commit Format
@@ -76,8 +76,8 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
 Use [GitHub Issues](https://github.com/murmurlinux/murmur/issues) with the appropriate template:
 
-- **Bug report**:include your distro, desktop environment, and steps to reproduce
-- **Feature request**:describe the use case and proposed solution
+- **Bug report**: include your distro, desktop environment, and steps to reproduce
+- **Feature request**: describe the use case and proposed solution
 
 ## Code of Conduct
 
