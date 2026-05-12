@@ -13,20 +13,20 @@
 
 ---
 
-**Murmur** is a Linux-native AI voice-to-text desktop gadget. Hold a hotkey, speak, and text appears at your cursor in any application. Powered by [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for fast, accurate, 100% offline transcription.
+**Murmur** is a Linux-native AI voice-to-text desktop gadget. Hold a hotkey, speak, and text appears at your cursor in any application. Powered by [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for fast, accurate, local transcription.
 
-No cloud. No account. No telemetry. Your voice never leaves your machine.
+Transcription runs locally by default. No account, no telemetry, no audio leaves your machine. Optional AI cleanup is off until you turn it on; when enabled, it sends the transcribed text to an LLM provider you choose (Groq, Anthropic, or xAI) using your own API key.
 
-> Murmur Pro cloud-engine integrations (Groq Whisper, Deepgram Nova-3, LLM cleanup) live in a separate private repository. This repo is the free desktop app and is fully buildable from source, with no closed components, no build-time secrets, and no telemetry.
+> This repo is the free desktop app. It is fully buildable from source, with no closed components, no build-time secrets, and no telemetry. A separate `murmur-pro` repo hosts the managed-keys convenience tier, which is currently paused.
 
 ## Features
 
 - **Offline by default.** whisper.cpp runs locally on your CPU or GPU; transcription never leaves your machine. Optional AI cleanup is opt-in and uses your own API key for an external LLM.
-- **Lives in the Tray.** No floating widget, no extra chrome. Click the tray icon to open settings; the app is out of the way until you press the hotkey.
+- **Tray + recording pill.** Lives in the system tray. A small recording-state pill appears while you're holding the hotkey and disappears when you release. Click the tray icon to open settings.
 - **Universal Text Injection.** Types into any app via xdotool (X11) or wtype (Wayland). Terminals, IDEs, browsers, chat. If it has a cursor, Murmur types into it.
 - **Hold or Tap to Record.** Configurable global hotkey. Hold to record and release to transcribe, or tap to toggle. Voice activity detection auto-stops when you finish speaking.
 - **Multiple Models.** Tiny (75 MB, ~3s), Base (142 MB, ~8s), Small (466 MB, best accuracy). Choose your tradeoff.
-- **Tiny Footprint.** ~15 MB .deb, ~50 MB RAM. Built with Rust + Tauri 2. Starts in under a second.
+- **Tiny Footprint.** ~20 MB .deb, ~50 MB RAM at idle (before model load). Built with Rust + Tauri 2. Starts in under a second.
 
 ## Quick Install
 
@@ -98,11 +98,14 @@ Settings are stored in `~/.local/share/com.murmurlinux.murmur/settings.json`.
 
 | Model | Size | Speed | Accuracy |
 |-------|------|-------|----------|
-| tiny.en | 75 MB | ~3-4s | Good |
-| base.en | 142 MB | ~8-10s | Better |
-| small.en | 466 MB | ~20-30s | Best |
+| tiny.en | 75 MB | ~3-4s | Good (English) |
+| base.en | 142 MB | ~8-10s | Better (English) |
+| small.en | 466 MB | ~20-30s | Best (English) |
+| tiny | 75 MB | ~3-4s | Good (99+ languages) |
+| base | 142 MB | ~8-10s | Better (99+ languages) |
+| small | 466 MB | ~20-30s | Best (99+ languages) |
 
-Models auto-download from Hugging Face on first use. SHA256 verified.
+Speeds are for CPU inference; Vulkan GPU acceleration is significantly faster when available. Models auto-download from Hugging Face on first use, SHA256 verified.
 
 ## Roadmap
 
@@ -119,12 +122,13 @@ Models auto-download from Hugging Face on first use. SHA256 verified.
 - [x] Multi-language support + translation (v0.3.0)
 - [x] Settings keyboard shortcut (v0.3.3)
 - [x] Dynamic tray tooltip (v0.3.3)
-- [ ] Cloud STT (Groq Whisper, Deepgram Nova-3) &mdash; Pro
-- [ ] LLM text cleanup (punctuation, filler removal) &mdash; Pro
-- [ ] Transcript history &mdash; Pro
-- [ ] Voice commands &mdash; Pro
-- [ ] Custom dictionaries / hot words &mdash; Pro
-- [x] CLI mode (murmur-cli, v0.2.1) &mdash; Pro
+- [x] AI text cleanup (Groq, Anthropic, xAI), bring your own API key (v0.3.7)
+- [x] Wayland hotkey + text injection via setgid input helper (v0.3.7)
+- [ ] Cloud STT (Groq Whisper, Deepgram Nova-3), bring your own API key
+- [ ] Encrypted OS keyring for API keys
+- [ ] Transcript history
+- [ ] Voice commands
+- [ ] Custom dictionaries / hot words
 
 See the full [roadmap](https://murmurlinux.com/about) on our website.
 

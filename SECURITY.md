@@ -53,7 +53,7 @@ You can disable AI cleanup at any time in Settings; whisper transcription alone 
 
 ### API key storage
 
-When AI cleanup is enabled with your own provider key (BYOK), the key is stored as plaintext in Murmur's app config directory under `tauri-plugin-store`. Any process running as your user account can read it. Encrypted OS keyring storage is on the roadmap.
+When AI cleanup is enabled with your own provider API key, the key is stored as plaintext in Murmur's app config directory under `tauri-plugin-store`. Any process running as your user account can read it. Encrypted OS keyring storage is on the roadmap.
 
 ### Privileged input helper
 
@@ -95,7 +95,7 @@ Secrets are scanned by TruffleHog on every push (see `.github/workflows/secret-s
 A compromise of a third-party GitHub Action used in `release.yml` (Tauri action, APT deploy action, TruffleHog) could inject malicious code into signed artefacts. Mitigation:
 
 - All third-party actions in the release path are pinned to a specific SHA (not a mutable `@main` or `@v1` tag). SHAs are listed in the header comment of each workflow file. Before bumping, verify the new SHA against the upstream project's changelog and release signatures.
-- `release.yml` jobs run inside the `production` GitHub Environment, which requires a reviewer approval before the signing-key-holding steps execute.
+- Release workflows scope `GITHUB_TOKEN` permissions explicitly and use signed commits via the `murmurlinux-automation` GitHub App for any automated PRs.
 
 If a compromise is suspected:
 
