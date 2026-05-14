@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, For, Show } from "solid-js";
+import { createSignal, createEffect, onMount, onCleanup, For, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -107,8 +107,21 @@ export function OnboardingWizard() {
   });
 
   onCleanup(() => {
+    invoke("stop_mic_test").catch(() => {});
     unlistenAudio?.();
     unlistenProgress?.();
+  });
+
+  // Mic test is only relevant on step 0. When the user advances or steps
+  // back, cancel the in-flight capture and drop the audio-level listener so
+  // it doesn't keep firing across later steps.
+  createEffect(() => {
+    if (step() !== 0) {
+      invoke("stop_mic_test").catch(() => {});
+      unlistenAudio?.();
+      unlistenAudio = undefined;
+      setMicTesting(false);
+    }
   });
 
   // --- Mic test ---
@@ -124,7 +137,7 @@ export function OnboardingWizard() {
     unlistenAudio = undefined;
 
     // Listen for audio levels
-    unlistenAudio = await listen<{ rms: number; peak: number }>("audio-level", (event) => {
+    unlistenAudio = await listen<{ rms: number; peak: number; samples: number[] }>("audio-level", (event) => {
       const level = Math.min(event.payload.rms * 20, 1); // normalize
       setMicLevel(level);
       if (event.payload.rms > 0.02) {
