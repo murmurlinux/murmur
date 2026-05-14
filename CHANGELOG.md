@@ -2,6 +2,13 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.10](https://github.com/murmurlinux/murmur/compare/v0.3.9...v0.3.10) (2026-05-14)
+
+
+### Features
+
+* store cleanup-provider API keys in the OS keyring ([#93](https://github.com/murmurlinux/murmur/issues/93)) ([285492a](https://github.com/murmurlinux/murmur/commit/285492a977fc4875c04422be265a19e53759433a))
+
 ## [0.3.9](https://github.com/murmurlinux/murmur/compare/v0.3.8...v0.3.9) (2026-05-14)
 
 
