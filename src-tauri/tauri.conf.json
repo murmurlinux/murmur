@@ -62,7 +62,7 @@
       "deb",
       "appimage"
     ],
-    "shortDescription": "AI voice-to-text gadget for Linux",
+    "shortDescription": "Murmur - voice dictation for Linux",
     "longDescription": "Murmur is a Linux-native voice-to-text desktop gadget. Hold a button or hotkey, speak, and text appears at your cursor in any application. Powered by whisper.cpp for fast local transcription.",
     "homepage": "https://murmurlinux.com",
     "category": "Utility",
