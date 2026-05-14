@@ -2,7 +2,6 @@ import { createSignal, onMount, onCleanup, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
-import { initAuth, signIn, signOut, user, profile, isPro, authLoading } from "../lib/auth";
 import logoImg from "../assets/logo.png";
 import { AICleanupSection } from "./AICleanupSection";
 import { Toggle } from "./Toggle";
@@ -81,106 +80,6 @@ const LANGUAGES = [
   { value: "uk", label: "Ukrainian" },
 ];
 
-function AccountSignIn() {
-  const [email, setEmail] = createSignal("");
-  const [password, setPassword] = createSignal("");
-  const [error, setError] = createSignal("");
-  const [loading, setLoading] = createSignal(false);
-
-  async function handleSignIn(e: Event) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const result = await signIn(email(), password());
-      if (result.error) setError(result.error);
-    } catch {
-      setError("Connection failed. Check your internet and try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSignIn}>
-      <input
-        type="email"
-        placeholder="Email"
-        value={email()}
-        onInput={(e) => setEmail(e.currentTarget.value)}
-        required
-        style={{ ...inputBase, "margin-bottom": "8px" }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = "#c9482b";
-          e.currentTarget.style.boxShadow = "3px 3px 0 #c9482b";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = "#1a1a1a";
-          e.currentTarget.style.boxShadow = "none";
-        }}
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password()}
-        onInput={(e) => setPassword(e.currentTarget.value)}
-        required
-        style={{ ...inputBase, "margin-bottom": "8px" }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = "#c9482b";
-          e.currentTarget.style.boxShadow = "3px 3px 0 #c9482b";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = "#1a1a1a";
-          e.currentTarget.style.boxShadow = "none";
-        }}
-      />
-      {error() && (
-        <p style={{ color: "#a33a2a", "font-size": "12px", "margin-bottom": "8px" }}>
-          {error()}
-        </p>
-      )}
-      <button
-        type="submit"
-        disabled={loading()}
-        style={{
-          width: "100%",
-          padding: "8px",
-          background: "#c9482b",
-          border: "1px solid #c9482b",
-          "border-radius": "0",
-          color: "#fff8ed",
-          "font-size": "13px",
-          "font-weight": "500",
-          "font-family": monoFont,
-          cursor: loading() ? "wait" : "pointer",
-          opacity: loading() ? "0.5" : "1",
-          transition: "all 0.15s ease",
-        }}
-        onMouseEnter={(e) => {
-          if (!loading()) {
-            e.currentTarget.style.background = "#1a1a1a";
-            e.currentTarget.style.borderColor = "#1a1a1a";
-            e.currentTarget.style.transform = "translate(-2px, -2px)";
-            e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "#c9482b";
-          e.currentTarget.style.borderColor = "#c9482b";
-          e.currentTarget.style.transform = "none";
-          e.currentTarget.style.boxShadow = "none";
-        }}
-      >
-        {loading() ? "Signing in..." : "Sign in"}
-      </button>
-      <p style={{ color: "#6b655a", "font-size": "11px", "margin-top": "8px", "text-align": "center" }}>
-        Create an account at murmurlinux.com
-      </p>
-    </form>
-  );
-}
-
 // --- Component ---
 
 export function SettingsPanel() {
@@ -197,8 +96,6 @@ export function SettingsPanel() {
   };
 
   onMount(async () => {
-    await initAuth();
-
     // Read version from Tauri config (not hardcoded)
     try {
       const { getVersion } = await import("@tauri-apps/api/app");
@@ -340,77 +237,6 @@ export function SettingsPanel() {
 
         {settings() && (
           <>
-            {/* Account */}
-            <div style={glass}>
-              <span style={label}>Account</span>
-              {!authLoading() && !user() && (
-                <p
-                  style={{
-                    "font-size": "12px",
-                    color: "#5a5140",
-                    "margin-bottom": "14px",
-                    "max-width": "520px",
-                  }}
-                >
-                  Murmur transcription works out of the box, offline, no keys
-                  needed. You don't need an account. If you want cloud AI
-                  cleanup, bring your own API keys and enter them below.
-                  Pro is for when you'd rather not bother with keys or
-                  separate cloud bills, plus the other Pro features as
-                  they ship.
-                </p>
-              )}
-              {authLoading() ? (
-                <p style={{ color: "#6b655a", "font-size": "13px" }}>Loading...</p>
-              ) : user() ? (
-                <div>
-                  <p style={{ color: "#1a1a1a", "font-size": "13px", "margin-bottom": "8px" }}>
-                    {profile()?.email ?? user()?.email}
-                  </p>
-                  <p style={{
-                    color: isPro() ? "#5a7a3a" : "#6b655a",
-                    "font-size": "11px",
-                    "font-weight": "600",
-                    "text-transform": "uppercase",
-                    "letter-spacing": "0.05em",
-                    "margin-bottom": "12px",
-                  }}>
-                    {isPro() ? "Pro" : "Free"}
-                  </p>
-                  <button
-                    onClick={() => signOut()}
-                    style={{
-                      padding: "6px 16px",
-                      background: "#ece4d0",
-                      border: "1px solid #1a1a1a",
-                      "border-radius": "0",
-                      color: "#1a1a1a",
-                      "font-size": "12px",
-                      "font-family": monoFont,
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#1a1a1a";
-                      e.currentTarget.style.color = "#f5f0e6";
-                      e.currentTarget.style.transform = "translate(-2px, -2px)";
-                      e.currentTarget.style.boxShadow = "4px 4px 0 #c9482b";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#ece4d0";
-                      e.currentTarget.style.color = "#1a1a1a";
-                      e.currentTarget.style.transform = "none";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </div>
-              ) : (
-                <AccountSignIn />
-              )}
-            </div>
-
             <AICleanupSection />
 
             {/* Hotkey */}
