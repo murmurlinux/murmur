@@ -39,6 +39,7 @@ impl CleanupService for AnthropicCleanup {
         let body = serde_json::json!({
             "model": self.model,
             "max_tokens": MAX_TOKENS,
+            "temperature": 0.0,
             "system": prompt::build_system_prompt(),
             "messages": [
                 { "role": "user", "content": prompt::build_user_message(text) }
