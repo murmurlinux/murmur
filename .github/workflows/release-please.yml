@@ -61,6 +61,60 @@ jobs:
           manifest-file: .release-please-manifest.json
           token: ${{ steps.app-token.outputs.token }}
 
+      # Self-heal for the "untagged, merged release PRs outstanding"
+      # abort path (internal#203). Detects merged release PRs that are
+      # still labelled `autorelease: pending`, advances them to
+      # `autorelease: tagged`, and creates the missing tag if release.yml
+      # never fired. Idempotent and no-op when nothing is stuck.
+      - name: Heal stuck release PRs
+        if: always()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: murmurlinux/murmur
+        run: |
+          set -euo pipefail
+
+          STUCK=$(gh pr list --repo "$REPO" --state merged \
+            --search "release main in:title" \
+            --json number,mergeCommit,labels \
+            --limit 20 \
+            --jq '[.[] | select(.labels[]?.name == "autorelease: pending") | {number, sha: .mergeCommit.oid}]')
+
+          COUNT=$(echo "$STUCK" | jq 'length')
+          if [ "$COUNT" = "0" ]; then
+            echo "No stuck release PRs. Nothing to heal."
+            exit 0
+          fi
+
+          echo "::warning::Found $COUNT stuck release PR(s) with autorelease: pending — healing."
+
+          echo "$STUCK" | jq -c '.[]' | while read -r entry; do
+            PR=$(echo "$entry" | jq -r .number)
+            SHA=$(echo "$entry" | jq -r .sha)
+
+            VERSION=$(gh api "repos/$REPO/contents/.release-please-manifest.json?ref=$SHA" \
+              --jq '.content' | base64 -d | jq -r '."."')
+            TAG="v$VERSION"
+
+            echo "PR #$PR cut version $VERSION at $SHA (tag: $TAG)"
+
+            if gh api "repos/$REPO/git/refs/tags/$TAG" --silent 2>/dev/null; then
+              echo "Tag $TAG already exists. Advancing label only."
+            else
+              echo "Tag $TAG missing. Creating at $SHA."
+              gh api -X POST "repos/$REPO/git/refs" \
+                -f "ref=refs/tags/$TAG" \
+                -f "sha=$SHA" >/dev/null
+              echo "::notice::Created missing tag $TAG (release.yml will fire on the push)."
+            fi
+
+            gh api -X DELETE "repos/$REPO/issues/$PR/labels/autorelease:%20pending" --silent 2>/dev/null || true
+            gh api -X POST "repos/$REPO/issues/$PR/labels" \
+              -f "labels[]=autorelease: tagged" --silent >/dev/null
+
+            echo "::notice::Healed PR #$PR (label advanced; tag $TAG ready)."
+          done
+
   auto-merge-release-pr:
     needs: release-please
     if: needs.release-please.outputs.pr_number != ''
