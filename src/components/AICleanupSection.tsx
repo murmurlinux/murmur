@@ -161,17 +161,6 @@ export function AICleanupSection() {
         Tidies up your dictation. Removes the "um" and "ah", fixes punctuation,
         catches typos. Your wording stays yours. We never see your key.
       </p>
-      <p
-        style={{
-          "font-size": "11px",
-          color: "#a33a2a",
-          "margin-bottom": "14px",
-          "max-width": "520px",
-        }}
-      >
-        Heads up: your key is saved as plain text on your machine. Anything
-        running as you could read it. We're working on encrypted storage.
-      </p>
 
       <div
         style={{
@@ -225,6 +214,17 @@ export function AICleanupSection() {
         placeholder="Paste your provider API key"
         style={{ ...inputBase, "margin-bottom": "10px" }}
       />
+      <p
+        style={{
+          "font-size": "11px",
+          color: "#a33a2a",
+          "margin-bottom": "14px",
+          "max-width": "520px",
+        }}
+      >
+        Your key is saved as plain text in a file only your user can read.
+        Encrypted storage via your system keyring is coming in the next release.
+      </p>
 
       <button
         disabled={testing() || apiKey().length === 0}
