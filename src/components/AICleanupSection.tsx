@@ -70,19 +70,49 @@ type SttFallbackPayload = {
   reason: string;
 };
 
+type StorageMode = "keyring" | "plaintext";
+
 export function AICleanupSection() {
   const [enabled, setEnabled] = createSignal(true);
   const [provider, setProvider] = createSignal<CleanupProvider>("groq");
-  const [apiKey, setApiKey] = createSignal("");
+  // The cleartext key never lives in a signal. We mirror just what we
+  // need to render the input: whether a key is set, a masked hint, and
+  // a transient buffer for the user's current keystrokes that is wiped
+  // on blur once the key is persisted to Rust-managed storage.
+  const [pendingKey, setPendingKey] = createSignal("");
+  const [hasKey, setHasKey] = createSignal(false);
+  const [keyHint, setKeyHint] = createSignal<string | null>(null);
+  const [storageMode, setStorageMode] = createSignal<StorageMode>("plaintext");
   const [testing, setTesting] = createSignal(false);
   const [testResult, setTestResult] = createSignal<TestCleanupResult | null>(null);
   const [lastToast, setLastToast] = createSignal<string | null>(null);
+
+  const refreshKeyState = async (p: CleanupProvider) => {
+    try {
+      const [has, hint] = await Promise.all([
+        invoke<boolean>("byok_has_key", { provider: p }),
+        invoke<string | null>("byok_key_hint", { provider: p }),
+      ]);
+      setHasKey(has);
+      setKeyHint(hint);
+    } catch (err) {
+      console.error("byok state read failed:", err);
+      setHasKey(false);
+      setKeyHint(null);
+    }
+  };
 
   onMount(async () => {
     const s = await loadCleanupSettings();
     setEnabled(s.enabled);
     setProvider(s.provider);
-    setApiKey(s.apiKey);
+    try {
+      const mode = await invoke<StorageMode>("byok_storage_mode");
+      setStorageMode(mode);
+    } catch (err) {
+      console.error("byok mode read failed:", err);
+    }
+    await refreshKeyState(s.provider);
   });
 
   onMount(() => {
@@ -111,7 +141,7 @@ export function AICleanupSection() {
     });
   });
 
-  const persist = <K extends "enabled" | "provider" | "apiKey">(
+  const persist = <K extends "enabled" | "provider">(
     key: K,
     value: unknown,
   ) => {
@@ -120,13 +150,45 @@ export function AICleanupSection() {
     );
   };
 
+  const commitKey = async () => {
+    const value = pendingKey().trim();
+    if (value.length === 0) return;
+    try {
+      await invoke("byok_set_key", { provider: provider(), key: value });
+      setPendingKey("");
+      await refreshKeyState(provider());
+      // A fresh key invalidates the previous "unavailable" toast.
+      setLastToast(null);
+    } catch (err) {
+      console.error("byok_set_key failed:", err);
+      setLastToast(`Could not save key: ${err}`);
+    }
+  };
+
+  const clearKey = async () => {
+    try {
+      await invoke("byok_clear_key", { provider: provider() });
+      setPendingKey("");
+      await refreshKeyState(provider());
+    } catch (err) {
+      console.error("byok_clear_key failed:", err);
+      setLastToast(`Could not clear key: ${err}`);
+    }
+  };
+
+  const onProviderChange = async (v: CleanupProvider) => {
+    setProvider(v);
+    persist("provider", v);
+    setPendingKey("");
+    await refreshKeyState(v);
+  };
+
   const runTest = async () => {
     setTesting(true);
     setTestResult(null);
     try {
       const res = await invoke<TestCleanupResult>("test_cleanup", {
         provider: provider(),
-        apiKey: apiKey(),
       });
       setTestResult(res);
       if (res.success) {
@@ -188,8 +250,7 @@ export function AICleanupSection() {
         <Select<CleanupProvider>
           value={provider()}
           onChange={(v) => {
-            setProvider(v);
-            persist("provider", v);
+            void onProviderChange(v);
           }}
           options={[
             { value: "groq", label: "Groq" },
@@ -205,36 +266,61 @@ export function AICleanupSection() {
       <label for="ai-cleanup-api-key" style={label}>
         API key
       </label>
-      <input
-        id="ai-cleanup-api-key"
-        type="password"
-        value={apiKey()}
-        onInput={(e) => setApiKey(e.currentTarget.value)}
-        onBlur={() => persist("apiKey", apiKey())}
-        placeholder="Paste your provider API key"
-        style={{ ...inputBase, "margin-bottom": "10px" }}
-      />
+      <div style={{ display: "flex", gap: "8px", "margin-bottom": "10px" }}>
+        <input
+          id="ai-cleanup-api-key"
+          type="password"
+          value={pendingKey()}
+          onInput={(e) => setPendingKey(e.currentTarget.value)}
+          onBlur={() => {
+            void commitKey();
+          }}
+          placeholder={
+            hasKey() ? `Saved: ${keyHint() ?? "****"} (paste to replace)` : "Paste your provider API key"
+          }
+          style={{ ...inputBase, flex: "1 1 auto", "margin-bottom": "0" }}
+        />
+        {hasKey() && (
+          <button
+            type="button"
+            onClick={() => {
+              void clearKey();
+            }}
+            style={{
+              ...inputBase,
+              width: "auto",
+              padding: "6px 14px",
+              cursor: "pointer",
+              background: "#f5f0e6",
+              "margin-bottom": "0",
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
       <p
         style={{
           "font-size": "11px",
-          color: "#a33a2a",
+          color: storageMode() === "keyring" ? "#5a5140" : "#a33a2a",
           "margin-bottom": "14px",
           "max-width": "520px",
         }}
       >
-        Your key is saved as plain text in a file only your user can read.
-        Encrypted storage via your system keyring is coming in the next release.
+        {storageMode() === "keyring"
+          ? "Your key is encrypted by your system keyring."
+          : "No system keyring detected. Your key is saved as plain text in ~/.config/murmur/settings.json. Install gnome-keyring or kwallet (with the secret-service plug-in) to encrypt it."}
       </p>
 
       <button
-        disabled={testing() || apiKey().length === 0}
+        disabled={testing() || !hasKey()}
         onClick={runTest}
         style={{
           ...inputBase,
           width: "auto",
           padding: "6px 14px",
-          cursor: testing() || apiKey().length === 0 ? "not-allowed" : "pointer",
-          background: testing() || apiKey().length === 0 ? "#d4c9b5" : "#f5f0e6",
+          cursor: testing() || !hasKey() ? "not-allowed" : "pointer",
+          background: testing() || !hasKey() ? "#d4c9b5" : "#f5f0e6",
         }}
       >
         {testing() ? "Testing..." : "Test connection"}
