@@ -13,7 +13,7 @@
 
 ---
 
-**Murmur** is a Linux-native AI voice-to-text desktop gadget. Hold a hotkey, speak, and text appears at your cursor in any application. Powered by [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for fast, accurate, local transcription.
+**Murmur** is voice dictation for Linux that doesn't suck. Hold a hotkey, speak, and text appears at your cursor in any application. Powered by [whisper.cpp](https://github.com/ggerganov/whisper.cpp) for fast, accurate, local transcription.
 
 Transcription runs locally by default. No account, no telemetry, no audio leaves your machine. Optional AI cleanup is off until you turn it on; when enabled, it sends the transcribed text to an LLM provider you choose (Groq, Anthropic, or xAI) using your own API key.
 
