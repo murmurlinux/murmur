@@ -2,6 +2,13 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.9](https://github.com/murmurlinux/murmur/compare/v0.3.8...v0.3.9) (2026-05-14)
+
+
+### Bug Fixes
+
+* sandbox cleanup transcript as data not instructions ([#88](https://github.com/murmurlinux/murmur/issues/88)) ([55826e7](https://github.com/murmurlinux/murmur/commit/55826e719becf78f411a1d96948f065f0b8bab1e))
+
 ## [0.3.8](https://github.com/murmurlinux/murmur/compare/v0.3.7...v0.3.8) (2026-05-11)
 
 
