@@ -103,9 +103,11 @@ jobs:
           cargo audit --ignore RUSTSEC-2026-0097 --ignore RUSTSEC-2026-0104
 
       # --- Blind property tests (from private test repo) ---
-      # Skipped on fork PRs where secrets are unavailable
+      # Skipped on fork PRs (secrets unavailable) and Dependabot PRs
+      # (Dependabot has its own restricted secret scope without TEST_REPO_TOKEN).
+      # Push-to-main and regular human PRs still run them.
       - name: Checkout blind tests
-        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        if: ${{ github.event.pull_request.head.repo.fork != true && github.actor != 'dependabot[bot]' }}
         uses: actions/checkout@v4
         with:
           repository: murmurlinux/tests
@@ -113,11 +115,11 @@ jobs:
           path: _tests
 
       - name: Run Rust property tests
-        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        if: ${{ github.event.pull_request.head.repo.fork != true && github.actor != 'dependabot[bot]' }}
         working-directory: _tests/app/rust
         run: cargo test --release
 
       - name: Run frontend property tests
-        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        if: ${{ github.event.pull_request.head.repo.fork != true && github.actor != 'dependabot[bot]' }}
         working-directory: _tests/app/frontend
         run: pnpm install --frozen-lockfile && pnpm test
