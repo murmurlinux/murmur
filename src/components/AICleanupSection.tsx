@@ -246,6 +246,12 @@ export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
   const saveDisabled = () => saving() || pendingKey().trim().length === 0;
   const testDisabled = () => testing() || !hasKey();
 
+  const testButtonLabel = () => {
+    if (testing()) return "Testing...";
+    if (!hasKey()) return "Save a key to test";
+    return `Test ${PROVIDER_LABEL[provider()]}`;
+  };
+
   return (
     <div style={glass}>
       <div style={{ ...label, "margin-bottom": "14px" }}>AI cleanup</div>
@@ -348,7 +354,11 @@ export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
         </button>
       </div>
 
-      {/* Row 2: Test connection button + result slot + timing/error */}
+      {/* Row 2: Test button + (inline diagnostic) + result slot.
+          The slot is the last flex child so its right edge aligns with
+          the save-icon button above it. The button shrinks when
+          diagnostic text appears; the icon position is anchored to
+          the right column and never moves. */}
       <div
         style={{
           display: "flex",
@@ -364,17 +374,36 @@ export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
           style={{
             ...inputBase,
             flex: "1 1 auto",
+            "min-width": "0",
             padding: "0 14px",
             height: ICON_BTN_SIZE,
             cursor: testDisabled() ? "not-allowed" : "pointer",
             background: testDisabled() ? "#d4c9b5" : "#f5f0e6",
             "margin-bottom": "0",
+            "white-space": "nowrap",
+            overflow: "hidden",
+            "text-overflow": "ellipsis",
           }}
         >
-          {testing() ? "Testing..." : "Test connection"}
+          {testButtonLabel()}
         </button>
-        {/* Reserved 36x36 slot to the right; no layout jump when the
-            indicator appears. */}
+        <Show when={testResult() !== null}>
+          <span
+            style={{
+              "font-size": "12px",
+              color: testResult()!.success ? "#5a5140" : "#a33a2a",
+              "font-family": monoFont,
+              "white-space": "nowrap",
+              "flex-shrink": "0",
+            }}
+          >
+            {testResult()!.success
+              ? `${testResult()!.duration_ms}ms`
+              : (testResult()!.error ?? "failed")}
+          </span>
+        </Show>
+        {/* Reserved 36x36 slot, anchored at the right column to align
+            vertically with the save-icon button above. */}
         <div
           style={{
             width: ICON_BTN_SIZE,
@@ -394,21 +423,6 @@ export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
             </Show>
           </Show>
         </div>
-        <Show when={testResult() !== null}>
-          <span
-            style={{
-              "font-size": "12px",
-              color: testResult()!.success ? "#5a5140" : "#a33a2a",
-              "font-family": monoFont,
-              "min-width": "0",
-              "overflow-wrap": "anywhere",
-            }}
-          >
-            {testResult()!.success
-              ? `${testResult()!.duration_ms}ms`
-              : (testResult()!.error ?? "failed")}
-          </span>
-        </Show>
       </div>
 
       {lastToast() !== null && (

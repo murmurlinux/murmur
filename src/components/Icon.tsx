@@ -20,9 +20,16 @@ interface IconProps {
 
 // Lucide v0.x stable paths. Pinning by inlining means an icon-change
 // in upstream Lucide will never silently land here.
-const PATHS: Record<IconName, JSX.Element> = {
+//
+// Each entry is a factory function so every <Icon> instance gets its
+// own freshly-created DOM nodes. A plain JSX.Element here would be
+// evaluated once at module load and reused; SolidJS can only place
+// the resulting DOM in one location at a time, so multiple <Icon>
+// instances with the same name would result in only the last one
+// rendering. The factory pattern fixes that.
+const PATHS: Record<IconName, () => JSX.Element> = {
   // save: floppy-disk-arrow-in
-  save: (
+  save: () => (
     <>
       <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
       <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
@@ -30,7 +37,7 @@ const PATHS: Record<IconName, JSX.Element> = {
     </>
   ),
   // trash: trash-2
-  trash: (
+  trash: () => (
     <>
       <path d="M3 6h18" />
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
@@ -40,14 +47,14 @@ const PATHS: Record<IconName, JSX.Element> = {
     </>
   ),
   // x: x
-  x: (
+  x: () => (
     <>
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
     </>
   ),
   // check: check
-  check: <path d="M20 6 9 17l-5-5" />,
+  check: () => <path d="M20 6 9 17l-5-5" />,
 };
 
 export function Icon(props: IconProps): JSX.Element {
@@ -71,7 +78,7 @@ export function Icon(props: IconProps): JSX.Element {
       <Show when={props.title}>
         <title>{props.title}</title>
       </Show>
-      {PATHS[props.name]}
+      {PATHS[props.name]()}
     </svg>
   );
 }
