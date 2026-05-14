@@ -78,14 +78,17 @@ export function AICleanupSection() {
   // The cleartext key never lives in a signal. We mirror just what we
   // need to render the input: whether a key is set, a masked hint, and
   // a transient buffer for the user's current keystrokes that is wiped
-  // on blur once the key is persisted to Rust-managed storage.
+  // immediately after the explicit Save action persists the key.
   const [pendingKey, setPendingKey] = createSignal("");
   const [hasKey, setHasKey] = createSignal(false);
   const [keyHint, setKeyHint] = createSignal<string | null>(null);
   const [storageMode, setStorageMode] = createSignal<StorageMode>("plaintext");
+  const [saving, setSaving] = createSignal(false);
+  const [justSaved, setJustSaved] = createSignal(false);
   const [testing, setTesting] = createSignal(false);
   const [testResult, setTestResult] = createSignal<TestCleanupResult | null>(null);
   const [lastToast, setLastToast] = createSignal<string | null>(null);
+  let justSavedTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const refreshKeyState = async (p: CleanupProvider) => {
     try {
@@ -150,18 +153,26 @@ export function AICleanupSection() {
     );
   };
 
-  const commitKey = async () => {
+  const saveKey = async () => {
     const value = pendingKey().trim();
-    if (value.length === 0) return;
+    if (value.length === 0 || saving()) return;
+    setSaving(true);
+    setTestResult(null);
     try {
       await invoke("byok_set_key", { provider: provider(), key: value });
       setPendingKey("");
       await refreshKeyState(provider());
       // A fresh key invalidates the previous "unavailable" toast.
       setLastToast(null);
+      // Transient confirmation next to the button row.
+      if (justSavedTimeout !== null) clearTimeout(justSavedTimeout);
+      setJustSaved(true);
+      justSavedTimeout = setTimeout(() => setJustSaved(false), 2500);
     } catch (err) {
       console.error("byok_set_key failed:", err);
       setLastToast(`Could not save key: ${err}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -169,12 +180,18 @@ export function AICleanupSection() {
     try {
       await invoke("byok_clear_key", { provider: provider() });
       setPendingKey("");
+      setJustSaved(false);
+      setTestResult(null);
       await refreshKeyState(provider());
     } catch (err) {
       console.error("byok_clear_key failed:", err);
       setLastToast(`Could not clear key: ${err}`);
     }
   };
+
+  onCleanup(() => {
+    if (justSavedTimeout !== null) clearTimeout(justSavedTimeout);
+  });
 
   const onProviderChange = async (v: CleanupProvider) => {
     setProvider(v);
@@ -266,44 +283,124 @@ export function AICleanupSection() {
       <label for="ai-cleanup-api-key" style={label}>
         API key
       </label>
-      <div style={{ display: "flex", gap: "8px", "margin-bottom": "10px" }}>
-        <input
-          id="ai-cleanup-api-key"
-          type="password"
-          value={pendingKey()}
-          onInput={(e) => setPendingKey(e.currentTarget.value)}
-          onBlur={() => {
-            void commitKey();
-          }}
-          placeholder={
-            hasKey() ? `Saved: ${keyHint() ?? "****"} (paste to replace)` : "Paste your provider API key"
+      <input
+        id="ai-cleanup-api-key"
+        type="password"
+        value={pendingKey()}
+        onInput={(e) => {
+          setPendingKey(e.currentTarget.value);
+          // Once the user starts entering a fresh key, prior feedback
+          // is stale — clear it so the slot is ready for the next action.
+          if (justSaved()) setJustSaved(false);
+          if (testResult() !== null) setTestResult(null);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void saveKey();
           }
-          style={{ ...inputBase, flex: "1 1 auto", "margin-bottom": "0" }}
-        />
-        {hasKey() && (
-          <button
-            type="button"
-            onClick={() => {
-              void clearKey();
-            }}
+        }}
+        placeholder="Paste your provider API key"
+        style={{ ...inputBase, "margin-bottom": "6px" }}
+      />
+      {hasKey() && (
+        <p
+          style={{
+            "font-size": "11px",
+            color: "#6b655a",
+            "font-family": monoFont,
+            margin: "0 0 10px 0",
+          }}
+        >
+          Saved: {keyHint() ?? "****"}
+        </p>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          "align-items": "center",
+          gap: "8px",
+          "margin-bottom": "12px",
+          "flex-wrap": "wrap",
+        }}
+      >
+        <button
+          type="button"
+          disabled={saving() || pendingKey().trim().length === 0}
+          onClick={() => {
+            void saveKey();
+          }}
+          style={{
+            ...inputBase,
+            width: "auto",
+            padding: "6px 14px",
+            cursor: saving() || pendingKey().trim().length === 0 ? "not-allowed" : "pointer",
+            background:
+              saving() || pendingKey().trim().length === 0 ? "#d4c9b5" : "#f5f0e6",
+            "margin-bottom": "0",
+          }}
+        >
+          {saving() ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          disabled={!hasKey()}
+          onClick={() => {
+            void clearKey();
+          }}
+          style={{
+            ...inputBase,
+            width: "auto",
+            padding: "6px 14px",
+            cursor: !hasKey() ? "not-allowed" : "pointer",
+            background: !hasKey() ? "#d4c9b5" : "#f5f0e6",
+            "margin-bottom": "0",
+          }}
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          disabled={testing() || !hasKey()}
+          onClick={runTest}
+          style={{
+            ...inputBase,
+            width: "auto",
+            padding: "6px 14px",
+            cursor: testing() || !hasKey() ? "not-allowed" : "pointer",
+            background: testing() || !hasKey() ? "#d4c9b5" : "#f5f0e6",
+            "margin-bottom": "0",
+          }}
+        >
+          {testing() ? "Testing..." : "Test connection"}
+        </button>
+
+        {justSaved() && !testResult() && (
+          <span style={{ "font-size": "12px", color: "#5a7a3a", "font-family": monoFont }}>
+            ✓ Saved
+          </span>
+        )}
+        {testResult() !== null && (
+          <span
             style={{
-              ...inputBase,
-              width: "auto",
-              padding: "6px 14px",
-              cursor: "pointer",
-              background: "#f5f0e6",
-              "margin-bottom": "0",
+              "font-size": "12px",
+              color: testResult()!.success ? "#5a7a3a" : "#a33a2a",
+              "font-family": monoFont,
             }}
           >
-            Clear
-          </button>
+            {testResult()!.success
+              ? `✓ Key works (${testResult()!.duration_ms}ms via ${testResult()!.provider})`
+              : `✗ ${testResult()!.error ?? "failed"}`}
+          </span>
         )}
       </div>
+
       <p
         style={{
           "font-size": "11px",
           color: storageMode() === "keyring" ? "#5a5140" : "#a33a2a",
-          "margin-bottom": "14px",
+          "margin-bottom": "0",
           "max-width": "520px",
         }}
       >
@@ -311,44 +408,6 @@ export function AICleanupSection() {
           ? "Your key is encrypted by your system keyring."
           : "No system keyring detected. Your key is saved as plain text in ~/.config/murmur/settings.json. Install gnome-keyring or kwallet (with the secret-service plug-in) to encrypt it."}
       </p>
-
-      <button
-        disabled={testing() || !hasKey()}
-        onClick={runTest}
-        style={{
-          ...inputBase,
-          width: "auto",
-          padding: "6px 14px",
-          cursor: testing() || !hasKey() ? "not-allowed" : "pointer",
-          background: testing() || !hasKey() ? "#d4c9b5" : "#f5f0e6",
-        }}
-      >
-        {testing() ? "Testing..." : "Test connection"}
-      </button>
-
-      {testResult() !== null && (
-        <div style={{ "margin-top": "10px", "font-size": "12px", "font-family": monoFont }}>
-          {testResult()!.success ? (
-            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
-              {testResult()!.input && (
-                <div>
-                  <span style={{ color: "#6b655a" }}>Input:&nbsp;</span>
-                  <span style={{ color: "#1a1a1a" }}>{testResult()!.input}</span>
-                </div>
-              )}
-              <div>
-                <span style={{ color: "#6b655a" }}>Output:&nbsp;</span>
-                <span style={{ color: "#c9482b" }}>{testResult()!.cleaned}</span>
-              </div>
-              <div style={{ color: "#6b655a", "font-size": "11px" }}>
-                {testResult()!.duration_ms}ms via {testResult()!.provider}
-              </div>
-            </div>
-          ) : (
-            <span style={{ color: "#5a5140" }}>Failed: {testResult()!.error}</span>
-          )}
-        </div>
-      )}
 
       {lastToast() !== null && (
         <div
