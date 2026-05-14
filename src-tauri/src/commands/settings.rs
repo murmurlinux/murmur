@@ -1,8 +1,26 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{AppHandle, Manager};
 use tauri_utils::config::{Color, WebviewUrl};
+
+/// Holds the stop flag for the currently running mic test capture so a sibling
+/// `stop_mic_test` command can flip it. Cleared whenever `start_mic_test`
+/// begins a new capture or `stop_mic_test` runs.
+fn mic_test_stop_slot() -> &'static Mutex<Option<Arc<AtomicBool>>> {
+    static SLOT: OnceLock<Mutex<Option<Arc<AtomicBool>>>> = OnceLock::new();
+    SLOT.get_or_init(|| Mutex::new(None))
+}
+
+fn signal_mic_test_stop() {
+    if let Ok(mut slot) = mic_test_stop_slot().lock() {
+        if let Some(flag) = slot.take() {
+            flag.store(true, Ordering::Relaxed);
+        }
+    }
+}
 
 #[tauri::command]
 pub fn open_settings(app: AppHandle) -> Result<(), String> {
@@ -83,23 +101,26 @@ pub fn list_microphones() -> Vec<MicrophoneInfo> {
 #[tauri::command]
 pub fn start_mic_test(app: tauri::AppHandle) -> Result<(), String> {
     use crate::audio::capture;
-    use std::sync::atomic::AtomicBool;
-    use std::sync::{Arc, Mutex};
+
+    // Stop any in-flight capture so back-to-back start_mic_test invocations
+    // don't leave orphan threads holding the mic.
+    signal_mic_test_stop();
 
     let stop_flag = Arc::new(AtomicBool::new(false));
     let audio_buffer = Arc::new(Mutex::new(Vec::new()));
 
-    // Store stop flag for later cancellation
-    let stop_clone = Arc::clone(&stop_flag);
-    let _app_clone = app.clone();
+    // Publish the flag so stop_mic_test can find it.
+    if let Ok(mut slot) = mic_test_stop_slot().lock() {
+        *slot = Some(Arc::clone(&stop_flag));
+    }
 
-    // Auto-stop after 10 seconds
+    // Safety net: auto-stop after 10 seconds even if no explicit stop arrives.
+    let stop_auto = Arc::clone(&stop_flag);
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(10));
-        stop_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+        stop_auto.store(true, Ordering::Relaxed);
     });
 
-    // Pass Tauri event emission as closure for mic test level monitoring
     use tauri::Emitter;
     let on_level = Box::new(move |rms: f32, peak: f32, samples: Vec<f32>| {
         let _ = app.emit("audio-level", capture::AudioLevel { rms, peak, samples });
@@ -109,6 +130,12 @@ pub fn start_mic_test(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Mic test failed: {}", e))?;
 
     Ok(())
+}
+
+/// Cancel an in-flight microphone test capture. No-op if none is running.
+#[tauri::command]
+pub fn stop_mic_test() {
+    signal_mic_test_stop();
 }
 
 pub fn open_onboarding_internal(app: &AppHandle) {

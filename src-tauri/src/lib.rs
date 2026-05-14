@@ -340,6 +340,7 @@ pub fn run_free() {
             commands::settings::check_microphone,
             commands::settings::list_microphones,
             commands::settings::start_mic_test,
+            commands::settings::stop_mic_test,
             commands::llm_cleanup::test_cleanup,
             commands::byok::byok_storage_mode,
             commands::byok::byok_set_key,
