@@ -22,3 +22,51 @@ html, body, #root {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+/*
+ * Animated check / cross primitives.
+ * Used by <AnimatedCheck> and <AnimatedCross> for one-shot success
+ * and failure confirmations across Settings (Save / Test connection)
+ * and the onboarding wizard (mic-confirmed badge).
+ *
+ * The ring strokes in first, then the check or cross strokes draw on
+ * top of it. The wrapper plays a brief scale-pop so the indicator
+ * announces itself when it first appears.
+ *
+ * Honours prefers-reduced-motion at the bottom of this file.
+ */
+@keyframes ac-draw-ring {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ac-draw-stroke {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ac-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1.0); opacity: 1; }
+}
+
+.ac-wrap {
+  animation: ac-pop 0.35s ease-out both;
+  display: inline-flex;
+}
+.ac-ring {
+  stroke-dasharray: 62.83;
+  stroke-dashoffset: 62.83;
+  animation: ac-draw-ring 0.4s ease-out forwards;
+}
+.ac-stroke {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: ac-draw-stroke 0.25s ease-out 0.35s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-wrap { animation: none; }
+  .ac-ring,
+  .ac-stroke {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

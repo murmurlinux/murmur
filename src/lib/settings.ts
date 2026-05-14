@@ -69,25 +69,32 @@ export { DEFAULTS as SETTING_DEFAULTS };
 
 export type CleanupProvider = "groq" | "anthropic" | "xai";
 
+// The API key is no longer stored in settings.json. It lives in the OS
+// keyring when available (preferred) or in a per-provider plaintext
+// slot under cleanup.keys.<provider> when no secret-service daemon is
+// running. Both paths are managed exclusively on the Rust side via the
+// byok_* Tauri commands; the frontend never holds the cleartext key
+// past the moment the user pastes it.
 export interface CleanupSettings {
   enabled: boolean;
   provider: CleanupProvider;
-  apiKey: string;
 }
 
 const DEFAULT_CLEANUP: CleanupSettings = {
   enabled: true,
   provider: "groq",
-  apiKey: "",
 };
 
 const CLEANUP_STORE_KEY = "cleanup";
 
 export async function loadCleanupSettings(): Promise<CleanupSettings> {
   const store = await getStore();
-  const val = await store.get<CleanupSettings>(CLEANUP_STORE_KEY);
+  const val = await store.get<Partial<CleanupSettings>>(CLEANUP_STORE_KEY);
   if (val && typeof val === "object") {
-    return { ...DEFAULT_CLEANUP, ...val };
+    return {
+      enabled: typeof val.enabled === "boolean" ? val.enabled : DEFAULT_CLEANUP.enabled,
+      provider: (val.provider as CleanupProvider) ?? DEFAULT_CLEANUP.provider,
+    };
   }
   return { ...DEFAULT_CLEANUP };
 }

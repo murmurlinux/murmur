@@ -48,6 +48,13 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-notification = "2"
 
+# OS keyring (secret-service over D-Bus on Linux) for BYOK API keys.
+# sync-secret-service avoids tokio/async-runtime entanglement; we call
+# it from a std::thread::spawn block in audio.rs which is already sync.
+# crypto-rust uses pure-Rust RustCrypto instead of OpenSSL so there is
+# no new system library link or .deb runtime dependency.
+keyring = { version = "3", default-features = false, features = ["sync-secret-service", "crypto-rust"] }
+
 # Wayland global hotkey support (#129) is implemented via direct evdev
 # reads (see commands/hotkey_evdev.rs). The xdg-desktop-portal
 # GlobalShortcuts API does not deliver reliable Released events for

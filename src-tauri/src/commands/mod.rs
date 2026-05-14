@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod byok;
 pub mod hotkey;
 #[cfg(target_os = "linux")]
 pub mod hotkey_evdev;

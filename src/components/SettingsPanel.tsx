@@ -4,6 +4,7 @@ import { emit } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
 import logoImg from "../assets/logo.png";
 import { AICleanupSection } from "./AICleanupSection";
+import { SavedKeysSection } from "./SavedKeysSection";
 import { Toggle } from "./Toggle";
 import { Select } from "./Select";
 
@@ -89,6 +90,10 @@ export function SettingsPanel() {
   const [downloadingModel, setDownloadingModel] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
   const [version, setVersion] = createSignal("...");
+  // Bumped whenever AICleanupSection or SavedKeysSection mutates the
+  // BYOK store; both halves observe this to stay in sync.
+  const [savedKeysVersion, setSavedKeysVersion] = createSignal(0);
+  const bumpSavedKeys = () => setSavedKeysVersion((v) => v + 1);
 
   const showError = (msg: string) => {
     setError(msg);
@@ -237,7 +242,11 @@ export function SettingsPanel() {
 
         {settings() && (
           <>
-            <AICleanupSection />
+            <AICleanupSection onKeyMutated={bumpSavedKeys} />
+            <SavedKeysSection
+              refreshTrigger={savedKeysVersion()}
+              onKeyMutated={bumpSavedKeys}
+            />
 
             {/* Hotkey */}
             <div style={glass}>

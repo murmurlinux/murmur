@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, JSX } from "solid-js";
+import { createSignal, onMount, onCleanup, JSX, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
@@ -8,6 +8,8 @@ import {
 } from "../lib/settings";
 import { Toggle } from "./Toggle";
 import { Select } from "./Select";
+import { Icon } from "./Icon";
+import { AnimatedCheck, AnimatedCross } from "./AnimatedCheck";
 
 const monoFont = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
 
@@ -43,6 +45,31 @@ const inputBase: JSX.CSSProperties = {
   outline: "none",
 };
 
+const ICON_BTN_SIZE = "36px";
+
+// Square icon button: same height as a standard input, sits flush
+// against it. Primary variant (Save) uses the brand terracotta as
+// background; secondary variant (used elsewhere for trash etc.) is
+// the standard cream-with-dark-border treatment.
+const iconBtnBase: JSX.CSSProperties = {
+  width: ICON_BTN_SIZE,
+  height: ICON_BTN_SIZE,
+  display: "inline-flex",
+  "align-items": "center",
+  "justify-content": "center",
+  border: "1px solid #1a1a1a",
+  "border-radius": "0",
+  padding: "0",
+  "flex-shrink": "0",
+  cursor: "pointer",
+};
+
+const PROVIDER_LABEL: Record<CleanupProvider, string> = {
+  groq: "Groq",
+  anthropic: "Anthropic",
+  xai: "xAI",
+};
+
 const PROVIDER_DESCRIPTIONS: Record<CleanupProvider, string> = {
   groq: "Fast and cheap, usually under a second. Uses Llama 3.3 70B on Groq Inc.'s LPU hardware (easy to mix up with xAI's Grok).",
   anthropic: "More careful, a touch slower. Around one to two seconds. Uses Claude Haiku 4.5.",
@@ -70,19 +97,43 @@ type SttFallbackPayload = {
   reason: string;
 };
 
-export function AICleanupSection() {
+interface AICleanupSectionProps {
+  // Called whenever a stored key for any provider is added or removed,
+  // so the parent can bump SavedKeysSection's refresh trigger.
+  onKeyMutated?: () => void;
+}
+
+export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
   const [enabled, setEnabled] = createSignal(true);
   const [provider, setProvider] = createSignal<CleanupProvider>("groq");
-  const [apiKey, setApiKey] = createSignal("");
+  // The cleartext key never lives in a signal. We mirror just what we
+  // need to render the input: whether a key is set, a masked hint, and
+  // a transient buffer for the user's current keystrokes that is wiped
+  // immediately after the explicit Save action persists the key.
+  const [pendingKey, setPendingKey] = createSignal("");
+  const [hasKey, setHasKey] = createSignal(false);
+  const [saving, setSaving] = createSignal(false);
+  const [justSaved, setJustSaved] = createSignal(false);
   const [testing, setTesting] = createSignal(false);
   const [testResult, setTestResult] = createSignal<TestCleanupResult | null>(null);
   const [lastToast, setLastToast] = createSignal<string | null>(null);
+  let justSavedTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const refreshHasKey = async (p: CleanupProvider) => {
+    try {
+      const has = await invoke<boolean>("byok_has_key", { provider: p });
+      setHasKey(has);
+    } catch (err) {
+      console.error("byok_has_key read failed:", err);
+      setHasKey(false);
+    }
+  };
 
   onMount(async () => {
     const s = await loadCleanupSettings();
     setEnabled(s.enabled);
     setProvider(s.provider);
-    setApiKey(s.apiKey);
+    await refreshHasKey(s.provider);
   });
 
   onMount(() => {
@@ -96,7 +147,6 @@ export function AICleanupSection() {
             `Cleanup unavailable: pasted raw (${e.payload.reason ?? "unknown"})`,
           );
         } else if (e.payload.status === "success") {
-          // Clear any stale "unavailable" toast once cleanup recovers.
           setLastToast(null);
         }
       });
@@ -111,7 +161,11 @@ export function AICleanupSection() {
     });
   });
 
-  const persist = <K extends "enabled" | "provider" | "apiKey">(
+  onCleanup(() => {
+    if (justSavedTimeout !== null) clearTimeout(justSavedTimeout);
+  });
+
+  const persist = <K extends "enabled" | "provider">(
     key: K,
     value: unknown,
   ) => {
@@ -120,17 +174,46 @@ export function AICleanupSection() {
     );
   };
 
+  const saveKey = async () => {
+    const value = pendingKey().trim();
+    if (value.length === 0 || saving()) return;
+    setSaving(true);
+    setTestResult(null);
+    try {
+      await invoke("byok_set_key", { provider: provider(), key: value });
+      setPendingKey("");
+      await refreshHasKey(provider());
+      setLastToast(null);
+      if (justSavedTimeout !== null) clearTimeout(justSavedTimeout);
+      setJustSaved(true);
+      justSavedTimeout = setTimeout(() => setJustSaved(false), 2000);
+      props.onKeyMutated?.();
+    } catch (err) {
+      console.error("byok_set_key failed:", err);
+      setLastToast(`Could not save key: ${err}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onProviderChange = async (v: CleanupProvider) => {
+    setProvider(v);
+    persist("provider", v);
+    setPendingKey("");
+    setTestResult(null);
+    setJustSaved(false);
+    await refreshHasKey(v);
+  };
+
   const runTest = async () => {
     setTesting(true);
     setTestResult(null);
     try {
       const res = await invoke<TestCleanupResult>("test_cleanup", {
         provider: provider(),
-        apiKey: apiKey(),
       });
       setTestResult(res);
       if (res.success) {
-        // Test passed -- clear any stale "unavailable" toast.
         setLastToast(null);
       }
     } catch (err: unknown) {
@@ -145,6 +228,28 @@ export function AICleanupSection() {
     } finally {
       setTesting(false);
     }
+  };
+
+  // Re-fetch hasKey when a sibling component (SavedKeysSection) clears
+  // a key for the active provider. The parent's onKeyMutated callback
+  // can't reach back into our state directly, so we listen to a
+  // synthetic event the parent dispatches.
+  onMount(() => {
+    const handler = () => {
+      void refreshHasKey(provider());
+      setTestResult(null);
+    };
+    window.addEventListener("byok-keys-changed", handler);
+    onCleanup(() => window.removeEventListener("byok-keys-changed", handler));
+  });
+
+  const saveDisabled = () => saving() || pendingKey().trim().length === 0;
+  const testDisabled = () => testing() || !hasKey();
+
+  const testButtonLabel = () => {
+    if (testing()) return "Testing...";
+    if (!hasKey()) return "Save a key to test";
+    return `Test ${PROVIDER_LABEL[provider()]}`;
   };
 
   return (
@@ -188,8 +293,7 @@ export function AICleanupSection() {
         <Select<CleanupProvider>
           value={provider()}
           onChange={(v) => {
-            setProvider(v);
-            persist("provider", v);
+            void onProviderChange(v);
           }}
           options={[
             { value: "groq", label: "Groq" },
@@ -205,64 +309,121 @@ export function AICleanupSection() {
       <label for="ai-cleanup-api-key" style={label}>
         API key
       </label>
-      <input
-        id="ai-cleanup-api-key"
-        type="password"
-        value={apiKey()}
-        onInput={(e) => setApiKey(e.currentTarget.value)}
-        onBlur={() => persist("apiKey", apiKey())}
-        placeholder="Paste your provider API key"
-        style={{ ...inputBase, "margin-bottom": "10px" }}
-      />
-      <p
+
+      {/* Row 1: input + Save icon button */}
+      <div style={{ display: "flex", gap: "8px", "margin-bottom": "8px" }}>
+        <input
+          id="ai-cleanup-api-key"
+          type="password"
+          value={pendingKey()}
+          onInput={(e) => {
+            setPendingKey(e.currentTarget.value);
+            if (justSaved()) setJustSaved(false);
+            if (testResult() !== null) setTestResult(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void saveKey();
+            }
+          }}
+          placeholder={`Paste your ${PROVIDER_LABEL[provider()]} API key`}
+          style={{ ...inputBase, flex: "1 1 auto", "margin-bottom": "0", height: ICON_BTN_SIZE }}
+        />
+        <button
+          type="button"
+          aria-label="Save API key"
+          title="Save API key"
+          disabled={saveDisabled() && !justSaved()}
+          onClick={() => {
+            void saveKey();
+          }}
+          style={{
+            ...iconBtnBase,
+            background: saveDisabled() && !justSaved() ? "#d4c9b5" : "#c9482b",
+            cursor: saveDisabled() && !justSaved() ? "not-allowed" : "pointer",
+            transition: "background 0.2s ease",
+          }}
+        >
+          <Show
+            when={justSaved()}
+            fallback={<Icon name="save" size={18} color="#f5f0e6" />}
+          >
+            <AnimatedCheck size={20} color="#f5f0e6" />
+          </Show>
+        </button>
+      </div>
+
+      {/* Row 2: Test button + (inline diagnostic) + result slot.
+          The slot is the last flex child so its right edge aligns with
+          the save-icon button above it. The button shrinks when
+          diagnostic text appears; the icon position is anchored to
+          the right column and never moves. */}
+      <div
         style={{
-          "font-size": "11px",
-          color: "#a33a2a",
-          "margin-bottom": "14px",
-          "max-width": "520px",
+          display: "flex",
+          "align-items": "center",
+          gap: "8px",
+          "margin-bottom": "0",
         }}
       >
-        Your key is saved as plain text in a file only your user can read.
-        Encrypted storage via your system keyring is coming in the next release.
-      </p>
-
-      <button
-        disabled={testing() || apiKey().length === 0}
-        onClick={runTest}
-        style={{
-          ...inputBase,
-          width: "auto",
-          padding: "6px 14px",
-          cursor: testing() || apiKey().length === 0 ? "not-allowed" : "pointer",
-          background: testing() || apiKey().length === 0 ? "#d4c9b5" : "#f5f0e6",
-        }}
-      >
-        {testing() ? "Testing..." : "Test connection"}
-      </button>
-
-      {testResult() !== null && (
-        <div style={{ "margin-top": "10px", "font-size": "12px", "font-family": monoFont }}>
-          {testResult()!.success ? (
-            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
-              {testResult()!.input && (
-                <div>
-                  <span style={{ color: "#6b655a" }}>Input:&nbsp;</span>
-                  <span style={{ color: "#1a1a1a" }}>{testResult()!.input}</span>
-                </div>
-              )}
-              <div>
-                <span style={{ color: "#6b655a" }}>Output:&nbsp;</span>
-                <span style={{ color: "#c9482b" }}>{testResult()!.cleaned}</span>
-              </div>
-              <div style={{ color: "#6b655a", "font-size": "11px" }}>
-                {testResult()!.duration_ms}ms via {testResult()!.provider}
-              </div>
-            </div>
-          ) : (
-            <span style={{ color: "#5a5140" }}>Failed: {testResult()!.error}</span>
-          )}
+        <button
+          type="button"
+          disabled={testDisabled()}
+          onClick={runTest}
+          style={{
+            ...inputBase,
+            flex: "1 1 auto",
+            "min-width": "0",
+            padding: "0 14px",
+            height: ICON_BTN_SIZE,
+            cursor: testDisabled() ? "not-allowed" : "pointer",
+            background: testDisabled() ? "#d4c9b5" : "#f5f0e6",
+            "margin-bottom": "0",
+            "white-space": "nowrap",
+            overflow: "hidden",
+            "text-overflow": "ellipsis",
+          }}
+        >
+          {testButtonLabel()}
+        </button>
+        <Show when={testResult() !== null}>
+          <span
+            style={{
+              "font-size": "12px",
+              color: testResult()!.success ? "#5a5140" : "#a33a2a",
+              "font-family": monoFont,
+              "white-space": "nowrap",
+              "flex-shrink": "0",
+            }}
+          >
+            {testResult()!.success
+              ? `${testResult()!.duration_ms}ms`
+              : (testResult()!.error ?? "failed")}
+          </span>
+        </Show>
+        {/* Reserved 36x36 slot, anchored at the right column to align
+            vertically with the save-icon button above. */}
+        <div
+          style={{
+            width: ICON_BTN_SIZE,
+            height: ICON_BTN_SIZE,
+            display: "inline-flex",
+            "align-items": "center",
+            "justify-content": "center",
+            "flex-shrink": "0",
+          }}
+        >
+          <Show when={testResult() !== null}>
+            <Show
+              when={testResult()!.success}
+              fallback={<AnimatedCross size={22} />}
+            >
+              <AnimatedCheck size={22} />
+            </Show>
+          </Show>
         </div>
-      )}
+      </div>
 
       {lastToast() !== null && (
         <div

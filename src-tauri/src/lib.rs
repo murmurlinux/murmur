@@ -1,4 +1,5 @@
 mod audio;
+pub mod byok_storage;
 pub mod cleanup;
 pub mod commands;
 mod inject;
@@ -97,6 +98,13 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     }
 
     inject::paste::start_window_tracker();
+
+    // --- BYOK key storage: probe OS keyring, migrate legacy plaintext ---
+    let byok = byok_storage::ByokStorage::detect(app.handle().clone());
+    if let Err(e) = byok.migrate_once() {
+        log::error!("byok: migration failed (will retry on next launch): {}", e);
+    }
+    app.manage(byok);
 
     // --- Load settings from store into AppState ---
     let (hotkey, active_model) = {
@@ -333,6 +341,12 @@ pub fn run_free() {
             commands::settings::list_microphones,
             commands::settings::start_mic_test,
             commands::llm_cleanup::test_cleanup,
+            commands::byok::byok_storage_mode,
+            commands::byok::byok_set_key,
+            commands::byok::byok_clear_key,
+            commands::byok::byok_has_key,
+            commands::byok::byok_key_hint,
+            commands::byok::byok_list_keys,
         ])
         .setup(shared_setup)
         .run(tauri::generate_context!())

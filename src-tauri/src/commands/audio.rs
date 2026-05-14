@@ -171,8 +171,11 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
         })
         .unwrap_or_else(|| ("en".to_string(), false));
 
-    // Read cleanup config from settings store (nested under "cleanup")
-    let (cleanup_enabled, cleanup_provider, cleanup_api_key) = app
+    // Read cleanup config (enabled, provider) from settings store.
+    // The API key itself lives in ByokStorage (OS keyring when available,
+    // plaintext fallback otherwise); it is fetched separately so it
+    // never has to be reflected back through settings.json.
+    let (cleanup_enabled, cleanup_provider) = app
         .store("settings.json")
         .ok()
         .map(|store| {
@@ -187,14 +190,17 @@ fn stop_recording_core(app: &tauri::AppHandle) -> Result<(), String> {
                 .and_then(|v| v.get("provider"))
                 .and_then(|v| v.as_str().map(String::from))
                 .unwrap_or_else(|| "groq".to_string());
-            let key = obj
-                .as_ref()
-                .and_then(|v| v.get("apiKey"))
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_default();
-            (enabled, provider, key)
+            (enabled, provider)
         })
-        .unwrap_or((false, "groq".to_string(), String::new()));
+        .unwrap_or((false, "groq".to_string()));
+
+    let cleanup_api_key = if cleanup_enabled {
+        app.try_state::<crate::byok_storage::ByokStorage>()
+            .and_then(|storage| storage.get_key(&cleanup_provider).ok().flatten())
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
 
     // Spawn transcription on a background thread
     let active_model = get_active_model(app);
