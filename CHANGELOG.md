@@ -2,6 +2,13 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.11](https://github.com/murmurlinux/murmur/compare/v0.3.10...v0.3.11) (2026-05-14)
+
+
+### Bug Fixes
+
+* stop mic test cleanly when leaving onboarding step ([#97](https://github.com/murmurlinux/murmur/issues/97)) ([c827a60](https://github.com/murmurlinux/murmur/commit/c827a60cbedbe0e6140d4dc6a420167063ff4e6a))
+
 ## [0.3.10](https://github.com/murmurlinux/murmur/compare/v0.3.9...v0.3.10) (2026-05-14)
 
 
