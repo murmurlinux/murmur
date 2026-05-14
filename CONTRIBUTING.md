@@ -15,10 +15,10 @@ Thanks for your interest in contributing to Murmur! This guide covers everything
 sudo apt install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xdotool wtype
 
 # Fedora
-sudo dnf install webkit2gtk4.1-devel libayatana-appindicator-devel xdotool
+sudo dnf install webkit2gtk4.1-devel libayatana-appindicator-devel xdotool wtype
 
 # Arch
-sudo pacman -S webkit2gtk-4.1 libayatana-appindicator xdotool
+sudo pacman -S webkit2gtk-4.1 libayatana-appindicator xdotool wtype
 ```
 
 ### Build & Run
