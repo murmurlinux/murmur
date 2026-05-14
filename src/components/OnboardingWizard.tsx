@@ -5,6 +5,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { saveSetting, type ModelInfo } from "../lib/settings";
 import logoImg from "../assets/logo.png";
 import { Select } from "./Select";
+import { Icon } from "./Icon";
+import { AnimatedCheck } from "./AnimatedCheck";
 
 const ACCENT = "#c9482b";
 
@@ -387,24 +389,10 @@ export function OnboardingWizard() {
                   />
                 </div>
 
-                {/* Status indicator */}
+                {/* Status indicator: appearance is the success transition,
+                    so use the animated check rather than a static glyph. */}
                 <Show when={micConfirmed()}>
-                  <div
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      "border-radius": "50%",
-                      background: "rgba(90, 122, 58, 0.15)",
-                      display: "flex",
-                      "align-items": "center",
-                      "justify-content": "center",
-                      color: "#5a7a3a",
-                      "font-size": "14px",
-                      "flex-shrink": 0,
-                    }}
-                  >
-                    {"\u2713"}
-                  </div>
+                  <AnimatedCheck size={24} />
                 </Show>
               </div>
 
@@ -559,7 +547,18 @@ export function OnboardingWizard() {
             >
               <span>{currentModelFile()}</span>
               <Show when={isCurrentModelDownloaded() || downloadDone()}>
-                <span style={{ color: "#5a7a3a", "font-size": "11px" }}>{"\u2713"} Downloaded</span>
+                <span
+                  style={{
+                    color: "#5a7a3a",
+                    "font-size": "11px",
+                    display: "inline-flex",
+                    "align-items": "center",
+                    gap: "4px",
+                  }}
+                >
+                  <Icon name="check" size={12} color="#5a7a3a" />
+                  Downloaded
+                </span>
               </Show>
             </div>
 

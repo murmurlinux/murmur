@@ -29,6 +29,10 @@ const MIGRATION_FLAG: &str = "storage_migrated_v1";
 const LEGACY_API_KEY_FIELD: &str = "apiKey";
 const KEYS_MAP_FIELD: &str = "keys";
 
+/// Cleanup providers supported by the current build. Order is the UI
+/// rendering order for the Saved Keys list and the dropdown.
+pub const KNOWN_PROVIDERS: &[&str] = &["groq", "anthropic", "xai"];
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StorageMode {
     Keyring,
@@ -99,6 +103,20 @@ impl ByokStorage {
 
     pub fn key_hint(&self, provider: &str) -> Result<Option<String>> {
         Ok(self.get_key(provider)?.map(|k| key_hint_from(&k)))
+    }
+
+    /// Enumerate every provider that currently has a stored key, returning
+    /// `(provider, masked_hint)` pairs. Order matches `KNOWN_PROVIDERS` for
+    /// deterministic UI rendering. Providers without a stored key are
+    /// omitted.
+    pub fn list_keys(&self) -> Result<Vec<(String, String)>> {
+        let mut out = Vec::with_capacity(KNOWN_PROVIDERS.len());
+        for provider in KNOWN_PROVIDERS {
+            if let Some(key) = self.get_key(provider)? {
+                out.push((provider.to_string(), key_hint_from(&key)));
+            }
+        }
+        Ok(out)
     }
 
     /// One-shot migration from the v0.3.9 plaintext layout
@@ -239,7 +257,7 @@ impl ByokStorage {
 }
 
 fn validate_provider(provider: &str) -> Result<()> {
-    if matches!(provider, "groq" | "anthropic" | "xai") {
+    if KNOWN_PROVIDERS.contains(&provider) {
         Ok(())
     } else {
         Err(anyhow!("unknown cleanup provider: {provider}"))

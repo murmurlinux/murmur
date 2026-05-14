@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, JSX } from "solid-js";
+import { createSignal, onMount, onCleanup, JSX, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
@@ -8,6 +8,8 @@ import {
 } from "../lib/settings";
 import { Toggle } from "./Toggle";
 import { Select } from "./Select";
+import { Icon } from "./Icon";
+import { AnimatedCheck, AnimatedCross } from "./AnimatedCheck";
 
 const monoFont = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
 
@@ -43,6 +45,31 @@ const inputBase: JSX.CSSProperties = {
   outline: "none",
 };
 
+const ICON_BTN_SIZE = "36px";
+
+// Square icon button: same height as a standard input, sits flush
+// against it. Primary variant (Save) uses the brand terracotta as
+// background; secondary variant (used elsewhere for trash etc.) is
+// the standard cream-with-dark-border treatment.
+const iconBtnBase: JSX.CSSProperties = {
+  width: ICON_BTN_SIZE,
+  height: ICON_BTN_SIZE,
+  display: "inline-flex",
+  "align-items": "center",
+  "justify-content": "center",
+  border: "1px solid #1a1a1a",
+  "border-radius": "0",
+  padding: "0",
+  "flex-shrink": "0",
+  cursor: "pointer",
+};
+
+const PROVIDER_LABEL: Record<CleanupProvider, string> = {
+  groq: "Groq",
+  anthropic: "Anthropic",
+  xai: "xAI",
+};
+
 const PROVIDER_DESCRIPTIONS: Record<CleanupProvider, string> = {
   groq: "Fast and cheap, usually under a second. Uses Llama 3.3 70B on Groq Inc.'s LPU hardware (easy to mix up with xAI's Grok).",
   anthropic: "More careful, a touch slower. Around one to two seconds. Uses Claude Haiku 4.5.",
@@ -70,9 +97,13 @@ type SttFallbackPayload = {
   reason: string;
 };
 
-type StorageMode = "keyring" | "plaintext";
+interface AICleanupSectionProps {
+  // Called whenever a stored key for any provider is added or removed,
+  // so the parent can bump SavedKeysSection's refresh trigger.
+  onKeyMutated?: () => void;
+}
 
-export function AICleanupSection() {
+export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
   const [enabled, setEnabled] = createSignal(true);
   const [provider, setProvider] = createSignal<CleanupProvider>("groq");
   // The cleartext key never lives in a signal. We mirror just what we
@@ -81,8 +112,6 @@ export function AICleanupSection() {
   // immediately after the explicit Save action persists the key.
   const [pendingKey, setPendingKey] = createSignal("");
   const [hasKey, setHasKey] = createSignal(false);
-  const [keyHint, setKeyHint] = createSignal<string | null>(null);
-  const [storageMode, setStorageMode] = createSignal<StorageMode>("plaintext");
   const [saving, setSaving] = createSignal(false);
   const [justSaved, setJustSaved] = createSignal(false);
   const [testing, setTesting] = createSignal(false);
@@ -90,18 +119,13 @@ export function AICleanupSection() {
   const [lastToast, setLastToast] = createSignal<string | null>(null);
   let justSavedTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  const refreshKeyState = async (p: CleanupProvider) => {
+  const refreshHasKey = async (p: CleanupProvider) => {
     try {
-      const [has, hint] = await Promise.all([
-        invoke<boolean>("byok_has_key", { provider: p }),
-        invoke<string | null>("byok_key_hint", { provider: p }),
-      ]);
+      const has = await invoke<boolean>("byok_has_key", { provider: p });
       setHasKey(has);
-      setKeyHint(hint);
     } catch (err) {
-      console.error("byok state read failed:", err);
+      console.error("byok_has_key read failed:", err);
       setHasKey(false);
-      setKeyHint(null);
     }
   };
 
@@ -109,13 +133,7 @@ export function AICleanupSection() {
     const s = await loadCleanupSettings();
     setEnabled(s.enabled);
     setProvider(s.provider);
-    try {
-      const mode = await invoke<StorageMode>("byok_storage_mode");
-      setStorageMode(mode);
-    } catch (err) {
-      console.error("byok mode read failed:", err);
-    }
-    await refreshKeyState(s.provider);
+    await refreshHasKey(s.provider);
   });
 
   onMount(() => {
@@ -129,7 +147,6 @@ export function AICleanupSection() {
             `Cleanup unavailable: pasted raw (${e.payload.reason ?? "unknown"})`,
           );
         } else if (e.payload.status === "success") {
-          // Clear any stale "unavailable" toast once cleanup recovers.
           setLastToast(null);
         }
       });
@@ -142,6 +159,10 @@ export function AICleanupSection() {
       unlistenCleanup?.();
       unlistenFallback?.();
     });
+  });
+
+  onCleanup(() => {
+    if (justSavedTimeout !== null) clearTimeout(justSavedTimeout);
   });
 
   const persist = <K extends "enabled" | "provider">(
@@ -161,13 +182,12 @@ export function AICleanupSection() {
     try {
       await invoke("byok_set_key", { provider: provider(), key: value });
       setPendingKey("");
-      await refreshKeyState(provider());
-      // A fresh key invalidates the previous "unavailable" toast.
+      await refreshHasKey(provider());
       setLastToast(null);
-      // Transient confirmation next to the button row.
       if (justSavedTimeout !== null) clearTimeout(justSavedTimeout);
       setJustSaved(true);
-      justSavedTimeout = setTimeout(() => setJustSaved(false), 2500);
+      justSavedTimeout = setTimeout(() => setJustSaved(false), 2000);
+      props.onKeyMutated?.();
     } catch (err) {
       console.error("byok_set_key failed:", err);
       setLastToast(`Could not save key: ${err}`);
@@ -176,28 +196,13 @@ export function AICleanupSection() {
     }
   };
 
-  const clearKey = async () => {
-    try {
-      await invoke("byok_clear_key", { provider: provider() });
-      setPendingKey("");
-      setJustSaved(false);
-      setTestResult(null);
-      await refreshKeyState(provider());
-    } catch (err) {
-      console.error("byok_clear_key failed:", err);
-      setLastToast(`Could not clear key: ${err}`);
-    }
-  };
-
-  onCleanup(() => {
-    if (justSavedTimeout !== null) clearTimeout(justSavedTimeout);
-  });
-
   const onProviderChange = async (v: CleanupProvider) => {
     setProvider(v);
     persist("provider", v);
     setPendingKey("");
-    await refreshKeyState(v);
+    setTestResult(null);
+    setJustSaved(false);
+    await refreshHasKey(v);
   };
 
   const runTest = async () => {
@@ -209,7 +214,6 @@ export function AICleanupSection() {
       });
       setTestResult(res);
       if (res.success) {
-        // Test passed -- clear any stale "unavailable" toast.
         setLastToast(null);
       }
     } catch (err: unknown) {
@@ -225,6 +229,22 @@ export function AICleanupSection() {
       setTesting(false);
     }
   };
+
+  // Re-fetch hasKey when a sibling component (SavedKeysSection) clears
+  // a key for the active provider. The parent's onKeyMutated callback
+  // can't reach back into our state directly, so we listen to a
+  // synthetic event the parent dispatches.
+  onMount(() => {
+    const handler = () => {
+      void refreshHasKey(provider());
+      setTestResult(null);
+    };
+    window.addEventListener("byok-keys-changed", handler);
+    onCleanup(() => window.removeEventListener("byok-keys-changed", handler));
+  });
+
+  const saveDisabled = () => saving() || pendingKey().trim().length === 0;
+  const testDisabled = () => testing() || !hasKey();
 
   return (
     <div style={glass}>
@@ -283,131 +303,113 @@ export function AICleanupSection() {
       <label for="ai-cleanup-api-key" style={label}>
         API key
       </label>
-      <input
-        id="ai-cleanup-api-key"
-        type="password"
-        value={pendingKey()}
-        onInput={(e) => {
-          setPendingKey(e.currentTarget.value);
-          // Once the user starts entering a fresh key, prior feedback
-          // is stale — clear it so the slot is ready for the next action.
-          if (justSaved()) setJustSaved(false);
-          if (testResult() !== null) setTestResult(null);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
+
+      {/* Row 1: input + Save icon button */}
+      <div style={{ display: "flex", gap: "8px", "margin-bottom": "8px" }}>
+        <input
+          id="ai-cleanup-api-key"
+          type="password"
+          value={pendingKey()}
+          onInput={(e) => {
+            setPendingKey(e.currentTarget.value);
+            if (justSaved()) setJustSaved(false);
+            if (testResult() !== null) setTestResult(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void saveKey();
+            }
+          }}
+          placeholder={`Paste your ${PROVIDER_LABEL[provider()]} API key`}
+          style={{ ...inputBase, flex: "1 1 auto", "margin-bottom": "0", height: ICON_BTN_SIZE }}
+        />
+        <button
+          type="button"
+          aria-label="Save API key"
+          title="Save API key"
+          disabled={saveDisabled() && !justSaved()}
+          onClick={() => {
             void saveKey();
-          }
-        }}
-        placeholder="Paste your provider API key"
-        style={{ ...inputBase, "margin-bottom": "6px" }}
-      />
-      {hasKey() && (
-        <p
+          }}
           style={{
-            "font-size": "11px",
-            color: "#6b655a",
-            "font-family": monoFont,
-            margin: "0 0 10px 0",
+            ...iconBtnBase,
+            background: saveDisabled() && !justSaved() ? "#d4c9b5" : "#c9482b",
+            cursor: saveDisabled() && !justSaved() ? "not-allowed" : "pointer",
+            transition: "background 0.2s ease",
           }}
         >
-          Saved: {keyHint() ?? "****"}
-        </p>
-      )}
+          <Show
+            when={justSaved()}
+            fallback={<Icon name="save" size={18} color="#f5f0e6" />}
+          >
+            <AnimatedCheck size={20} color="#f5f0e6" />
+          </Show>
+        </button>
+      </div>
 
+      {/* Row 2: Test connection button + result slot + timing/error */}
       <div
         style={{
           display: "flex",
           "align-items": "center",
           gap: "8px",
-          "margin-bottom": "12px",
-          "flex-wrap": "wrap",
+          "margin-bottom": "0",
         }}
       >
         <button
           type="button"
-          disabled={saving() || pendingKey().trim().length === 0}
-          onClick={() => {
-            void saveKey();
-          }}
-          style={{
-            ...inputBase,
-            width: "auto",
-            padding: "6px 14px",
-            cursor: saving() || pendingKey().trim().length === 0 ? "not-allowed" : "pointer",
-            background:
-              saving() || pendingKey().trim().length === 0 ? "#d4c9b5" : "#f5f0e6",
-            "margin-bottom": "0",
-          }}
-        >
-          {saving() ? "Saving..." : "Save"}
-        </button>
-        <button
-          type="button"
-          disabled={!hasKey()}
-          onClick={() => {
-            void clearKey();
-          }}
-          style={{
-            ...inputBase,
-            width: "auto",
-            padding: "6px 14px",
-            cursor: !hasKey() ? "not-allowed" : "pointer",
-            background: !hasKey() ? "#d4c9b5" : "#f5f0e6",
-            "margin-bottom": "0",
-          }}
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          disabled={testing() || !hasKey()}
+          disabled={testDisabled()}
           onClick={runTest}
           style={{
             ...inputBase,
-            width: "auto",
-            padding: "6px 14px",
-            cursor: testing() || !hasKey() ? "not-allowed" : "pointer",
-            background: testing() || !hasKey() ? "#d4c9b5" : "#f5f0e6",
+            flex: "1 1 auto",
+            padding: "0 14px",
+            height: ICON_BTN_SIZE,
+            cursor: testDisabled() ? "not-allowed" : "pointer",
+            background: testDisabled() ? "#d4c9b5" : "#f5f0e6",
             "margin-bottom": "0",
           }}
         >
           {testing() ? "Testing..." : "Test connection"}
         </button>
-
-        {justSaved() && !testResult() && (
-          <span style={{ "font-size": "12px", color: "#5a7a3a", "font-family": monoFont }}>
-            ✓ Saved
-          </span>
-        )}
-        {testResult() !== null && (
+        {/* Reserved 36x36 slot to the right; no layout jump when the
+            indicator appears. */}
+        <div
+          style={{
+            width: ICON_BTN_SIZE,
+            height: ICON_BTN_SIZE,
+            display: "inline-flex",
+            "align-items": "center",
+            "justify-content": "center",
+            "flex-shrink": "0",
+          }}
+        >
+          <Show when={testResult() !== null}>
+            <Show
+              when={testResult()!.success}
+              fallback={<AnimatedCross size={22} />}
+            >
+              <AnimatedCheck size={22} />
+            </Show>
+          </Show>
+        </div>
+        <Show when={testResult() !== null}>
           <span
             style={{
               "font-size": "12px",
-              color: testResult()!.success ? "#5a7a3a" : "#a33a2a",
+              color: testResult()!.success ? "#5a5140" : "#a33a2a",
               "font-family": monoFont,
+              "min-width": "0",
+              "overflow-wrap": "anywhere",
             }}
           >
             {testResult()!.success
-              ? `✓ Key works (${testResult()!.duration_ms}ms via ${testResult()!.provider})`
-              : `✗ ${testResult()!.error ?? "failed"}`}
+              ? `${testResult()!.duration_ms}ms`
+              : (testResult()!.error ?? "failed")}
           </span>
-        )}
+        </Show>
       </div>
-
-      <p
-        style={{
-          "font-size": "11px",
-          color: storageMode() === "keyring" ? "#5a5140" : "#a33a2a",
-          "margin-bottom": "0",
-          "max-width": "520px",
-        }}
-      >
-        {storageMode() === "keyring"
-          ? "Your key is encrypted by your system keyring."
-          : "No system keyring detected. Your key is saved as plain text in ~/.config/murmur/settings.json. Install gnome-keyring or kwallet (with the secret-service plug-in) to encrypt it."}
-      </p>
 
       {lastToast() !== null && (
         <div

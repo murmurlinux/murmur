@@ -39,3 +39,8 @@ pub fn byok_key_hint(
 ) -> Result<Option<String>, String> {
     storage.key_hint(&provider).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn byok_list_keys(storage: State<'_, ByokStorage>) -> Result<Vec<(String, String)>, String> {
+    storage.list_keys().map_err(|e| e.to_string())
+}

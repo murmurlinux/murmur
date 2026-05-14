@@ -346,6 +346,7 @@ pub fn run_free() {
             commands::byok::byok_clear_key,
             commands::byok::byok_has_key,
             commands::byok::byok_key_hint,
+            commands::byok::byok_list_keys,
         ])
         .setup(shared_setup)
         .run(tauri::generate_context!())
