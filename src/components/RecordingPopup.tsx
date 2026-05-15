@@ -1,5 +1,5 @@
 import { onMount, onCleanup, createSignal } from "solid-js";
-import { listen } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import logoImg from "../assets/logo.png";
 
 const BAR_COUNT = 16;
@@ -32,8 +32,17 @@ export function RecordingPopup() {
     }
   };
 
+  let unlistenAudio: UnlistenFn | undefined;
+  let unlistenState: UnlistenFn | undefined;
+
+  onCleanup(() => {
+    unlistenAudio?.();
+    unlistenState?.();
+    if (animFrame) cancelAnimationFrame(animFrame);
+  });
+
   onMount(async () => {
-    const unlistenAudio = await listen<{ samples: number[] }>("audio-level", (e) => {
+    unlistenAudio = await listen<{ samples: number[] }>("audio-level", (e) => {
       const src = e.payload.samples;
       const step = Math.floor(src.length / BAR_COUNT);
       for (let i = 0; i < BAR_COUNT; i++) {
@@ -42,16 +51,10 @@ export function RecordingPopup() {
       if (!animFrame) animFrame = requestAnimationFrame(animate);
     });
 
-    const unlistenState = await listen<{ state: string }>("recording-state", (e) => {
+    unlistenState = await listen<{ state: string }>("recording-state", (e) => {
       const active = e.payload.state === "recording";
       setIsActive(active);
       if (active && !animFrame) animFrame = requestAnimationFrame(animate);
-    });
-
-    onCleanup(() => {
-      unlistenAudio();
-      unlistenState();
-      if (animFrame) cancelAnimationFrame(animFrame);
     });
   });
 
