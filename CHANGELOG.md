@@ -2,6 +2,19 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.12](https://github.com/murmurlinux/murmur/compare/v0.3.11...v0.3.12) (2026-05-15)
+
+
+### Bug Fixes
+
+* **popup:** register cleanup synchronously to keep listeners disposable ([#102](https://github.com/murmurlinux/murmur/issues/102)) ([b47075c](https://github.com/murmurlinux/murmur/commit/b47075c85625daf3a71a5b0a3eea1d2ddf6e0095))
+* **settings:** wrap long cleanup test errors below the button row ([#100](https://github.com/murmurlinux/murmur/issues/100)) ([2da2c2a](https://github.com/murmurlinux/murmur/commit/2da2c2a64ce01386f8b19396d73fec11638ef4e6))
+
+
+### Performance Improvements
+
+* **vad:** shorten silence-detection wait from 2s to 1.5s ([#101](https://github.com/murmurlinux/murmur/issues/101)) ([545a792](https://github.com/murmurlinux/murmur/commit/545a7925505c1c1aadccd474147a9ed25d7d265c))
+
 ## [0.3.11](https://github.com/murmurlinux/murmur/compare/v0.3.10...v0.3.11) (2026-05-14)
 
 
