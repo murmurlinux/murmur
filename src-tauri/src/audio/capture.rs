@@ -252,7 +252,7 @@ pub fn start_capture(
             // Auto-stop on silence (VAD) -- only when enabled
             if auto_stop_silence {
                 const SILENCE_RMS_THRESHOLD: f32 = 0.008;
-                const SILENCE_TIMEOUT_FRAMES: u32 = 125; // ~2s at 16ms per frame
+                const SILENCE_TIMEOUT_FRAMES: u32 = 94; // ~1.5s at 16ms per frame
 
                 // Use a thread-local counter (this closure runs on one thread)
                 use std::cell::Cell;
