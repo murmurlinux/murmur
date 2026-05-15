@@ -83,12 +83,15 @@ jobs:
         working-directory: src-tauri
         run: cargo fmt --check
 
+      # Frontend must build before any cargo step that expands
+      # tauri::generate_context!(), because custom-protocol embeds
+      # ../dist at compile time.
+      - name: Frontend build
+        run: pnpm build
+
       - name: Rust linting
         working-directory: src-tauri
         run: cargo clippy -- -D warnings
-
-      - name: Frontend build
-        run: pnpm build
 
       - name: Rust check
         working-directory: src-tauri
