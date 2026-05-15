@@ -354,11 +354,11 @@ export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
         </button>
       </div>
 
-      {/* Row 2: Test button + (inline diagnostic) + result slot.
-          The slot is the last flex child so its right edge aligns with
-          the save-icon button above it. The button shrinks when
-          diagnostic text appears; the icon position is anchored to
-          the right column and never moves. */}
+      {/* Row 2: Test button + (inline success timing) + result icon slot.
+          Success timing stays inline ("547ms"). Errors get their own
+          row below so long upstream messages wrap instead of crushing
+          the button width. The icon slot is the last flex child so its
+          right edge aligns with the save-icon button above. */}
       <div
         style={{
           display: "flex",
@@ -387,19 +387,17 @@ export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
         >
           {testButtonLabel()}
         </button>
-        <Show when={testResult() !== null}>
+        <Show when={testResult()?.success === true}>
           <span
             style={{
               "font-size": "12px",
-              color: testResult()!.success ? "#5a5140" : "#a33a2a",
+              color: "#5a5140",
               "font-family": monoFont,
               "white-space": "nowrap",
               "flex-shrink": "0",
             }}
           >
-            {testResult()!.success
-              ? `${testResult()!.duration_ms}ms`
-              : (testResult()!.error ?? "failed")}
+            {testResult()!.duration_ms}ms
           </span>
         </Show>
         {/* Reserved 36x36 slot, anchored at the right column to align
@@ -424,6 +422,25 @@ export function AICleanupSection(props: AICleanupSectionProps): JSX.Element {
           </Show>
         </div>
       </div>
+
+      {/* Error messages get their own full-width row so long upstream
+          responses (auth failures, edge-blocked, etc.) wrap freely
+          instead of compressing the Test button. */}
+      <Show when={testResult()?.success === false}>
+        <div
+          style={{
+            "margin-top": "6px",
+            "font-size": "12px",
+            color: "#a33a2a",
+            "font-family": monoFont,
+            "line-height": "1.4",
+            "word-break": "break-word",
+            "overflow-wrap": "anywhere",
+          }}
+        >
+          {testResult()!.error ?? "failed"}
+        </div>
+      </Show>
 
       {lastToast() !== null && (
         <div
