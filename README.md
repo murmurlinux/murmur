@@ -26,7 +26,7 @@ Transcription runs locally by default. No account, no telemetry, no audio leaves
 - **Universal Text Injection.** Types into any app via xdotool (X11) or wtype (Wayland). Terminals, IDEs, browsers, chat. If it has a cursor, Murmur types into it.
 - **Hold or Tap to Record.** Configurable global hotkey. Hold to record and release to transcribe, or tap to toggle. Voice activity detection auto-stops when you finish speaking.
 - **Multiple Models.** Tiny (75 MB, ~3s), Base (142 MB, ~8s), Small (466 MB, best accuracy). Choose your tradeoff.
-- **Tiny Footprint.** ~20 MB .deb, ~50 MB RAM at idle (before model load). Built with Rust + Tauri 2. Starts in under a second.
+- **Tiny Footprint.** ~20 MB .deb, ~175 MB RAM idle (rises to ~300 MB while transcribing). Built with Rust + Tauri 2. Starts in under a second.
 
 ## Quick Install
 
