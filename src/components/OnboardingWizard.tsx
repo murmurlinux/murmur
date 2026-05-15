@@ -7,6 +7,7 @@ import logoImg from "../assets/logo.png";
 import { Select } from "./Select";
 import { Icon } from "./Icon";
 import { AnimatedCheck } from "./AnimatedCheck";
+import { RecordModeToggle } from "./RecordModeToggle";
 
 const ACCENT = "#c9482b";
 
@@ -684,30 +685,7 @@ export function OnboardingWizard() {
             <label style={{ "font-size": "11px", color: "#6b655a", "text-transform": "uppercase", "letter-spacing": "0.05em", "margin-bottom": "6px", display: "block" }}>
               Recording Mode
             </label>
-            <div style={{ display: "flex", gap: "6px" }}>
-              {(["hold", "tap"] as const).map((mode) => (
-                <button
-                  onClick={() => setRecordMode(mode)}
-                  style={{
-                    flex: 1,
-                    padding: "10px 12px",
-                    background: recordMode() === mode ? "#f5f0e6" : "#ece4d0",
-                    border: recordMode() === mode ? `1px solid ${ACCENT}` : "1px solid #d4c9b5",
-                    "border-radius": "0",
-                    color: recordMode() === mode ? ACCENT : "#6b655a",
-                    cursor: "pointer",
-                    "font-size": "12px",
-                    "font-weight": recordMode() === mode ? "600" : "400",
-                    "text-align": "center",
-                  }}
-                >
-                  <div>{mode === "hold" ? "Hold to Record" : "Tap to Toggle"}</div>
-                  <div style={{ "font-size": "9px", "margin-top": "3px", opacity: 0.6 }}>
-                    {mode === "hold" ? "Press and hold, release to stop" : "Tap once to start, tap again to stop"}
-                  </div>
-                </button>
-              ))}
-            </div>
+            <RecordModeToggle value={recordMode()} onChange={setRecordMode} variant="wizard" />
           </div>
         </Show>
       </div>

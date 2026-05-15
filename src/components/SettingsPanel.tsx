@@ -7,6 +7,7 @@ import { AICleanupSection } from "./AICleanupSection";
 import { SavedKeysSection } from "./SavedKeysSection";
 import { Toggle } from "./Toggle";
 import { Select } from "./Select";
+import { RecordModeToggle } from "./RecordModeToggle";
 
 // --- Terminal Cream Theme ---
 
@@ -435,34 +436,11 @@ export function SettingsPanel() {
             {/* Recording Mode */}
             <div style={glass}>
               <label style={label}>Recording Mode</label>
-              <div style={{ display: "flex", gap: "6px" }}>
-                {(["hold", "tap"] as const).map((mode) => (
-                  <button
-                    onClick={() => updateSetting("recordMode", mode)}
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      background: settings()!.recordMode === mode
-                        ? "#f5f0e6"
-                        : "#ece4d0",
-                      border: settings()!.recordMode === mode
-                        ? "1px solid #c9482b"
-                        : "1px solid #d4c9b5",
-                      "border-radius": "0",
-                      color: settings()!.recordMode === mode
-                        ? "#c9482b"
-                        : "#6b655a",
-                      cursor: "pointer",
-                      "font-size": "12px",
-                      "font-family": monoFont,
-                      "font-weight": settings()!.recordMode === mode ? "600" : "400",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    {mode === "hold" ? "Hold to Record" : "Tap to Toggle"}
-                  </button>
-                ))}
-              </div>
+              <RecordModeToggle
+                value={settings()!.recordMode}
+                onChange={(mode) => updateSetting("recordMode", mode)}
+                variant="settings"
+              />
               {/* Auto-stop on silence (only meaningful in tap mode) */}
               <div style={{ "margin-top": "10px" }}>
                 <SettingRow label="Auto-stop on Silence">
