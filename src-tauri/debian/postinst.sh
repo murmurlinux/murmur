@@ -16,6 +16,16 @@ case "$1" in
             update-desktop-database -q /usr/share/applications || true
         fi
 
+        # Register Murmur as the system handler for `murmur://` URLs so
+        # `xdg-open murmur://...` routes back to the running instance
+        # (used by the website Pro sign-in flow). The tauri bundler
+        # already lists MimeType=x-scheme-handler/murmur on the .desktop
+        # via plugins.deep-link.desktop.schemes; this line just makes
+        # Murmur the default handler when nothing else has claimed it.
+        if command -v xdg-mime >/dev/null 2>&1; then
+            xdg-mime default "$(basename "$NEW")" x-scheme-handler/murmur || true
+        fi
+
         # Apply setgid `input` to the privileged keyboard helper so it can
         # open /dev/input/event* without the calling user being in the
         # input group. The helper drops gid back to the caller's real gid

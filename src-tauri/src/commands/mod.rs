@@ -6,4 +6,5 @@ pub mod hotkey_evdev;
 pub mod llm_cleanup;
 pub mod models;
 pub mod popup;
+pub mod pro;
 pub mod settings;

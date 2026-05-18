@@ -47,6 +47,15 @@ tauri-plugin-store = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-notification = "2"
+tauri-plugin-deep-link = "2"
+tauri-plugin-opener = "2"
+# tauri-plugin-deep-link's Linux/Windows docs require single-instance:
+# without it, `xdg-open murmur://...` spawns a second binary and the
+# running gadget never sees the URL.
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+jsonwebtoken = "9"
+url = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 
 # OS keyring (secret-service over D-Bus on Linux) for BYOK API keys.
 # sync-secret-service avoids tokio/async-runtime entanglement; we call
