@@ -2,6 +2,13 @@
 
 All notable changes to Murmur will be documented in this file.
 
+## [0.3.13](https://github.com/murmurlinux/murmur/compare/v0.3.12...v0.3.13) (2026-05-18)
+
+
+### Features
+
+* **settings:** add account section with sign-in deep-link ([#107](https://github.com/murmurlinux/murmur/issues/107)) ([5725a64](https://github.com/murmurlinux/murmur/commit/5725a6436fbc04778cee372a77700bc958733a3d))
+
 ## [0.3.12](https://github.com/murmurlinux/murmur/compare/v0.3.11...v0.3.12) (2026-05-15)
 
 
