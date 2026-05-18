@@ -1,6 +1,6 @@
-import { createSignal, onMount, onCleanup, For, JSX } from "solid-js";
+import { createSignal, onMount, onCleanup, For, JSX, Show } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { loadSettings, saveSetting, type MurmurSettings, type ModelInfo } from "../lib/settings";
 import logoImg from "../assets/logo.png";
 import { AICleanupSection } from "./AICleanupSection";
@@ -96,6 +96,19 @@ export function SettingsPanel() {
   const [savedKeysVersion, setSavedKeysVersion] = createSignal(0);
   const bumpSavedKeys = () => setSavedKeysVersion((v) => v + 1);
 
+  type AccountState = {
+    signedIn: boolean;
+    isPro: boolean;
+    email: string | null;
+    proExpiresAt: string | null;
+  };
+  const [account, setAccount] = createSignal<AccountState>({
+    signedIn: false,
+    isPro: false,
+    email: null,
+    proExpiresAt: null,
+  });
+
   const showError = (msg: string) => {
     setError(msg);
     setTimeout(() => setError(null), 5000);
@@ -117,7 +130,40 @@ export function SettingsPanel() {
     } catch {
       // Models command may not exist yet
     }
+
+    await refreshAccount();
+    const unlistenPro = await listen<AccountState>("pro-state-changed", (event) => {
+      setAccount(event.payload);
+    });
+    onCleanup(() => unlistenPro());
   });
+
+  async function refreshAccount() {
+    try {
+      const [isPro, email, proExpiresAt] = await Promise.all([
+        invoke<boolean>("pro_is_active"),
+        invoke<string | null>("pro_email"),
+        invoke<string | null>("pro_expires_at"),
+      ]);
+      setAccount({ signedIn: email !== null, isPro, email, proExpiresAt });
+    } catch (e) {
+      // pro commands may not be registered in older binaries; leave default state.
+      console.warn("account state unavailable", e);
+    }
+  }
+
+  function accountButtonLabel(a: AccountState): string {
+    if (!a.signedIn) return "Sign in / Get Pro";
+    if (a.isPro) return "Manage subscription";
+    return "Manage account";
+  }
+
+  function formatProExpiry(iso: string | null): string | null {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
 
   const updateSetting = async <K extends keyof MurmurSettings>(
     key: K,
@@ -487,6 +533,79 @@ export function SettingsPanel() {
                     Your current model is English-only. Download a multilingual model above for best results.
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Account */}
+            <div style={glass}>
+              <label style={label}>Account</label>
+              <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
+                <Show
+                  when={account().signedIn}
+                  fallback={
+                    <div style={{ "font-size": "12px", color: "#6b655a" }}>
+                      Not signed in.
+                    </div>
+                  }
+                >
+                  <div style={{ "font-size": "12px", color: "#1a1a1a" }}>
+                    Signed in as <strong>{account().email}</strong>
+                  </div>
+                  <Show when={account().isPro && formatProExpiry(account().proExpiresAt)}>
+                    <div style={{ "font-size": "11px", color: "#6b655a" }}>
+                      Pro until {formatProExpiry(account().proExpiresAt)}
+                    </div>
+                  </Show>
+                </Show>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "6px 12px",
+                      "font-size": "12px",
+                      "font-family": monoFont,
+                      background: "#1a1a1a",
+                      color: "#f5f0e6",
+                      border: "1px solid #1a1a1a",
+                      "border-radius": "0",
+                      cursor: "pointer",
+                    }}
+                    onClick={async () => {
+                      try {
+                        await invoke("pro_open_sign_in");
+                      } catch (e) {
+                        showError(`Could not open browser: ${e}`);
+                      }
+                    }}
+                  >
+                    {accountButtonLabel(account())}
+                  </button>
+                  <Show when={account().signedIn}>
+                    <button
+                      type="button"
+                      style={{
+                        padding: "6px 12px",
+                        "font-size": "12px",
+                        "font-family": monoFont,
+                        background: "#f5f0e6",
+                        color: "#1a1a1a",
+                        border: "1px solid #1a1a1a",
+                        "border-radius": "0",
+                        cursor: "pointer",
+                      }}
+                      onClick={async () => {
+                        try {
+                          await invoke("pro_sign_out");
+                          await refreshAccount();
+                        } catch (e) {
+                          showError(`Sign-out failed: ${e}`);
+                        }
+                      }}
+                    >
+                      Sign out
+                    </button>
+                  </Show>
+                </div>
               </div>
             </div>
 

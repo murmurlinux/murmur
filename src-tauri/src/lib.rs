@@ -3,6 +3,7 @@ pub mod byok_storage;
 pub mod cleanup;
 pub mod commands;
 mod inject;
+pub mod pro_state;
 pub mod state;
 mod stt;
 
@@ -40,6 +41,34 @@ pub fn shared_setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     // --- Updater plugin (registers inside setup, not on builder) ---
     app.handle()
         .plugin(tauri_plugin_updater::Builder::new().build())?;
+
+    // --- Deep-link + opener plugins (Pro sign-in via `murmur://auth?token=...`) ---
+    app.handle().plugin(tauri_plugin_deep_link::init())?;
+    app.handle().plugin(tauri_plugin_opener::init())?;
+
+    // Pro entitlement state: load any cached token, then arm the
+    // deep-link receiver and an opportunistic refresh.
+    app.manage(pro_state::ProState::new());
+    {
+        let pro_handle = app.handle().clone();
+        let pro_state: tauri::State<'_, pro_state::ProState> = pro_handle.state();
+        pro_state.load_from_store(&pro_handle);
+        pro_state::maybe_refresh_on_launch(&pro_state, pro_handle.clone());
+    }
+    {
+        use tauri_plugin_deep_link::DeepLinkExt;
+        let dl_handle = app.handle().clone();
+        app.deep_link().on_open_url(move |event| {
+            for url in event.urls() {
+                let url_str = url.to_string();
+                let state: tauri::State<'_, pro_state::ProState> = dl_handle.state();
+                match state.apply_deep_link(&dl_handle, &url_str) {
+                    Ok(()) => {}
+                    Err(e) => log::warn!("pro: deep link rejected: {e}"),
+                }
+            }
+        });
+    }
 
     // --- Check for updates in background ---
     let update_handle = app.handle().clone();
@@ -317,6 +346,17 @@ pub fn run_free() {
 
     let mut builder = tauri::Builder::default()
         .manage(state::AppState::default())
+        // single-instance MUST be registered before deep-link (which is
+        // initialised inside shared_setup) so a second invocation
+        // triggered by `xdg-open murmur://...` routes back to the
+        // running gadget rather than spawning a sibling.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            use tauri::Manager;
+            if let Some(window) = app.get_webview_window("settings") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init());
@@ -348,6 +388,11 @@ pub fn run_free() {
             commands::byok::byok_has_key,
             commands::byok::byok_key_hint,
             commands::byok::byok_list_keys,
+            commands::pro::pro_is_active,
+            commands::pro::pro_email,
+            commands::pro::pro_expires_at,
+            commands::pro::pro_sign_out,
+            commands::pro::pro_open_sign_in,
         ])
         .setup(shared_setup)
         .run(tauri::generate_context!())

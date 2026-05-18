@@ -41,6 +41,11 @@
     }
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["murmur"]
+      }
+    },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE2OEMyMDRFQ0UyQjgxMTQKUldRVWdTdk9UaUNNcHZQVkU2VU9EWUxJYSt3L2RzMkM4SGRSUUxoWWpyYU5KaTRHdzEwQitkTCsK",
       "endpoints": [
